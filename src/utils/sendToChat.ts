@@ -3,7 +3,7 @@ import {
   TextChannel,
   MessageCreateOptions,
 } from 'discord.js';
-import { PrismaClient, GuildConfig } from '../../prisma/app/generated/prisma/client';
+import { PrismaClient, GuildConfig } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -28,13 +28,13 @@ export async function sendToGuildChannel(
       const channelId = config?.[key];
 
       if (!channelId) {
-        console.log(`[sendToGuildChannel] No channel configured for ${key} in guild ${guildId}`);
+        console.log(`[sendToGuildChannel] No channel configured for ${key} in guild ${String(guildId)}`);
         continue;
       }
 
       const channel = client.channels.cache.get(channelId) as TextChannel;
       if (!channel || !channel.isTextBased()) {
-        console.warn(`[sendToGuildChannel] Invalid or missing text channel for guild ${guildId}`);
+        console.warn(`[sendToGuildChannel] Invalid or missing text channel for guild ${String(guildId)}`);
         continue;
       }
 
@@ -45,7 +45,7 @@ export async function sendToGuildChannel(
 
       await channel.send(messagePayload);
     } catch (err) {
-      console.error(`[sendToGuildChannel] Error sending message to guild ${guildId}:`, err);
+      console.error(`[sendToGuildChannel] Error sending message to guild ${String(guildId)}:`, err);
     }
   }
 }

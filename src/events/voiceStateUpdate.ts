@@ -103,19 +103,26 @@ module.exports = {
 					if (channel && channel.type === ChannelType.GuildVoice) {
 						// Check if channel is empty
 						if (channel.members.size === 0) {
-							try {
-								// Delete the voice channel (this will also delete its chat)
-								await channel.delete();
-								
-								// Remove from database
-								await prisma.temporaryVoiceChannel.delete({
-									where: { channelId: oldState.channelId }
-								});
+							// Wait 30 seconds before deleting the channel
+							setTimeout(async () => {
+								try {
+									// Check again if channel is still empty after delay
+									const updatedChannel = guild.channels.cache.get(oldState.channelId);
+									if (updatedChannel && updatedChannel.type === ChannelType.GuildVoice && updatedChannel.members.size === 0) {
+										// Delete the voice channel (this will also delete its chat)
+										await updatedChannel.delete();
+										
+										// Remove from database
+										await prisma.temporaryVoiceChannel.delete({
+											where: { channelId: oldState.channelId }
+										});
 
-								console.log(`Deleted empty temporary voice channel: ${channel.name}`);
-							} catch (error) {
-								console.error('Error deleting temporary voice channel:', error);
-							}
+										console.log(`Deleted empty temporary voice channel: ${updatedChannel.name}`);
+									}
+								} catch (error) {
+									console.error('Error deleting temporary voice channel:', error);
+								}
+							}, 30000); // 30 seconds delay
 						}
 					}
 				}

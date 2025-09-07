@@ -1,4 +1,4 @@
-import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType, StringSelectMenuBuilder, StringSelectMenuOptionBuilder } from 'discord.js';
+import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, VoiceChannel } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -14,6 +14,16 @@ module.exports = {
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
 					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					return;
+				}
+
+				// Check if user is the room owner
+				const tempChannel = await prisma.temporaryVoiceChannel.findUnique({
+					where: { channelId: channelId }
+				});
+
+				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
+					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', ephemeral: true });
 					return;
 				}
 
@@ -193,7 +203,7 @@ module.exports = {
 					await member.voice.disconnect();
 					
 					// Add permission override to prevent them from rejoining
-					await channel.permissionOverwrites.create(member, {
+					await (channel as VoiceChannel).permissionOverwrites.create(member, {
 						Connect: false
 					});
 
@@ -213,6 +223,16 @@ module.exports = {
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
 					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					return;
+				}
+
+				// Check if user is the room owner
+				const tempChannel = await prisma.temporaryVoiceChannel.findUnique({
+					where: { channelId: channelId }
+				});
+
+				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
+					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', ephemeral: true });
 					return;
 				}
 
