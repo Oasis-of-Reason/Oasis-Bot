@@ -1,0 +1,10 @@
+##Discord development server ID - If Set only update commands on this server
+##Dont add this line in prod
+isDev=610092063136022570
+
+##Discord Bot Token
+DISCORD_TOKEN=
+DISCORD_CLIENT_ID=
+
+##Database URL
+DATABASE_URL="mysql://USRRNAME:PASSWORD@localhost:3306/oasisbot"
