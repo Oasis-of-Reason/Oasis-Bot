@@ -94,12 +94,13 @@ module.exports = {
 
 			// Check if user left a temporary channel
 			if (oldState.channelId) {
+				const channelId = oldState.channelId; // Store the channelId to avoid null issues
 				const tempChannel = await prisma.temporaryVoiceChannel.findUnique({
-					where: { channelId: oldState.channelId }
+					where: { channelId: channelId }
 				});
 
 				if (tempChannel) {
-					const channel = guild.channels.cache.get(oldState.channelId);
+					const channel = guild.channels.cache.get(channelId);
 					if (channel && channel.type === ChannelType.GuildVoice) {
 						// Check if channel is empty
 						if (channel.members.size === 0) {
@@ -107,14 +108,14 @@ module.exports = {
 							setTimeout(async () => {
 								try {
 									// Check again if channel is still empty after delay
-									const updatedChannel = guild.channels.cache.get(oldState.channelId);
+									const updatedChannel = guild.channels.cache.get(channelId);
 									if (updatedChannel && updatedChannel.type === ChannelType.GuildVoice && updatedChannel.members.size === 0) {
 										// Delete the voice channel (this will also delete its chat)
 										await updatedChannel.delete();
 										
 										// Remove from database
 										await prisma.temporaryVoiceChannel.delete({
-											where: { channelId: oldState.channelId }
+											where: { channelId: channelId }
 										});
 
 										console.log(`Deleted empty temporary voice channel: ${updatedChannel.name}`);
