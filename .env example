@@ -1,4 +1,4 @@
-##Discord development server ID - If Set only update commands on this server
+##Discord development server ID - If Set only updates slash commands on this specific server
 ##Dont add this line in prod
 isDev=610092063136022570
 
