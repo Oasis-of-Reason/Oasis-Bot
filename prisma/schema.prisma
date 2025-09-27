@@ -30,3 +30,51 @@ model TemporaryVoiceChannel {
   
   @@map("temporary_voice_channels")
 }
+
+model Event {
+  id             String   @id
+  guild_id       String
+  channel_id     String
+  message_id     String
+  thread_id      String
+  host_id        String
+  cohosts        CoHostsOnEvent[] // in case the event grows and we need more co hosts
+  title          String
+  type           String
+  subtype        String
+  game           String
+  description    String
+  capacity       Int
+  signups        EventSignUps[] // Tracking the people that signed up so we can determine group size, waitlist etc
+  interested     InterestedSignUps[] // Seperate tracking of those interested as we apply different logic 
+  start_ts       Int
+  length_minutes Int?
+  created_at     Int?
+}
+
+model CoHostsOnEvent {
+  id            Int @id @default(autoincrement())
+  event         Event @relation(fields: [eventId], references: [id])
+  eventId       String
+  HostId        String
+}
+
+model EventSignUps {
+  id            Int @id @default(autoincrement())
+  event         Event @relation(fields: [eventId], references: [id])
+  eventId       String
+  userId        String
+}
+
+model InterestedSignUps {
+  id            Int @id @default(autoincrement())
+  event         Event @relation(fields: [eventId], references: [id])
+  eventId       String
+  userId        String
+}
+
+// Add to schema.prisma
+model Magic8BallProphecy {
+  id       Int    @id @default(autoincrement())
+  message  String
+}

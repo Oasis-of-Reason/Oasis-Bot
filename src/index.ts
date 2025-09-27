@@ -1,4 +1,5 @@
-import dotenv from 'dotenv';
+import * as dotenv from "dotenv" // Import style for when local
+// import dotenv from 'dotenv'; // Alternative import style - For when live
 dotenv.config();
 
 import { config } from './config';
@@ -92,3 +93,17 @@ client.login(config.DISCORD_TOKEN)
   .catch((error: any) => {
     console.error('Error logging in:', error);
   });
+
+  // Register your commands here (simplified for local testing)
+client.once("ready", () => {
+  console.log(`Logged in as ${client.user?.tag}!`);
+});
+
+client.on("interactionCreate", async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+  // Import your command module
+  const command = require("./commands/Magic8Ball");
+  if (interaction.commandName === "shakeball") {
+    await command.execute(interaction);
+  }
+});
