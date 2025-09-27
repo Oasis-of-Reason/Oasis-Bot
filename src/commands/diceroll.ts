@@ -5,7 +5,7 @@ module.exports = {
 		.setName('diceroll')
 		.setDescription('generates a random number between 1 and 20'),
 	async execute(interaction: any) {
-		await interaction.reply('Dice roll! ' + (interaction.member.nickname ?? interaction.member.user.globalName) + ' rolled: ' + getRandomInt(1, 20));
+		await interaction.reply('Dice roll! ' + (interaction.member.nickname ?? interaction.member.user.globalName) + ' rolled: ' + getRandomInt(1, 20) + " 🎲");
 	},
 };
 
