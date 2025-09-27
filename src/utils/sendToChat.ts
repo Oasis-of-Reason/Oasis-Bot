@@ -3,7 +3,7 @@ import {
   TextChannel,
   MessageCreateOptions,
 } from 'discord.js';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, GuildConfig } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -18,7 +18,7 @@ const prisma = new PrismaClient();
  */
 export async function sendToGuildChannel(
   client: Client,
-  key: keyof Awaited<ReturnType<typeof prisma.guildConfig.findUnique>>,
+  key: keyof GuildConfig,
   content: string,
   options?: Omit<MessageCreateOptions, 'content'>
 ): Promise<void> {
@@ -28,7 +28,7 @@ export async function sendToGuildChannel(
       const channelId = config?.[key];
 
       if (!channelId) {
-        console.log(`[sendToGuildChannel] No channel configured for ${String(key)} in guild ${String(guildId)}`);
+        console.log(`[sendToGuildChannel] No channel configured for ${key} in guild ${String(guildId)}`);
         continue;
       }
 
