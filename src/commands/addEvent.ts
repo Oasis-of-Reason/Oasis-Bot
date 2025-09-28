@@ -38,31 +38,24 @@ module.exports = {
 			return;
 		}
 
-		const startDateTime = new Date(startTime);
+		const startDateTime = new Date(startTime * 1000);
 
 		if (!startDateTime) { // GuildVoice
 			await interaction.reply({ content: '❌ You must give a valid start datetime in unix format.', ephemeral: true });
 			return;
 		}
 
-
 		try {
 			// Upsert the guild configuration
-			await prisma.Event.upsert({
-				where: { id: interaction.name },
-				update: {
+			await prisma.event.create({
+				data: {
 					name: name,
-					startTime: startTime
-				},
-				create: {
-					id: interaction.guild.id,
-					name: name,
-					startTime: startTime
+					startTime: startDateTime
 				}
 			});
 
 			await interaction.reply({ 
-				content: `✅ Event added!\n\n**Event Name:** ${name}\n**Start DateTime:** ${Date.toLocaleString()}\n\n`, 
+				content: `✅ Event added!\n\n**Event Name:** ${name}\n**Start DateTime:** ${startDateTime.toLocaleString()}\n\n`, 
 				ephemeral: true 
 			});
 		} catch (error) {
