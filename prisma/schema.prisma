@@ -30,3 +30,13 @@ model TemporaryVoiceChannel {
   
   @@map("temporary_voice_channels")
 }
+
+model Event {
+  id          String   @id @default(cuid())
+  name   String
+  startTime   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("events")
+}
