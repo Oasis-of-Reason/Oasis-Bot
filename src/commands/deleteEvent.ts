@@ -38,7 +38,7 @@ module.exports = {
 		} catch (error: any) {
 			if (error.code === 'P2025') {
 				// Prisma error when record not found
-				await interaction.reply({ content: `❌ No event found with the name **${name}**.`, ephemeral: true });
+				await interaction.reply({ content: `❌ No event found with the name **${id}**.`, ephemeral: true });
 			} else {
 				console.error('Error deleting event:', error);
 				await interaction.reply({ content: '❌ An error occurred while deleting the event. Please try again.', ephemeral: true });
