@@ -41,7 +41,7 @@ module.exports = {
 
 			for (const event of events) {
 				response += `**ID:** ${event.id}\n`;
-				response += `**Name:** ${event.name}\n`;
+				response += `**Name:** ${event.title}\n`;
 				response += `**Start Time:** ${event.startTime.toLocaleString()}\n`;
 				response += `**Created At:** ${event.createdAt.toLocaleString()}\n`;
 				response += `**Updated At:** ${event.updatedAt.toLocaleString()}\n\n`;

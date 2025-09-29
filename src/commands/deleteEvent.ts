@@ -7,7 +7,7 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('deleteevent')
 		.setDescription('Delete an event')
-		.addStringOption(option =>
+		.addNumberOption(option =>
 			option
 				.setName('id')
 				.setDescription('id of the event to delete')
@@ -19,7 +19,7 @@ module.exports = {
 			return;
 		}
 
-		const id = interaction.options.getString('id');
+		const id = interaction.options.getNumber('id');
 
 		if (!id) {
 			await interaction.reply({ content: '❌ You must specify an event id.', ephemeral: true });
@@ -32,7 +32,7 @@ module.exports = {
 			});
 
 			await interaction.reply({
-				content: `✅ Event deleted!\n\n**Event Name:** ${deletedEvent.name}\n**Start DateTime:** ${deletedEvent.startTime.toLocaleString()}`,
+				content: `✅ Event deleted!\n\n**Event Name:** ${deletedEvent.title}\n**Start DateTime:** ${deletedEvent.startTime.toLocaleString()}`,
 				ephemeral: true
 			});
 		} catch (error: any) {

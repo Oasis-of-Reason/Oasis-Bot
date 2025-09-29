@@ -78,7 +78,7 @@ module.exports = {
 				content:
 `✅ Event updated!
 **ID:** ${updatedEvent.id}
-**Name:** ${updatedEvent.name}
+**Name:** ${updatedEvent.title}
 **Start DateTime:** ${updatedEvent.startTime.toLocaleString()}
 **Updated At:** ${updatedEvent.updatedAt.toLocaleString()}`,
 				ephemeral: true

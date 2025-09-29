@@ -51,7 +51,7 @@ module.exports = {
 				const dt = new Date(ev.startTime);
 				const key = ymd(dt);
 				const unix = Math.floor(dt.getTime() / 1000);
-				const line = `• **${ev.name}** — <t:${unix}:R>`; // name + relative time
+				const line = `• **${ev.title}** — <t:${unix}:R>`; // name + relative time
 
 				if (!groups.has(key)) {
 					groups.set(key, { date: dt, lines: [line] });

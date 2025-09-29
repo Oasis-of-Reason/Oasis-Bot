@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -15,28 +15,65 @@ datasource db {
 }
 
 model GuildConfig {
-  id                    String @id
+  id                   String  @id
   voiceCreatorRoomId   String?
   voiceCreatorCategory String?
 }
 
 model TemporaryVoiceChannel {
-  id          String   @id @default(cuid())
-  channelId   String   @unique
-  guildId     String
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(cuid())
+  channelId String   @unique
+  guildId   String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("temporary_voice_channels")
 }
 
 model Event {
-  id          String   @id @default(cuid())
-  name        String
-  startTime   DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  @@map("events")
+  id              Int @id @default(autoincrement())
+  guildId         String
+  channelId       String
+  messageId       String
+  threadId        String
+  title           String
+  type            String
+  subtype         String
+  game            String
+  platforms       String
+  requirements    String
+  description     String
+  imageUrl        String
+  hostId          String
+  capacity        Int
+  cohostCapacity  Int
+  cohosts         CohostsOnEvent[] // in case the event grows and we need more co hosts
+  signups         EventSignUps[] // Tracking the people that signed up so we can determine group size, waitlist etc
+  interested      InterestedSignUps[] // Seperate tracking of those interested as we apply different logic 
+  startTime       DateTime
+  lengthMinutes   Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CohostsOnEvent {
+  id            Int @id @default(autoincrement())
+  event         Event @relation(fields: [eventId], references: [id])
+  eventId       Int
+  hostId        String
+}
+
+model EventSignUps {
+  id            Int @id @default(autoincrement())
+  event         Event @relation(fields: [eventId], references: [id])
+  eventId       Int
+  userId        String
+}
+
+model InterestedSignUps {
+  id            Int @id @default(autoincrement())
+  event         Event @relation(fields: [eventId], references: [id])
+  eventId       Int
+  userId        String
 }
