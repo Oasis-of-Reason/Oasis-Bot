@@ -46,6 +46,8 @@ model Event {
   description     String
   imageUrl        String
   hostId          String
+  scope           String
+  published       Boolean @default(false)
   capacity        Int
   cohostCapacity  Int
   cohosts         CohostsOnEvent[] // in case the event grows and we need more co hosts

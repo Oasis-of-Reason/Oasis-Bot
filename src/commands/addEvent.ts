@@ -45,6 +45,10 @@ module.exports = {
 			o.setName('image_url')
 			 .setDescription('Image URL')
 			 .setRequired(false))
+		.addStringOption(o =>
+			o.setName('scope')
+			 .setDescription('Invitee Scope')
+			 .setRequired(false))
 		.addIntegerOption(o =>
 			o.setName('capacity')
 			 .setDescription('Max attendees (0 = no limit)')
@@ -76,6 +80,7 @@ module.exports = {
 		const requirements = interaction.options.getString('requirements') ?? '';
 		const description = interaction.options.getString('description') ?? '';
 		const imageUrl = interaction.options.getString('image_url') ?? '';
+		const scope = interaction.options.getString('scope') ?? '';
 		const capacity = interaction.options.getInteger('capacity') ?? 0;
 		const cohostCapacity = interaction.options.getInteger('cohost_capacity') ?? 0;
 		const lengthMinutes = interaction.options.getInteger('length_minutes') ?? null;
@@ -123,7 +128,8 @@ module.exports = {
 					imageUrl,
 
 					hostId: interaction.user.id,
-
+					scope,
+					false, // published
 					capacity,
 					cohostCapacity,
 
@@ -148,7 +154,7 @@ module.exports = {
 **Type/Subtype:** ${event.type || '—'}${event.subtype ? ` / ${event.subtype}` : ''}
 **Game:** ${event.game || '—'}
 **Platforms:** ${event.platforms || '—'}
-**Capacity:** ${event.capacity == 0 ? "Unlimited" : event.capacity} (cohosts: ${event.cohostCapacity})
+**Capacity:** ${event.capacity == 0 ? "Unlimited " : event.capacity} (cohosts: ${event.cohostCapacity})
 **Host:** <@${event.hostId}>`,
 				ephemeral: true,
 			});
