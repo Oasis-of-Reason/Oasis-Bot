@@ -14,7 +14,6 @@ module.exports = {
 		.addStringOption(o => o.setName('title').setDescription('New title').setRequired(false))
 		.addNumberOption(o => o.setName('start_time').setDescription('New start time (unix seconds)').setRequired(false))
 		.addIntegerOption(o => o.setName('length_minutes').setDescription('New length in minutes').setRequired(false))
-		.addBooleanOption(o => o.setName('clear_length').setDescription('Set length_minutes to NULL').setRequired(false))
 
 		.addStringOption(o => o.setName('type').setDescription('Event type').setRequired(false))
 		.addStringOption(o => o.setName('subtype').setDescription('Event subtype').setRequired(false))
@@ -23,6 +22,8 @@ module.exports = {
 		.addStringOption(o => o.setName('requirements').setDescription('Requirements').setRequired(false))
 		.addStringOption(o => o.setName('description').setDescription('Description').setRequired(false))
 		.addStringOption(o => o.setName('image_url').setDescription('Image URL').setRequired(false))
+		.addStringOption(o => o.setName('scope').setDescription('Invitee Scope').setRequired(false))
+		.addBooleanOption(o => o.setName('published').setDescription('Whether the event is published').setRequired(false))
 
 		.addIntegerOption(o => o.setName('capacity').setDescription('Max attendees').setRequired(false))
 		.addIntegerOption(o => o.setName('cohost_capacity').setDescription('Max co-hosts').setRequired(false))
@@ -46,7 +47,6 @@ module.exports = {
 		const title = interaction.options.getString('title');
 		const startTime = interaction.options.getNumber('start_time');
 		const lengthMinutes = interaction.options.getInteger('length_minutes');
-		const clearLength = interaction.options.getBoolean('clear_length') ?? false;
 
 		const type = interaction.options.getString('type');
 		const subtype = interaction.options.getString('subtype');
@@ -55,6 +55,8 @@ module.exports = {
 		const requirements = interaction.options.getString('requirements');
 		const description = interaction.options.getString('description');
 		const imageUrl = interaction.options.getString('image_url');
+		const scope = interaction.options.getString('scope');
+		const published = interaction.options.getBoolean('published');
 
 		const capacity = interaction.options.getInteger('capacity');
 		const cohostCapacity = interaction.options.getInteger('cohost_capacity');
@@ -109,9 +111,6 @@ module.exports = {
 				return;
 			}
 			data.lengthMinutes = lengthMinutes;
-		}
-		if (clearLength) {
-			data.lengthMinutes = null; // explicitly clear
 		}
 
 		// start_time

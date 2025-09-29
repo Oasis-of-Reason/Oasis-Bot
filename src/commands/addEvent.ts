@@ -129,7 +129,7 @@ module.exports = {
 
 					hostId: interaction.user.id,
 					scope,
-					false, // published
+					published:false, // published
 					capacity,
 					cohostCapacity,
 
