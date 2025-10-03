@@ -37,6 +37,7 @@ model Event {
   channelId      String                 // ChannelID 
   messageId      String              @unique   
   threadId       String
+  publishedThreadId String?
   community      String?                // Can include other community hosting event name
   communityLink  String?                // Can include a link to VRC Group               
   title          String                 
@@ -45,13 +46,15 @@ model Event {
   game           String?                // Free field for the game name
   platforms      String?              // Multi Select when event is VRC only Android, Quest or PCVR
   requirements   String?                // Avatar requirement - Please have X or better (Very Poor, Poor, Medium, Good)
-  description    String?                 
-  imageUrl       String?                
+  description    String? @db.Text          
+  imageUrl       String? @db.Text                 
   hostId         String          
   scope          String?                // Discord or VRC, Open to Friends or Closed to Group 
   published      Boolean             @default(false)
   capacityCap    Int                    // How many people can join the event In Total - limits to cap on event size
   capacityBase   Int                    // Base Capacity. if lower than cap then cohosts increase capacity. 
+  capacityCohosts   Int?                    // Maximum capacity of cohosts .
+  capacityPerCohost   Int?                    // Additional capacity per cohost. 
   cohosts        CohostsOnEvent[] // in case the event grows and we need more co hosts
   signups        EventSignUps[] // Tracking the people that signed up so we can determine group size, waitlist etc
   interested     InterestedSignUps[] // Seperate tracking of those interested as we apply different logic 
