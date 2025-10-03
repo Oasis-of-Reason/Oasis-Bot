@@ -54,7 +54,7 @@ function formatEventLine(
   const capBadge = ` ${signupCount}/${capTotal > 0 ? capTotal : '∞'}`;
 
   // host mention brings in avatar+username hover card
-  return `<t:${unix}:t> ${title} <t:${unix}:R> •${capBadge}`;
+  return `> <t:${unix}:t> ${title} <t:${unix}:R> •${capBadge}`;
 }
 
 function chunkString(str: string, size = 1024): string[] {
