@@ -552,11 +552,11 @@ module.exports = {
                 .setCustomId("select_requirements")
                 .setPlaceholder("Choose requirement")
                 .addOptions(
-                  { label: "Very Poor", value: "Very Poor" },
-                  { label: "Poor", value: "Poor" },
-                  { label: "Medium", value: "Medium" },
-                  { label: "Good", value: "Good" },
-                  { label: "Excellent", value: "Excellent" }
+                  { label: "Very Poor", value: ":VeryPoor: Very Poor" },
+                  { label: "Poor", value: ":Poor: Poor" },
+                  { label: "Medium", value: ":Medium: Medium" },
+                  { label: "Good", value: ":Good: Good" },
+                  { label: "Excellent", value: ":VeryGood: Excellent" }
                 )
             ),
           ],
