@@ -33,23 +33,25 @@ model TemporaryVoiceChannel {
 
 model Event {
   id             Int                 @id @default(autoincrement())
-  guildId        String
-  channelId      String
-  messageId      String
+  guildId        String                 // Guild Discord Server ID
+  channelId      String                 // ChannelID 
+  messageId      String              @unique   
   threadId       String
-  title          String
-  type           String
-  subtype        String
-  game           String
-  platforms      String
-  requirements   String
-  description    String
-  imageUrl       String
-  hostId         String
-  scope          String
+  community      String?                // Can include other community hosting event name
+  communityLink  String?                // Can include a link to VRC Group               
+  title          String                 
+  type           String                 // Whether it is Discord or VRC
+  subtype        String                 // Where its Gaming, Social or Cinema
+  game           String?                // Free field for the game name
+  platforms      String?              // Multi Select when event is VRC only Android, Quest or PCVR
+  requirements   String?                // Avatar requirement - Please have X or better (Very Poor, Poor, Medium, Good)
+  description    String?                 
+  imageUrl       String?                
+  hostId         String          
+  scope          String?                // Discord or VRC, Open to Friends or Closed to Group 
   published      Boolean             @default(false)
-  capacity       Int
-  cohostCapacity Int
+  capacityCap    Int                    // How many people can join the event In Total - limits to cap on event size
+  capacityBase   Int                    // Base Capacity. if lower than cap then cohosts increase capacity. 
   cohosts        CohostsOnEvent[] // in case the event grows and we need more co hosts
   signups        EventSignUps[] // Tracking the people that signed up so we can determine group size, waitlist etc
   interested     InterestedSignUps[] // Seperate tracking of those interested as we apply different logic 
