@@ -4,18 +4,14 @@ import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
 const prisma = new PrismaClient();
 const PUBLISHING_CHANNEL_ID = "1423694714250465331";
 
-export async function refreshPublishedCalender(client: Client, guildId: string)
+export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean)
 {
     const now = new Date();
     const guildConfig = await prisma.guildConfig.findUnique({
 				where: { id: guildId }
 			});
     const channel = await client.channels.fetch(PUBLISHING_CHANNEL_ID) as TextChannel;
-    if(guildConfig?.eventCalenderMessageId)
-    {
-        const message = await channel.messages.fetch(guildConfig?.eventCalenderMessageId);
-        await message.delete();
-    }
+    
 
     const events = await prisma.event.findMany({
         where: {
@@ -30,16 +26,32 @@ export async function refreshPublishedCalender(client: Client, guildId: string)
     });
 
     const embed = buildCalenderEmbed(events, guildId);
-    const calenderMessage = await channel.send({ embeds: [embed]});
 
-    await prisma.guildConfig.upsert({
-        where: { id: guildId },
-        update: {
-            eventCalenderMessageId: calenderMessage.id
-        },
-        create: {
-            id: guildId,
-            eventCalenderMessageId: calenderMessage.id
-        }
-    });
+    let message;
+    if(guildConfig?.eventCalenderMessageId)
+    {
+        message = await channel.messages.fetch(guildConfig?.eventCalenderMessageId);
+    }
+
+    if(!deleteAndResend && message)
+    {
+        await message.edit({ embeds: [embed] });
+    }
+    else
+    {
+        await message?.delete();
+
+        const calenderMessage = await channel.send({ embeds: [embed]});
+
+        await prisma.guildConfig.upsert({
+            where: { id: guildId },
+            update: {
+                eventCalenderMessageId: calenderMessage.id
+            },
+            create: {
+                id: guildId,
+                eventCalenderMessageId: calenderMessage.id
+            }
+        });
+    }
 }

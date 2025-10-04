@@ -30,7 +30,7 @@ module.exports = {
     }
 
     await publishEvent(interaction.client, id);
-    await refreshPublishedCalender(interaction.client, interaction.guildId as string);
+    await refreshPublishedCalender(interaction.client, interaction.guildId as string, true);
     interaction.reply({ content: `Successfully published event: ${id}.`, flags: MessageFlags.Ephemeral })
   }, 
 }; 
