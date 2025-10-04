@@ -16,7 +16,7 @@ import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { Prisma } from "@prisma/client";
 
-const DRAFT_CHANNEL_ID = "937297789279416350";
+const DRAFT_CHANNEL_ID = "1218546731009179731";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -362,9 +362,9 @@ module.exports = {
     await prisma.event.create({
       data: {
         guildId: interaction.guildId!,
-        channelId: interaction.channelId,
-        messageId: sent.id,
-        threadId: thread.id,
+        draftChannelId: interaction.channelId,
+        draftThreadMessageId: sent.id,
+        draftThreadId: thread.id,
         hostId: interaction.user.id,
         title: eventData.title,
         type: eventData.type!,
@@ -569,21 +569,21 @@ module.exports = {
       if (modalI.isModalSubmit()) {
         if (modalI.customId === "modal_edit_title") {
           eventData.title = modalI.fields.getTextInputValue("new_title");
-          await prisma.event.update({ where: { messageId: sent.id }, data: { title: eventData.title } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { title: eventData.title } });
         }
         if (modalI.customId === "modal_edit_description") {
           eventData.description = modalI.fields.getTextInputValue("new_description");
-          await prisma.event.update({ where: { messageId: sent.id }, data: { description: eventData.description } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { description: eventData.description } });
         }
         if (modalI.customId === "modal_edit_game") {
           eventData.game = modalI.fields.getTextInputValue("new_game");
-          await prisma.event.update({ where: { messageId: sent.id }, data: { game: eventData.game } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { game: eventData.game } });
         }
         if (modalI.customId === "modal_edit_capacity") {
           eventData.capacityBase = parseInt(modalI.fields.getTextInputValue("new_capacity_base"), 10);
           eventData.capacityCap = parseInt(modalI.fields.getTextInputValue("new_capacity_cap"), 10);
           await prisma.event.update({
-            where: { messageId: sent.id },
+            where: { draftThreadMessageId: sent.id },
             data: { capacityBase: eventData.capacityBase, capacityCap: eventData.capacityCap },
           });
         }
@@ -592,13 +592,13 @@ module.exports = {
           const parsed = chrono.parseDate(modalI.fields.getTextInputValue("new_start"));
           if (parsed) {
             eventData.startTime = parsed;
-            await prisma.event.update({ where: { messageId: sent.id }, data: { startTime: eventData.startTime } });
+            await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { startTime: eventData.startTime } });
           }
         }
         if (modalI.customId === "modal_edit_length") {
           const val = modalI.fields.getTextInputValue("new_length");
           eventData.lengthMinutes = val ? parseInt(val, 10) : null;
-          await prisma.event.update({ where: { messageId: sent.id }, data: { lengthMinutes: eventData.lengthMinutes } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { lengthMinutes: eventData.lengthMinutes } });
         }
 
         await modalI.reply({ content: "✅ Updated!", flags: MessageFlags.Ephemeral });
@@ -609,23 +609,23 @@ module.exports = {
       if (modalI.isStringSelectMenu()) {
         if (modalI.customId === "select_type") {
           eventData.type = modalI.values[0];
-          await prisma.event.update({ where: { messageId: sent.id }, data: { type: eventData.type } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { type: eventData.type } });
         }
         if (modalI.customId === "select_subtype") {
           eventData.subtype = modalI.values[0];
-          await prisma.event.update({ where: { messageId: sent.id }, data: { subtype: eventData.subtype } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { subtype: eventData.subtype } });
         }
         if (modalI.customId === "select_scope") {
           eventData.scope = modalI.values[0];
-          await prisma.event.update({ where: { messageId: sent.id }, data: { scope: eventData.scope } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { scope: eventData.scope } });
         }
         if (modalI.customId === "select_platforms") {
           eventData.platforms = modalI.values;
-          await prisma.event.update({ where: { messageId: sent.id }, data: { platforms: JSON.stringify(eventData.platforms) } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { platforms: JSON.stringify(eventData.platforms) } });
         }
         if (modalI.customId === "select_requirements") {
           eventData.requirements = modalI.values[0];
-          await prisma.event.update({ where: { messageId: sent.id }, data: { requirements: eventData.requirements } });
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { requirements: eventData.requirements } });
         }
 
         await modalI.update({ content: "✅ Updated!", components: [] });

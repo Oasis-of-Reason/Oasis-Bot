@@ -36,12 +36,11 @@ model Event {
   guildId        String                 // Guild Discord Server ID
   draftChannelId  String                 // ChannelID 
   draftThreadId  String
-  draftChannelMessageId String              @unique   
   draftThreadMessageId  String              @unique   
-  publishedChannelId  String                 // ChannelID 
+  publishedChannelId  String?                 // ChannelID 
   publishedThreadId String?
-  publishedChannelMessageId String              @unique   
-  publishedThreadMessageId  String              @unique   
+  publishedChannelMessageId String?              @unique   
+  publishedThreadMessageId  String?              @unique   
   community      String?                // Can include other community hosting event name
   communityLink  String?                // Can include a link to VRC Group               
   title          String                 
