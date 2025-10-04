@@ -65,11 +65,11 @@ function formatDayHeader(date: Date) {
 }
 
 function eventLink(ev: any, guildId: string) {
-  if (ev.threadId) {
-    return `https://discord.com/channels/${guildId}/${ev.threadId}`;
+  if (ev.publishedThreadID) {
+    return `https://discord.com/channels/${guildId}/${ev.publishedThreadID}`;
   }
-  if (ev.channelId && ev.messageId) {
-    return `https://discord.com/channels/${guildId}/${ev.channelId}/${ev.messageId}`;
+  if (ev.publishedChannelId && ev.publishedChannelMessageId) {
+    return `https://discord.com/channels/${guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`;
   }
   return null;
 }
