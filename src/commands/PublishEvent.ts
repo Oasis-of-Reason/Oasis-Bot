@@ -4,10 +4,10 @@ import {
   MessageFlags,
   TextChannel,
   PermissionFlagsBits, 
-  EmbedBuilder,
 } from "discord.js";
 import { prisma } from "../utils/prisma";
-import { sendToGuildChannel } from "../utils/sendToChat";
+import { buildEventEmbedWithLists } from "../helpers/buildEventEmbedWithLists";
+import { getEventButtons } from "../helpers/getEventButtons";
 
 const PUBLISHING_CHANNEL_ID = "1423694714250465331";
 
@@ -45,14 +45,16 @@ module.exports = {
       console.error(`Failed to fetch channel ${PUBLISHING_CHANNEL_ID}:`, err);
     }
     const publishingEvent = await getEventById(id as number);
+    const channelEmbed = buildEventEmbedWithLists(publishingEvent, [], []);
+    const components = getEventButtons(id as number);
 
     // Fire messages and create event (order important for desired order of messages in channel)
-    const sentChannel = await channel?.send({ embeds: [buildEventEmbed(publishingEvent)] });
+    const sentChannel = await channel?.send({ embeds: [channelEmbed], components });
     const thread = await channel?.threads.create({
       name: `Event: ${publishingEvent}`,
       autoArchiveDuration: 1440, // 24h
     });
-    const sentThread = await thread?.send({ embeds: [buildEventEmbed(publishingEvent)] });
+    const sentThread = await thread?.send({ embeds: [channelEmbed], components });
 
     updatePublishedValues(id, PUBLISHING_CHANNEL_ID, thread?.id as string, sentChannel?.id as string, sentThread?.id as string);
   }, // end execute
@@ -77,30 +79,6 @@ export async function getEventById(eventId: number): Promise<(any & { _count: { 
     console.error(`Error fetching event ${eventId}:`, error);
     return null;
   }
-}
-
-export function buildEventEmbed(publishingEvent: any) {
-  const dt = new Date(publishingEvent.startTime);
-  const unix = Math.floor(dt.getTime() / 1000);
-
-  const embed = new EmbedBuilder()
-    .setTitle(publishingEvent.title)
-    .setColor(0x5865F2) // Discord blurple
-    .setDescription(publishingEvent.description ?? "No description provided.")
-    .addFields(
-      { name: "Host", value: `<@${publishingEvent.hostId}>`, inline: true },
-      { name: "Start Time", value: `<t:${unix}:F> (<t:${unix}:R>)`, inline: true },
-      { name: "Type", value: publishingEvent.type, inline: true },
-      { name: "Subtype", value: publishingEvent.subtype, inline: true },
-      { name: "Scope", value: publishingEvent.scope ?? "—", inline: true },
-      { name: "Capacity", value: `${publishingEvent.capacityBase}/${publishingEvent.capacityCap}`, inline: true }
-    );
-
-  if (publishingEvent.imageUrl) {
-    embed.setImage(publishingEvent.imageUrl);
-  }
-
-  return embed;
 }
 
 export async function updatePublishedValues(

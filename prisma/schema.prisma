@@ -71,7 +71,7 @@ model CohostsOnEvent {
   id      Int    @id @default(autoincrement())
   event   Event  @relation(fields: [eventId], references: [id])
   eventId Int
-  hostId  String
+  userId  String
 }
 
 model EventSignUps {

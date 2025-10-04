@@ -1,5 +1,17 @@
-import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, VoiceChannel } from 'discord.js';
+import { 
+	Events, 
+	Interaction,
+	ButtonInteraction, 
+	ModalBuilder, 
+	TextInputBuilder, 
+	TextInputStyle, 
+	ActionRowBuilder, 
+	ChannelType, 
+	StringSelectMenuBuilder, 
+	StringSelectMenuOptionBuilder, 
+	VoiceChannel } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
+import { refreshEventMessages } from "../helpers/refreshEventMessages";
 
 const prisma = new PrismaClient();
 
@@ -7,6 +19,12 @@ module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction: Interaction) {
 		if (interaction.isButton()) {
+			// Handle an event signup button
+			if (interaction.customId.startsWith('ev:')) {
+				await handleEventButtons(interaction); // <- your handler
+      			return;
+			}
+
 			// Handle edit voice channel button
 			if (interaction.customId.startsWith('edit_voice_')) {
 				const channelId = interaction.customId.split('_')[2];
@@ -286,3 +304,66 @@ module.exports = {
 		}
 	},
 };
+
+// map action -> prisma client + shape
+type ActionKind = "attend" | "interest" | "cohost";
+
+export async function handleEventButtons(interaction: Interaction) {
+  if (!interaction.isButton()) return;
+
+  const m = interaction.customId.match(/^ev:(\d+):(attend|interest|cohost):(on|off)$/);
+  if (!m) return;
+
+  const [, eventIdStr, action, op] = m;
+  const eventId = Number(eventIdStr);
+  const userId = interaction.user.id;
+
+  try {
+    switch (action as ActionKind) {
+      case "attend": {
+        if (op === "on") {
+          const existing = await prisma.eventSignUps.findFirst({ where: { eventId, userId } });
+          if (!existing) await prisma.eventSignUps.create({ data: { eventId, userId } });
+          await interaction.reply({ content: "✅ You’re signed up as an attendee.", ephemeral: true });
+        } else {
+          await prisma.eventSignUps.deleteMany({ where: { eventId, userId } });
+          await interaction.reply({ content: "❎ You’re no longer signed up.", ephemeral: true });
+        }
+        break;
+      }
+      case "interest": {
+        if (op === "on") {
+          const existing = await prisma.interestedSignUps.findFirst({ where: { eventId, userId } });
+          if (!existing) await prisma.interestedSignUps.create({ data: { eventId, userId } });
+          await interaction.reply({ content: "⭐ Marked as interested.", ephemeral: true });
+        } else {
+          await prisma.interestedSignUps.deleteMany({ where: { eventId, userId } });
+          await interaction.reply({ content: "⭐ Removed interest.", ephemeral: true });
+        }
+        break;
+      }
+      case "cohost": {
+        if (op === "on") {
+          const existing = await prisma.cohostsOnEvent.findFirst({ where: { eventId, userId: userId } });
+          if (!existing) await prisma.cohostsOnEvent.create({ data: { eventId, userId: userId } });
+          await interaction.reply({ content: "🧑‍🤝‍🧑 Added as a cohost.", ephemeral: true });
+        } else {
+          await prisma.cohostsOnEvent.deleteMany({ where: { eventId, userId: userId } });
+          await interaction.reply({ content: "🧑‍🤝‍🧑 Removed as a cohost.", ephemeral: true });
+        }
+        break;
+      }
+    }
+
+    // Refresh both published messages with updated lists
+    await refreshEventMessages(interaction.client, eventId);
+  } catch (err) {
+    console.error("Button handler error:", err);
+    const bi = interaction as ButtonInteraction;
+    if (bi.deferred || bi.replied) {
+      await bi.followUp({ content: "❌ Something went wrong. Please try again.", ephemeral: true });
+    } else {
+      await bi.reply({ content: "❌ Something went wrong. Please try again.", ephemeral: true });
+    }
+  }
+}
