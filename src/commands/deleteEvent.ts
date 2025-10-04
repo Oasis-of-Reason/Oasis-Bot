@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -15,14 +15,14 @@ module.exports = {
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction: any) {
 		if (!interaction.guild) {
-			await interaction.reply({ content: 'This command can only be used in a server!', ephemeral: true });
+			await interaction.reply({ content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });
 			return;
 		}
 
 		const id = interaction.options.getNumber('id');
 
 		if (!id) {
-			await interaction.reply({ content: '❌ You must specify an event id.', ephemeral: true });
+			await interaction.reply({ content: '❌ You must specify an event id.', flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -38,10 +38,10 @@ module.exports = {
 		} catch (error: any) {
 			if (error.code === 'P2025') {
 				// Prisma error when record not found
-				await interaction.reply({ content: `❌ No event found with the name **${id}**.`, ephemeral: true });
+				await interaction.reply({ content: `❌ No event found with the name **${id}**.`, flags: MessageFlags.Ephemeral });
 			} else {
 				console.error('Error deleting event:', error);
-				await interaction.reply({ content: '❌ An error occurred while deleting the event. Please try again.', ephemeral: true });
+				await interaction.reply({ content: '❌ An error occurred while deleting the event. Please try again.', flags: MessageFlags.Ephemeral });
 			}
 		}
 	},

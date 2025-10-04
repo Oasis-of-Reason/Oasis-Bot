@@ -9,7 +9,7 @@ import { prisma } from "../utils/prisma";
 import { buildEventEmbedWithLists } from "../helpers/buildEventEmbedWithLists";
 import { getEventButtons } from "../helpers/getEventButtons";
 
-const PUBLISHING_CHANNEL_ID = "1423694714250465331";
+const PUBLISHING_CHANNEL_ID = "1424002983515127818";
 
 module.exports = {
   data: new SlashCommandBuilder()

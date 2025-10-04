@@ -1,5 +1,5 @@
 // src/commands/calender.ts
-import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, CacheType } from 'discord.js';
+import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, CacheType, MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -74,7 +74,7 @@ module.exports = {
 
   async execute(interaction: ChatInputCommandInteraction<CacheType>) {
     if (!interaction.guildId) {
-      await interaction.reply({ content: 'This command can only be used in a server!', ephemeral: true });
+      await interaction.reply({ content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -148,9 +148,9 @@ module.exports = {
     } catch (error) {
       console.error('Error fetching events:', error);
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: '❌ An error occurred while fetching events. Please try again.', ephemeral: true });
+        await interaction.followUp({ content: '❌ An error occurred while fetching events. Please try again.', flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: '❌ An error occurred while fetching events. Please try again.', ephemeral: true });
+        await interaction.reply({ content: '❌ An error occurred while fetching events. Please try again.', flags: MessageFlags.Ephemeral });
       }
     }
   },

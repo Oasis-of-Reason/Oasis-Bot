@@ -9,7 +9,8 @@ import {
 	ChannelType, 
 	StringSelectMenuBuilder, 
 	StringSelectMenuOptionBuilder, 
-	VoiceChannel } from 'discord.js';
+	VoiceChannel,
+	MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 import { refreshEventMessages } from "../helpers/refreshEventMessages";
 
@@ -31,7 +32,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -41,7 +42,7 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -87,7 +88,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -97,7 +98,7 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can kick users.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can kick users.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -105,7 +106,7 @@ module.exports = {
 				const members = channel.members.filter(member => member.id !== interaction.user.id);
 				
 				if (members.size === 0) {
-					await interaction.reply({ content: 'No users to kick from the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'No users to kick from the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -128,7 +129,7 @@ module.exports = {
 
 				const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-				await interaction.reply({ content: 'Select a user to kick from the voice channel:', components: [row], ephemeral: true });
+				await interaction.reply({ content: 'Select a user to kick from the voice channel:', components: [row], flags: MessageFlags.Ephemeral });
 			}
 
 			// Handle ban user button
@@ -137,7 +138,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -147,7 +148,7 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can ban users.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can ban users.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -155,7 +156,7 @@ module.exports = {
 				const members = channel.members.filter(member => member.id !== interaction.user.id);
 				
 				if (members.size === 0) {
-					await interaction.reply({ content: 'No users to ban from the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'No users to ban from the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -178,7 +179,7 @@ module.exports = {
 
 				const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-				await interaction.reply({ content: 'Select a user to ban from the voice channel:', components: [row], ephemeral: true });
+				await interaction.reply({ content: 'Select a user to ban from the voice channel:', components: [row], flags: MessageFlags.Ephemeral });
 			}
 		}
 
@@ -191,16 +192,16 @@ module.exports = {
 				const member = interaction.guild?.members.cache.get(userId);
 
 				if (!channel || !member) {
-					await interaction.reply({ content: 'User or channel not found.', ephemeral: true });
+					await interaction.reply({ content: 'User or channel not found.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				try {
 					await member.voice.disconnect();
-					await interaction.reply({ content: `Successfully kicked ${member.user.username} from the voice channel.`, ephemeral: true });
+					await interaction.reply({ content: `Successfully kicked ${member.user.username} from the voice channel.`, flags: MessageFlags.Ephemeral });
 				} catch (error) {
 					console.error('Error kicking user:', error);
-					await interaction.reply({ content: 'Failed to kick user from voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Failed to kick user from voice channel.', flags: MessageFlags.Ephemeral });
 				}
 			}
 
@@ -212,7 +213,7 @@ module.exports = {
 				const member = interaction.guild?.members.cache.get(userId);
 
 				if (!channel || !member) {
-					await interaction.reply({ content: 'User or channel not found.', ephemeral: true });
+					await interaction.reply({ content: 'User or channel not found.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -225,10 +226,10 @@ module.exports = {
 						Connect: false
 					});
 
-					await interaction.reply({ content: `Successfully banned ${member.user.username} from the voice channel.`, ephemeral: true });
+					await interaction.reply({ content: `Successfully banned ${member.user.username} from the voice channel.`, flags: MessageFlags.Ephemeral });
 				} catch (error) {
 					console.error('Error banning user:', error);
-					await interaction.reply({ content: 'Failed to ban user from voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Failed to ban user from voice channel.', flags: MessageFlags.Ephemeral });
 				}
 			}
 		}
@@ -240,7 +241,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -250,7 +251,7 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -259,7 +260,7 @@ module.exports = {
 
 				// Validate inputs
 				if (userLimit < 0 || userLimit > 99) {
-					await interaction.reply({ content: 'User limit must be between 0 and 99.', ephemeral: true });
+					await interaction.reply({ content: 'User limit must be between 0 and 99.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -274,10 +275,10 @@ module.exports = {
 						userLimit: userLimit
 					});
 
-					await interaction.reply({ content: 'Voice channel updated successfully!', ephemeral: true });
+					await interaction.reply({ content: 'Voice channel updated successfully!', flags: MessageFlags.Ephemeral });
 				} catch (error) {
 					console.error('Error updating voice channel:', error);
-					await interaction.reply({ content: 'Failed to update voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Failed to update voice channel.', flags: MessageFlags.Ephemeral });
 				}
 			}
 		}
@@ -296,9 +297,9 @@ module.exports = {
 			} catch (error) {
 				console.error(error);
 				if (interaction.replied || interaction.deferred) {
-					await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+					await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
 				} else {
-					await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+					await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
 				}
 			}
 		}
@@ -324,10 +325,10 @@ export async function handleEventButtons(interaction: Interaction) {
         if (op === "on") {
           const existing = await prisma.eventSignUps.findFirst({ where: { eventId, userId } });
           if (!existing) await prisma.eventSignUps.create({ data: { eventId, userId } });
-          await interaction.reply({ content: "✅ You’re signed up as an attendee.", ephemeral: true });
+          await interaction.reply({ content: "✅ You’re signed up as an attendee.", flags: MessageFlags.Ephemeral });
         } else {
           await prisma.eventSignUps.deleteMany({ where: { eventId, userId } });
-          await interaction.reply({ content: "❎ You’re no longer signed up.", ephemeral: true });
+          await interaction.reply({ content: "❎ You’re no longer signed up.", flags: MessageFlags.Ephemeral });
         }
         break;
       }
@@ -335,10 +336,10 @@ export async function handleEventButtons(interaction: Interaction) {
         if (op === "on") {
           const existing = await prisma.interestedSignUps.findFirst({ where: { eventId, userId } });
           if (!existing) await prisma.interestedSignUps.create({ data: { eventId, userId } });
-          await interaction.reply({ content: "⭐ Marked as interested.", ephemeral: true });
+          await interaction.reply({ content: "⭐ Marked as interested.", flags: MessageFlags.Ephemeral });
         } else {
           await prisma.interestedSignUps.deleteMany({ where: { eventId, userId } });
-          await interaction.reply({ content: "⭐ Removed interest.", ephemeral: true });
+          await interaction.reply({ content: "⭐ Removed interest.", flags: MessageFlags.Ephemeral });
         }
         break;
       }
@@ -346,10 +347,10 @@ export async function handleEventButtons(interaction: Interaction) {
         if (op === "on") {
           const existing = await prisma.cohostsOnEvent.findFirst({ where: { eventId, userId: userId } });
           if (!existing) await prisma.cohostsOnEvent.create({ data: { eventId, userId: userId } });
-          await interaction.reply({ content: "🧑‍🤝‍🧑 Added as a cohost.", ephemeral: true });
+          await interaction.reply({ content: "🧑‍🤝‍🧑 Added as a cohost.", flags: MessageFlags.Ephemeral });
         } else {
           await prisma.cohostsOnEvent.deleteMany({ where: { eventId, userId: userId } });
-          await interaction.reply({ content: "🧑‍🤝‍🧑 Removed as a cohost.", ephemeral: true });
+          await interaction.reply({ content: "🧑‍🤝‍🧑 Removed as a cohost.", flags: MessageFlags.Ephemeral });
         }
         break;
       }
@@ -361,9 +362,9 @@ export async function handleEventButtons(interaction: Interaction) {
     console.error("Button handler error:", err);
     const bi = interaction as ButtonInteraction;
     if (bi.deferred || bi.replied) {
-      await bi.followUp({ content: "❌ Something went wrong. Please try again.", ephemeral: true });
+      await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
     } else {
-      await bi.reply({ content: "❌ Something went wrong. Please try again.", ephemeral: true });
+      await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
     }
   }
 }

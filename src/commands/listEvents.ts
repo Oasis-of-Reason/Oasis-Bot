@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -15,14 +15,14 @@ module.exports = {
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction: any) {
 		if (!interaction.guild) {
-			await interaction.reply({ content: 'This command can only be used in a server!', ephemeral: true });
+			await interaction.reply({ content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });
 			return;
 		}
 
 		const count = interaction.options.getNumber('count');
 
 		if (!count || count <= 0) {
-			await interaction.reply({ content: '❌ You must provide a valid number greater than 0.', ephemeral: true });
+			await interaction.reply({ content: '❌ You must provide a valid number greater than 0.', flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -33,7 +33,7 @@ module.exports = {
 			});
 
 			if (events.length === 0) {
-				await interaction.reply({ content: 'ℹ️ No events found.', ephemeral: true });
+				await interaction.reply({ content: 'ℹ️ No events found.', flags: MessageFlags.Ephemeral });
 				return;
 			}
 
@@ -53,7 +53,7 @@ module.exports = {
 			});
 		} catch (error) {
 			console.error('Error listing events:', error);
-			await interaction.reply({ content: '❌ An error occurred while fetching events. Please try again.', ephemeral: true });
+			await interaction.reply({ content: '❌ An error occurred while fetching events. Please try again.', flags: MessageFlags.Ephemeral });
 		}
 	},
 };
