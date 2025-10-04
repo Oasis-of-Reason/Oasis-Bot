@@ -1,4 +1,8 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { 
+  ActionRowBuilder, 
+  ButtonBuilder, 
+  ButtonStyle,
+ } from "discord.js";
 
 export function getEventButtons(eventId: number) {
   const rowAttend = new ActionRowBuilder<ButtonBuilder>().addComponents(

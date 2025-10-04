@@ -16,7 +16,7 @@ import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { Prisma } from "@prisma/client";
 
-const DRAFT_CHANNEL_ID = "937297789279416350";
+const DRAFT_CHANNEL_ID = "1218546731009179731";
 
 module.exports = {
   data: new SlashCommandBuilder()
