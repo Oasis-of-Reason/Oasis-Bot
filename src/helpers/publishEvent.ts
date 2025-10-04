@@ -4,7 +4,7 @@ import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
 import { getEventById } from "./generalHelpers";
 
-const PUBLISHING_CHANNEL_ID = "1424002983515127818";
+const PUBLISHING_CHANNEL_ID = "1423694714250465331";
 
 export async function publishEvent(client: Client, eventId: number) {
   let channel;

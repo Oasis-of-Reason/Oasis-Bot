@@ -5,6 +5,7 @@ import {
   PermissionFlagsBits, 
 } from "discord.js";
 import { publishEvent } from "../helpers/publishEvent";
+import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -28,10 +29,8 @@ module.exports = {
       return;
     }
 
-    publishEvent(interaction.client, id);
+    await publishEvent(interaction.client, id);
+    await refreshPublishedCalender(interaction.client, interaction.guildId as string);
+    interaction.reply({ content: `Successfully published event: ${id}.`, flags: MessageFlags.Ephemeral })
   }, 
 }; 
-
-
-
-

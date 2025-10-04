@@ -1,17 +1,11 @@
-// src/commands/calender.ts
-import { SlashCommandBuilder, EmbedBuilder, ChatInputCommandInteraction, CacheType, MessageFlags } from 'discord.js';
+import { 
+  SlashCommandBuilder, 
+  ChatInputCommandInteraction, 
+  CacheType, 
+  MessageFlags } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
-import { buildCalenderEmbed } from '../helpers/refreshCalender';
-
+import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
 const prisma = new PrismaClient();
-
-
-
-/**
- * Event line format:
- * "<@hostId> <t:unix:t> [**Title**](link) <t:unix:R> • 5/30 _(TYPE · SUBTYPE · SCOPE)_"
- */
-
 
 module.exports = {
   data: new SlashCommandBuilder()
