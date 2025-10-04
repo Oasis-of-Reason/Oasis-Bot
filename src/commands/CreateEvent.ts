@@ -113,7 +113,7 @@ module.exports = {
       .setPlaceholder("Who can join?")
       .addOptions([
         { label: "Group Only", value: "group" },
-        { label: "Friends Can Join", value: "friends" },
+        { label: "Friends Can Join", value: "Friends" },
       ]);
 
     await modalSubmit.editReply({
@@ -513,8 +513,8 @@ module.exports = {
                 .setCustomId("select_scope")
                 .setPlaceholder("Choose scope")
                 .addOptions(
-                  { label: "Group Only", value: "group" },
-                  { label: "Friends Can Join", value: "friends" }
+                  { label: "Group Only", value: "Group" },
+                  { label: "Friends Can Join", value: "Friends" }
                 )
             ),
           ],

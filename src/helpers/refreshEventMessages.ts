@@ -16,10 +16,10 @@ export async function refreshEventMessages(client: Client, eventId: number) {
   if (!ev) return;
 
   // Build mention arrays
-  const attendees = ev.signups.map(s => `<@${s.userId}>`);
-  const cohosts = ev.cohosts.map(c => `<@${c.userId}>`);
+  const attendees = ev.signups.map(s => `<${s.userId}>`);
+  const cohosts = ev.cohosts.map(c => `<${c.userId}>`);
 
-  const embed = buildEventEmbedWithLists(ev, attendees, cohosts);
+  const embed = await buildEventEmbedWithLists(client, ev, attendees, ev.cohosts);
   const components = getEventButtons(eventId);
 
   // Edit the published channel message

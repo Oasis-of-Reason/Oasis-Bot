@@ -44,8 +44,9 @@ module.exports = {
     } catch (err) {
       console.error(`Failed to fetch channel ${PUBLISHING_CHANNEL_ID}:`, err);
     }
+
     const publishingEvent = await getEventById(id as number);
-    const channelEmbed = buildEventEmbedWithLists(publishingEvent, [], []);
+    const channelEmbed = await buildEventEmbedWithLists(interaction.client, publishingEvent, [], []);
     const components = getEventButtons(id as number);
 
     // Fire messages and create event (order important for desired order of messages in channel)
