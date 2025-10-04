@@ -7,6 +7,7 @@ import {
   EmbedBuilder,
 } from "discord.js";
 import { prisma } from "../utils/prisma";
+import { sendToGuildChannel } from "../utils/sendToChat";
 
 const PUBLISHING_CHANNEL_ID = "1423694714250465331";
 
@@ -52,6 +53,8 @@ module.exports = {
       autoArchiveDuration: 1440, // 24h
     });
     const sentThread = await thread?.send({ embeds: [buildEventEmbed(publishingEvent)] });
+
+    updatePublishedValues(id, PUBLISHING_CHANNEL_ID, thread?.id as string, sentChannel?.id as string, sentThread?.id as string);
   }, // end execute
 }; // end module.exports
 
@@ -98,4 +101,31 @@ export function buildEventEmbed(publishingEvent: any) {
   }
 
   return embed;
+}
+
+export async function updatePublishedValues(
+  eventId: number,
+  publishedChannelId: string,
+  publishedThreadId: string,
+  publishedChannelMessageId: string,
+  publishedThreadMessageId: string
+) {
+  try {
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        published: true,
+        publishedChannelId,
+        publishedThreadId,
+        publishedChannelMessageId,
+        publishedThreadMessageId,
+      },
+    });
+
+    console.log(`✅ Updated event #${eventId} as published`);
+    return updatedEvent;
+  } catch (error) {
+    console.error(`❌ Failed to update published values for event #${eventId}:`, error);
+    throw error;
+  }
 }
