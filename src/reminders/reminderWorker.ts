@@ -1,6 +1,11 @@
-// src/reminders/user-pref-and-start-reminders.ts
-import { Client } from 'discord.js';
-import { PrismaClient, NotificationType } from '@prisma/client';
+import { 
+  Client, 
+  EmbedBuilder 
+} from 'discord.js';
+import { 
+  PrismaClient, 
+  NotificationType 
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -62,7 +67,7 @@ async function runOnce(client: Client) {
 
   for (const ev of events) {
     const startMs = new Date(ev.startTime).getTime();
-    const deltaMin = Math.floor((startMs - nowMs) / 60000);
+    const deltaMinutes = (startMs - nowMs) / 60000.0;
     const unix = Math.floor(startMs / 1000);
 
     for (const s of ev.signups) {
@@ -76,10 +81,10 @@ async function runOnce(client: Client) {
       // --- A) Pre-reminder (user-specific offset) ---
       if (prefs.reminderNotifications && prefs.reminderMinutesBefore > 0) {
         const pref = prefs.reminderMinutesBefore;
-        if (deltaMin >= pref && deltaMin <= pref + WINDOW_MINUTES) {
+        if (deltaMinutes >= pref && deltaMinutes <= pref + WINDOW_MINUTES) {
           const key = `${uid}:${ev.id}:REMINDER`;
           if (!sentKey.has(key)) {
-            const ok = await sendReminderDM(client, uid, ev, unix, pref, 'REMINDER');
+            const ok = await sendReminderDM(client, uid, ev, unix, 'REMINDER');
             if (ok) {
               sentKey.add(key);
             }
@@ -90,10 +95,10 @@ async function runOnce(client: Client) {
 
       // --- B) Event is starting now (global) ---
       if (prefs.eventStartingNotifications) {
-        if (deltaMin >= 0 && deltaMin <= WINDOW_MINUTES) {
+        if (deltaMinutes >= 0 && deltaMinutes <= WINDOW_MINUTES) {
           const key = `${uid}:${ev.id}:START`;
           if (!sentKey.has(key)) {
-            const ok = await sendReminderDM(client, uid, ev, unix, 0, 'START');
+            const ok = await sendReminderDM(client, uid, ev, unix, 'START');
             if (ok) {
               sentKey.add(key);
             }
@@ -110,32 +115,40 @@ async function sendReminderDM(
   userId: string,
   ev: { id: number; title: string; startTime: Date; guildId: string; publishedThreadId: string | null; publishedChannelId: string | null; publishedChannelMessageId: string | null; },
   unix: number,
-  prefMinutes: number,
   type: 'REMINDER' | 'START',
 ): Promise<boolean> {
   try {
     const user = await client.users.fetch(userId);
-
+    const isReminder = type === 'REMINDER';
     const whenFull = `<t:${unix}:F>`;
     const whenRel = `<t:${unix}:R>`;
     const joinLink =
       ev.publishedThreadId
-        ? `Join thread: https://discord.com/channels/${ev.guildId}/${ev.publishedThreadId}`
+        ? `https://discord.com/channels/${ev.guildId}/${ev.publishedThreadId}`
         : (ev.publishedChannelId && ev.publishedChannelMessageId)
-          ? `Message: https://discord.com/channels/${ev.guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`
+          ? `https://discord.com/channels/${ev.guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`
           : '';
 
+    const embed = new EmbedBuilder()
+        .setTitle(isReminder ? '⏰ Event Reminder' : `🚀 Event Starting!`)
+        .setColor(isReminder ? 0xFF9D00 : 0x00FF13);
     const header =
-      type === 'START'
-        ? `🚀 **${ev.title}** is starting now!`
-        : `⏰ Reminder: **${ev.title}** starts in ${prefMinutes} minute${prefMinutes === 1 ? '' : 's'}`;
+      isReminder
+        ? `**${ev.title}** is starting soon!`
+        : `**${ev.title}** is starting now!`;
 
     const content =
-      `${header}\n` +
-      `Start time: ${whenFull} (${whenRel})\n` +
+      `${header}\n\n` +
+      `Start time: ${whenFull} (${whenRel})\n\n` +
       (joinLink ? `${joinLink}\n` : '');
 
-    await user.send({ content, allowedMentions: { parse: [] } });
+    embed.addFields({
+      name: "",
+      value: content,
+      inline: true,
+    });
+
+    await user.send({ embeds: [embed], allowedMentions: { parse: [] } });
 
     // record success
     await prisma.userEventReminder.create({
