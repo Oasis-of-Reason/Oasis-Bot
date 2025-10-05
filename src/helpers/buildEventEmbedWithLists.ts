@@ -25,7 +25,8 @@ export async function buildEventEmbedWithLists(
   // Resolve attendees to nicknames (or usernames if no nickname)
   const attendeeNames = await Promise.all(
     attendees.map(async id => {
-      const member = await guild.members.cache.get(toSnowflake(id)) ?? await guild.members.fetch(toSnowflake(id));
+      const snowflake = toSnowflake(id);
+      const member = await guild.members.cache.get(snowflake) ?? await guild.members.fetch(snowflake);
       const rawName = member?.nickname || member?.user.username || "(No Name)";
       return rawName.charAt(0).toUpperCase() + rawName.slice(1);
     })
