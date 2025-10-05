@@ -39,19 +39,25 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
     }
     else
     {
-        await message?.delete();
+        if(message)
+        {
+            await message?.delete();
+        }
 
         const calenderMessage = await channel.send({ embeds: [embed]});
 
-        await prisma.guildConfig.upsert({
-            where: { id: guildId },
-            update: {
-                eventCalenderMessageId: calenderMessage.id
-            },
-            create: {
-                id: guildId,
-                eventCalenderMessageId: calenderMessage.id
-            }
-        });
+        if(calenderMessage)
+        {
+            await prisma.guildConfig.upsert({
+                where: { id: guildId },
+                update: {
+                    eventCalenderMessageId: calenderMessage.id
+                },
+                create: {
+                    id: guildId,
+                    eventCalenderMessageId: calenderMessage.id
+                }
+            });
+        }
     }
 }

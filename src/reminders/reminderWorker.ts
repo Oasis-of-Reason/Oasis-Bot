@@ -10,7 +10,7 @@ import {
 const prisma = new PrismaClient();
 
 const LOOKAHEAD_HOURS = 24;
-const WINDOW_MINUTES = 1;     // tolerance for scheduler drift
+const WINDOW_MINUTES = 2;     // tolerance for scheduler drift
 const PACE_MS = 350;          // gentle pacing between DMs
 
 export function startReminderWorker(client: Client) {
@@ -81,7 +81,7 @@ async function runOnce(client: Client) {
       // --- A) Pre-reminder (user-specific offset) ---
       if (prefs.reminderNotifications && prefs.reminderMinutesBefore > 0) {
         const pref = prefs.reminderMinutesBefore;
-        if (deltaMinutes >= pref && deltaMinutes <= pref + WINDOW_MINUTES) {
+        if (deltaMinutes >= pref - WINDOW_MINUTES && deltaMinutes <= pref) {
           const key = `${uid}:${ev.id}:REMINDER`;
           if (!sentKey.has(key)) {
             const ok = await sendReminderDM(client, uid, ev, unix, 'REMINDER');
@@ -95,7 +95,7 @@ async function runOnce(client: Client) {
 
       // --- B) Event is starting now (global) ---
       if (prefs.eventStartingNotifications) {
-        if (deltaMinutes >= 0 && deltaMinutes <= WINDOW_MINUTES) {
+        if (deltaMinutes >= -WINDOW_MINUTES && deltaMinutes <= 0 ) {
           const key = `${uid}:${ev.id}:START`;
           if (!sentKey.has(key)) {
             const ok = await sendReminderDM(client, uid, ev, unix, 'START');
