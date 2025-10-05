@@ -26,7 +26,7 @@ const DRAFT_CHANNEL_ID = "1218546731009179731";
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("createevent")
+    .setName("create-event")
     .setDescription("Start the event creation wizard"),
 
   async execute(interaction: ChatInputCommandInteraction) {

@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('listevents')
+		.setName('list-events')
 		.setDescription('List the latest events')
 		.addNumberOption(option =>
 			option

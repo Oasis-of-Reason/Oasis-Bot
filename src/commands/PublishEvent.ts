@@ -14,7 +14,7 @@ import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("publishevent")
+    .setName("publish-event")
     .setDescription("Publish an existing draft event.")
     .addNumberOption(option =>
           option

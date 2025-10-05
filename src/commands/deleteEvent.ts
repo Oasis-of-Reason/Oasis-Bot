@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('deleteevent')
+		.setName('delete-event')
 		.setDescription('Delete an event')
 		.addNumberOption(option =>
 			option
@@ -50,7 +50,7 @@ module.exports = {
 				});
 				return;
 			}
-			
+
 			const deletedEvent = await prisma.event.delete({
 				where: { id }
 			});

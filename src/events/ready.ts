@@ -1,6 +1,7 @@
 import { Events } from 'discord.js';
 import { deployCommands } from '../utils/deploy-commands';
 import { config } from '../config';
+import { startReminderWorker } from '../reminders/reminderWorker';
 
 module.exports = {
 	name: Events.ClientReady,
@@ -17,6 +18,11 @@ module.exports = {
 			await deployCommands({ guildId: config.isDev });
 			console.log(`Deployed commands to test guild: ${config.isDev}`);
 		}
+
+		client.once('ready', () => {
+			startReminderWorker(client);
+			console.log('Reminder worker started.');
+		});
 
 		// Uncomment the line below to fetch and log global commands
 		//const commands = await client.application.commands.fetch();
