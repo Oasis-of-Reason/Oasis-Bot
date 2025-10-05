@@ -10,8 +10,14 @@ import {
   ComponentType,
   MessageFlags,
   TextChannel,
-  ButtonBuilder, ButtonStyle
+  ButtonBuilder, 
+  ButtonStyle,
+  GuildMember
 } from "discord.js";
+import { 
+  userHasAllowedRole,
+  getStandardRolesHost
+} from "../helpers/securityHelpers";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { Prisma } from "@prisma/client";
@@ -27,6 +33,14 @@ module.exports = {
     if (interaction.channelId !== DRAFT_CHANNEL_ID) {
       await interaction.reply({
         content: "❌ This command can only be used in the #draft-event channel.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost())) {
+      await interaction.reply({
+        content: "❌ You don't have permission for this command.",
         flags: MessageFlags.Ephemeral,
       });
       return;

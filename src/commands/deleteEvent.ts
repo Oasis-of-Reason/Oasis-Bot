@@ -1,4 +1,13 @@
-import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { 
+	SlashCommandBuilder, 
+	PermissionFlagsBits, 
+	MessageFlags,
+	GuildMember 
+} from 'discord.js';
+import { 
+  userHasAllowedRoleOrId,
+  getStandardRolesMod
+} from "../helpers/securityHelpers";
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -27,6 +36,21 @@ module.exports = {
 		}
 
 		try {
+			const event = await prisma.event.findFirst({
+				where: {
+					id: id
+				}
+			});
+			
+			if (!userHasAllowedRoleOrId(interaction.member as GuildMember, getStandardRolesMod(), [event?.hostId as string])) {
+				// Bail if we arent a mod or the host
+				await interaction.reply({
+				content: "❌ You don't have permission for this command.",
+				flags: MessageFlags.Ephemeral,
+				});
+				return;
+			}
+			
 			const deletedEvent = await prisma.event.delete({
 				where: { id }
 			});
