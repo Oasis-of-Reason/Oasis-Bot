@@ -81,6 +81,7 @@ function formatEventLine(
 ) {
   const dt = new Date(ev.startTime);
   const unix = Math.floor(dt.getTime() / 1000);
+  const draftText = ev.published ? "" : " • (Draft)";
 
   const bits: string[] = [];
   if (ev.type) bits.push(ev.type.toUpperCase());
@@ -94,7 +95,7 @@ function formatEventLine(
   const capBadge = ` ${signupCount}/${capTotal > 0 ? capTotal : '∞'}`;
 
   // host mention brings in avatar+username hover card
-  return `> <t:${unix}:t> ${title} <t:${unix}:R> •${capBadge}`;
+  return `> <t:${unix}:t> ${title} <t:${unix}:R> • ${capBadge}${draftText}`;
 }
 
 function chunkString(str: string, size = 1024): string[] {
