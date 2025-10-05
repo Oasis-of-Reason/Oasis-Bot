@@ -19,10 +19,8 @@ module.exports = {
 			console.log(`Deployed commands to test guild: ${config.isDev}`);
 		}
 
-		client.once('ready', () => {
-			startReminderWorker(client);
-			console.log('Reminder worker started.');
-		});
+		startReminderWorker(client);
+		console.log('Reminder worker started.');
 
 		// Uncomment the line below to fetch and log global commands
 		//const commands = await client.application.commands.fetch();

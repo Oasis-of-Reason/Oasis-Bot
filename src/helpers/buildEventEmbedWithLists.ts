@@ -1,4 +1,9 @@
-import { EmbedBuilder, Client, User } from "discord.js";
+import { 
+  EmbedBuilder, 
+  Client, 
+  User, 
+  GuildMember 
+} from "discord.js";
 
 /** Build the event embed including attendees & cohosts lists. */
 export async function buildEventEmbedWithLists(
@@ -20,8 +25,8 @@ export async function buildEventEmbedWithLists(
   // Resolve attendees to nicknames (or usernames if no nickname)
   const attendeeNames = await Promise.all(
     attendees.map(async id => {
-      const member = guild.members.cache.get(id) ?? await guild.members.fetch(id);
-      const rawName = member?.nickname || member?.user.username || id;
+      const member = await guild.members.cache.get(toSnowflake(id)) ?? await guild.members.fetch(toSnowflake(id));
+      const rawName = member?.nickname || member?.user.username || "(No Name)";
       return rawName.charAt(0).toUpperCase() + rawName.slice(1);
     })
   );
@@ -84,4 +89,13 @@ export async function buildEventEmbedWithLists(
   }
 
   return embed;
+}
+
+/** Accepts a User, GuildMember, or string (ID/mention) and returns a clean snowflake string. */
+function toSnowflake(target: string | User | GuildMember): string {
+  if (typeof target !== "string") return target.id;
+  // Strip <@...> or <@!...> and keep only digits
+  const m = target.match(/\d{17,20}/);
+  if (!m) throw new Error(`Invalid user reference: "${target}"`);
+  return m[0];
 }
