@@ -19,7 +19,7 @@ export async function publishEvent(client: Client, eventId: number) {
       console.error(`Failed to fetch channel ${PUBLISHING_CHANNEL_ID}:`, err);
     }
     const publishingEvent = await getEventById(eventId as number);
-    const channelEmbed = await buildEventEmbedWithLists(publishingEvent, [], []);
+    const channelEmbed = await buildEventEmbedWithLists(client, publishingEvent, [], []);
     const components = getEventButtons(eventId as number);
 
     // Fire messages and create event (order important for desired order of messages in channel)

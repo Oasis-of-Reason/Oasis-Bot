@@ -2,8 +2,13 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   MessageFlags,
-  PermissionFlagsBits, 
+  PermissionFlagsBits,
+  GuildMember, 
 } from "discord.js";
+import { 
+  userHasAllowedRole,
+  getStandardRolesOrganizer
+ } from "../helpers/securityHelpers";
 import { publishEvent } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 
@@ -19,6 +24,14 @@ module.exports = {
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction: ChatInputCommandInteraction) {
+
+    if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesOrganizer())) {
+      await interaction.reply({
+        content: "❌ You don't have permission for this command.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
 		const id = interaction.options.getNumber('id');
     if (!id) {

@@ -2,7 +2,13 @@ import {
   SlashCommandBuilder, 
   ChatInputCommandInteraction, 
   CacheType, 
-  MessageFlags } from 'discord.js';
+  MessageFlags,
+  GuildMember,
+} from 'discord.js';
+import { 
+  userHasAllowedRole,
+  getStandardRolesHost
+} from "../helpers/securityHelpers";
 import { PrismaClient } from '@prisma/client';
 import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
 const prisma = new PrismaClient();
@@ -19,19 +25,35 @@ module.exports = {
       return;
     }
 
+    let canSeeDrafts = userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost());
+
     const now = new Date();
     const guildId = interaction.guildId;
-    const events = await prisma.event.findMany({
-      where: {
-        guildId: guildId,
-        startTime: { gte: now }
-      },
-      orderBy: { startTime: 'asc' },
-      include: {
-        _count: { select: { signups: true } },
-      },
-    });
-  
+    let events;
+    if(canSeeDrafts) {
+      events = await prisma.event.findMany({
+        where: {
+          guildId: guildId,
+          startTime: { gte: now }
+        },
+        orderBy: { startTime: 'asc' },
+        include: {
+          _count: { select: { signups: true } },
+        },
+      });
+    } else {
+      events = await prisma.event.findMany({
+        where: {
+          guildId: guildId,
+          startTime: { gte: now },
+          published: true
+        },
+        orderBy: { startTime: 'asc' },
+        include: {
+          _count: { select: { signups: true } },
+        },
+      });
+    }
     if (events.length === 0) {
       await interaction.reply('ℹ️ No upcoming events.');
       return;
