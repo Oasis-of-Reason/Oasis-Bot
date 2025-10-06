@@ -89,6 +89,7 @@ client.login(config.DISCORD_TOKEN)
       status: 'online'
     });
     console.log(`Logged in as ${client.user?.tag}!`);
+    
   })
   .catch((error: any) => {
     console.error('Error logging in:', error);
