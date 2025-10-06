@@ -3,6 +3,9 @@ CREATE TABLE `GuildConfig` (
     `id` VARCHAR(191) NOT NULL,
     `voiceCreatorRoomId` VARCHAR(191) NULL,
     `voiceCreatorCategory` VARCHAR(191) NULL,
+    `eventCalenderMessageId` VARCHAR(191) NULL,
+    `draftChannelId` VARCHAR(191) NULL,
+    `publishingChannelId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -17,6 +20,29 @@ CREATE TABLE `temporary_voice_channels` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `temporary_voice_channels_channelId_key`(`channelId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `User` (
+    `id` VARCHAR(191) NOT NULL,
+    `reminderMinutesBefore` INTEGER NOT NULL DEFAULT 30,
+    `reminderNotifications` BOOLEAN NOT NULL DEFAULT true,
+    `eventStartingNotifications` BOOLEAN NOT NULL DEFAULT true,
+
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `UserEventReminder` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `userId` VARCHAR(191) NOT NULL,
+    `eventId` INTEGER NOT NULL,
+    `notificationType` ENUM('REMINDER', 'START') NOT NULL,
+    `sentAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `UserEventReminder_eventId_notificationType_idx`(`eventId`, `notificationType`),
+    UNIQUE INDEX `UserEventReminder_userId_eventId_notificationType_key`(`userId`, `eventId`, `notificationType`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -85,6 +111,12 @@ CREATE TABLE `InterestedSignUps` (
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `UserEventReminder` ADD CONSTRAINT `UserEventReminder_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `UserEventReminder` ADD CONSTRAINT `UserEventReminder_eventId_fkey` FOREIGN KEY (`eventId`) REFERENCES `Event`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `CohostsOnEvent` ADD CONSTRAINT `CohostsOnEvent_eventId_fkey` FOREIGN KEY (`eventId`) REFERENCES `Event`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;

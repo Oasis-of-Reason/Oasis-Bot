@@ -62,8 +62,8 @@ module.exports = {
       .setMaxLength(90) // Error on thread name over 100, -10 for extra chars we add to that thread title.
       .setRequired(true);
 
-    const gameInput = new TextInputBuilder()
-      .setCustomId("game")
+    const activityInput = new TextInputBuilder()
+      .setCustomId("activity")
       .setLabel("What game, world or movie is this for")
       .setStyle(TextInputStyle.Short)
       .setMaxLength(50)
@@ -90,7 +90,7 @@ module.exports = {
 
     eventModal.addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
-      new ActionRowBuilder<TextInputBuilder>().addComponents(gameInput),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(activityInput),
       new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
       new ActionRowBuilder<TextInputBuilder>().addComponents(baseInput),
       new ActionRowBuilder<TextInputBuilder>().addComponents(capInput),
@@ -106,7 +106,7 @@ module.exports = {
     await modalSubmit.deferReply({ flags: MessageFlags.Ephemeral });
 
     const title = modalSubmit.fields.getTextInputValue("title"); 
-    const game = modalSubmit.fields.getTextInputValue("game");
+    const activity = modalSubmit.fields.getTextInputValue("activity");
     const description = modalSubmit.fields.getTextInputValue("description");
     const capacityBase = parseInt(modalSubmit.fields.getTextInputValue("capacity_base"), 10);
     const capacityCap = parseInt(modalSubmit.fields.getTextInputValue("capacity_cap"), 10);
@@ -317,7 +317,7 @@ module.exports = {
       description,
       type,
       subtype,
-      game,
+      activity,
       scope,
       platforms,
       requirements,
@@ -348,7 +348,7 @@ module.exports = {
         },
         {
           name: "Segment 2: Event Types",
-          value: `**Type:** ${eventData.type}\n**Subtype:** ${eventData.subtype}\n**Game:** ${eventData.game || "None"}\n**Scope:** ${eventData.scope}`,
+          value: `**Type:** ${eventData.type}\n**Subtype:** ${eventData.subtype}\n**activity:** ${eventData.activity || "None"}\n**Scope:** ${eventData.scope}`,
         },
         {
           name: "Segment 3: Event Technical Reqs",
@@ -372,7 +372,7 @@ module.exports = {
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder().setCustomId("edit_type").setLabel("🎭 Edit Type").setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId("edit_subtype").setLabel("🎭 Edit Subtype").setStyle(ButtonStyle.Secondary),
-        new ButtonBuilder().setCustomId("edit_game").setLabel("🎮 Edit Game").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId("edit_activity").setLabel("🎮 Edit Activity").setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId("edit_scope").setLabel("🌍 Edit Scope").setStyle(ButtonStyle.Secondary)
       ),
       new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -408,7 +408,7 @@ module.exports = {
         startTime: eventData.startTime,
         lengthMinutes: eventData.lengthMinutes ?? undefined,
         published: false,
-        ...(eventData.game ? { game: eventData.game } : {}),
+        ...(eventData.activity ? { activity: eventData.activity } : {}),
         ...(eventData.type === "VRC" && eventData.platforms.length ? { platforms: JSON.stringify(eventData.platforms) } : {}),
         ...(eventData.type === "VRC" && eventData.requirements ? { requirements: eventData.requirements } : {}),
         ...(eventData.description ? { description: eventData.description } : {}),
@@ -457,13 +457,13 @@ module.exports = {
           );
         return i.showModal(modal);
       }
-      if (i.customId === "edit_game") {
+      if (i.customId === "edit_activity") {
         const modal = new ModalBuilder()
-          .setCustomId("modal_edit_game")
-          .setTitle("Edit Game")
+          .setCustomId("modal_edit_activity")
+          .setTitle("Edit activity")
           .addComponents(
             new ActionRowBuilder<TextInputBuilder>().addComponents(
-              new TextInputBuilder().setCustomId("new_game").setLabel("Game").setStyle(TextInputStyle.Short)
+              new TextInputBuilder().setCustomId("new_activity").setLabel("Activity").setStyle(TextInputStyle.Short)
             )
           );
         return i.showModal(modal);
@@ -631,9 +631,9 @@ module.exports = {
           eventData.description = modalI.fields.getTextInputValue("new_description");
           await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { description: eventData.description } });
         }
-        if (modalI.customId === "modal_edit_game") {
-          eventData.game = modalI.fields.getTextInputValue("new_game");
-          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { game: eventData.game } });
+        if (modalI.customId === "modal_edit_activity") {
+          eventData.activity = modalI.fields.getTextInputValue("new_activity");
+          await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { activity: eventData.activity } });
         }
         if (modalI.customId === "modal_edit_capacity") {
           eventData.capacityBase = parseInt(modalI.fields.getTextInputValue("new_capacity_base"), 10);

@@ -78,7 +78,7 @@ model Event {
   title                     String
   type                      String // Whether it is Discord or VRC
   subtype                   String // Where its Gaming, Social or Cinema
-  game                      String? // Free field for the game name
+  activity                  String? // Free field for the activity name
   platforms                 String? // Multi Select when event is VRC only Android, Quest or PCVR
   requirements              String? // Avatar requirement - Please have X or better (Very Poor, Poor, Medium, Good)
   description               String?             @db.Text
