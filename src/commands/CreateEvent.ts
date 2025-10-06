@@ -59,18 +59,21 @@ module.exports = {
       .setCustomId("title")
       .setLabel("Event Title")
       .setStyle(TextInputStyle.Short)
+      .setMaxLength(90) // Error on thread name over 100, -10 for extra chars we add to that thread title.
       .setRequired(true);
 
     const gameInput = new TextInputBuilder()
       .setCustomId("game")
       .setLabel("What game, world or movie is this for")
       .setStyle(TextInputStyle.Short)
+      .setMaxLength(50)
       .setRequired(false);
 
     const descInput = new TextInputBuilder()
       .setCustomId("description")
       .setLabel("Description")
       .setStyle(TextInputStyle.Paragraph)
+      .setMaxLength(1000) //1024 max for embed field
       .setRequired(false);
 
     const baseInput = new TextInputBuilder()
@@ -102,7 +105,7 @@ module.exports = {
 
     await modalSubmit.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const title = modalSubmit.fields.getTextInputValue("title");
+    const title = modalSubmit.fields.getTextInputValue("title"); 
     const game = modalSubmit.fields.getTextInputValue("game");
     const description = modalSubmit.fields.getTextInputValue("description");
     const capacityBase = parseInt(modalSubmit.fields.getTextInputValue("capacity_base"), 10);
@@ -333,7 +336,15 @@ module.exports = {
       fields: [
         {
           name: "Segment 1: Event Info",
-          value: `**Title:** ${eventData.title}\n**Description:** ${eventData.description || "None"}\n**Host:** <@${interaction.user.id}>`,
+          value: `**Title:** ${eventData.title}\n`,
+        },
+        {
+          name:"",
+          value: `**Description:** ${eventData.description || "None"}\n`,
+        },
+        {
+          name:"",
+          value: `**Host:** <@${interaction.user.id}>`,
         },
         {
           name: "Segment 2: Event Types",
