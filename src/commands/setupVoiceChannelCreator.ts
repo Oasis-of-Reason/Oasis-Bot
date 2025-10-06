@@ -72,7 +72,7 @@ module.exports = {
 
 			await interaction.reply({ 
 				content: `✅ Voice channel creator setup complete!\n\n**Voice Creator Room:** ${roomChannel.name}\n**Category:** ${categoryChannel.name}\n\nUsers can now join the voice creator room to automatically create temporary voice channels!`, 
-				ephemeral: true 
+				flags: MessageFlags.Ephemeral 
 			});
 		} catch (error) {
 			console.error('Error setting up voice channel creator:', error);

@@ -72,7 +72,7 @@ module.exports = {
 
 			await interaction.reply({ 
 				content: `✅ Event channel setup complete!\n\n**Draft Channel:** ${draftChannel.name}\n**Publishing Channel:** ${publishingChannel.name}`, 
-				ephemeral: true 
+				flags: MessageFlags.Ephemeral
 			});
 		} catch (error) {
 			console.error('Error setting up event channels:', error);
