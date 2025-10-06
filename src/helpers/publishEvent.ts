@@ -34,6 +34,8 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		autoArchiveDuration: 1440, // 24h
 	});
 	const sentThread = await thread?.send({ embeds: [channelEmbed], components });
+	
+	await channel?.send({ content: "Pings: " });
 
 	updatePublishedValues(eventId, publishingChannelId, thread?.id as string, sentChannel?.id as string, sentThread?.id as string);
 }
