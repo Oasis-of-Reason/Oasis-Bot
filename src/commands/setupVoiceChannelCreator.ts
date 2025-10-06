@@ -9,17 +9,17 @@ const prisma = new PrismaClient();
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('setup')
+		.setName('setup-voice-channel-creator')
 		.setDescription('Setup voice channel creator configuration for this server')
 		.addStringOption(option =>
 			option
 				.setName('voice_creator_room')
-				.setDescription('The voice channel ID where users join to create temporary channels')
+				.setDescription('The voice channel Id where users join to create temporary channels')
 				.setRequired(true))
 		.addStringOption(option =>
 			option
 				.setName('voice_creator_category')
-				.setDescription('The category ID where temporary voice channels will be created')
+				.setDescription('The category Id where temporary voice channels will be created')
 				.setRequired(true))
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 	async execute(interaction: any) {
@@ -36,12 +36,12 @@ module.exports = {
 		const categoryChannel = interaction.guild.channels.cache.get(voiceCreatorCategory);
 
 		if (!roomChannel) {
-			await interaction.reply({ content: '❌ Voice creator room channel not found! Please check the channel ID.', flags: MessageFlags.Ephemeral });
+			await interaction.reply({ content: '❌ Voice creator room channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 			return;
 		}
 
 		if (!categoryChannel) {
-			await interaction.reply({ content: '❌ Voice creator category not found! Please check the category ID.', flags: MessageFlags.Ephemeral });
+			await interaction.reply({ content: '❌ Voice creator category not found! Please check the category Id.', flags: MessageFlags.Ephemeral });
 			return;
 		}
 

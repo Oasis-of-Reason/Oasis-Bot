@@ -53,7 +53,7 @@ export function userHasAllowedId(member: GuildMember, allowedMemberIds: string[]
 }
 
 export function getStandardRolesAdmin(): RoleResolvable[] {
-    return ["Admins", "Admin"];
+    return ["Admins"];
 }
 
 export function getStandardRolesMod(): RoleResolvable[] {

@@ -3,6 +3,8 @@ import { deployCommands } from '../utils/deploy-commands';
 import { config } from '../config';
 import { startReminderWorker } from '../reminders/reminderWorker';
 import { reinitialiseDraftEvents } from '../helpers/reinitialiseDraftEvents';
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
 
 module.exports = {
 	name: Events.ClientReady,
@@ -17,6 +19,7 @@ module.exports = {
 				console.log('starting reinitialise of Draft Events in guild.');
 				await reinitialiseDraftEvents(client);
 				console.log('Reinitialised events in guild.');
+				initializeEventChannelIds(guildId);
 			}
 		} else {
 			await deployCommands({ guildId: config.isDev });
@@ -24,6 +27,7 @@ module.exports = {
 			console.log('starting reinitialise of Draft Events in Test guild.');
 			await reinitialiseDraftEvents(client);
 			console.log('Reinitialised events in test guild.');
+			initializeEventChannelIds(config.isDev);
 		}
 
 		startReminderWorker(client);
@@ -37,3 +41,18 @@ module.exports = {
 		// await deployCommands();
 	},
 };
+
+
+async function initializeEventChannelIds(guildId: string)
+{
+	await prisma.$transaction([
+		prisma.guildConfig.updateMany({
+			where: { id: guildId, draftChannelId: null },
+			data:  { draftChannelId: config.DEFAULT_EVENT_DRAFT_CHANNEL_ID },
+		}),
+		prisma.guildConfig.updateMany({
+			where: { id: guildId, publishingChannelId: null },
+			data:  { publishingChannelId: config.DEFAULT_EVENT_PUBLISHING_CHANNEL_ID },
+		}),
+	]);
+}

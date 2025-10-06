@@ -4,12 +4,16 @@ dotenv.config();
 const { 
   DISCORD_TOKEN, 
   DISCORD_CLIENT_ID, 
+  DEFAULT_EVENT_DRAFT_CHANNEL_ID,
+  DEFAULT_EVENT_PUBLISHING_CHANNEL_ID,
   isDev
 } = process.env;
 
 if (
   !DISCORD_TOKEN 
   || !DISCORD_CLIENT_ID 
+  || !DEFAULT_EVENT_DRAFT_CHANNEL_ID
+  || !DEFAULT_EVENT_PUBLISHING_CHANNEL_ID
 ) {
   throw new Error("Missing environment variables");
 }
@@ -17,5 +21,7 @@ if (
 export const config = {
   DISCORD_TOKEN,
   DISCORD_CLIENT_ID,
+  DEFAULT_EVENT_DRAFT_CHANNEL_ID,
+  DEFAULT_EVENT_PUBLISHING_CHANNEL_ID,
   isDev
 };
