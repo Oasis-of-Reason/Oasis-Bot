@@ -18,7 +18,8 @@ model GuildConfig {
   id                     		String  @id
   voiceCreatorRoomId     		String?
   voiceCreatorCategory   		String?
-  eventCalenderMessageId 		String?
+  discordEventCalenderMessageId String?
+  vrcEventCalenderMessageId 	String?
   draftChannelId         		String?
   publishingDiscordChannelId    String?
   publishingVRCChannelId    	String?

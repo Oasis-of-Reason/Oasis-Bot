@@ -9,7 +9,9 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const guildConfig = await prisma.guildConfig.findUnique({
 		where: { id: guild.id as string }
 	});
-	const publishingChannelId = guildConfig?.publishingVRCChannelId ?? "[No Guild Config]";
+	
+	const publishingEvent = await getEventById(eventId as number);
+	const publishingChannelId = (publishingEvent.type === "VRC" ? guildConfig?.publishingVRCChannelId : guildConfig?.publishingDiscordChannelId) ?? "[No Guild Config]";
 
 	let channel;
 	try {
@@ -22,7 +24,6 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	} catch (err) {
 		console.error(`Failed to fetch channel ${publishingChannelId}:`, err);
 	}
-	const publishingEvent = await getEventById(eventId as number);
 	const channelEmbed = await buildEventEmbedWithLists(client, publishingEvent, [], []);
 	const components = getEventButtons(eventId as number);
 
