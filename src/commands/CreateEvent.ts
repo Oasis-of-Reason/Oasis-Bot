@@ -108,8 +108,11 @@ module.exports = {
 		const title = modalSubmit.fields.getTextInputValue("title");
 		const activity = modalSubmit.fields.getTextInputValue("activity");
 		const description = modalSubmit.fields.getTextInputValue("description");
-		const capacityBase = parseInt(modalSubmit.fields.getTextInputValue("capacity_base"), 10);
-		const capacityCap = parseInt(modalSubmit.fields.getTextInputValue("capacity_cap"), 10);
+
+		let capacityBase = parseInt(modalSubmit.fields.getTextInputValue("capacity_base"), 10) ?? 0;
+		let capacityCap = parseInt(modalSubmit.fields.getTextInputValue("capacity_cap"), 10) ?? 0;
+		if(Number.isNaN(capacityBase)) capacityBase = 0;
+		if(Number.isNaN(capacityCap)) capacityCap = 0;
 
 		// --- Step 2: Dropdowns (type, subtype, scope) ---
 		const typeMenu = new StringSelectMenuBuilder()
@@ -281,7 +284,8 @@ module.exports = {
 		}
 
 		const startTime = startDate;
-		const lengthMinutes = lengthStr ? parseInt(lengthStr, 10) : null;
+		let lengthMinutes = parseInt(lengthStr, 10) ?? 0;
+		if(Number.isNaN(lengthMinutes)) lengthMinutes = 0;
 
 		// --- Step 6: Ask for poster upload ---
 		await timingSubmit.followUp({
