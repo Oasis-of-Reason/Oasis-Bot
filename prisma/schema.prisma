@@ -19,6 +19,8 @@ model GuildConfig {
   voiceCreatorRoomId     String?
   voiceCreatorCategory   String?
   eventCalenderMessageId String?
+  draftChannelId         String?
+  publishingChannelId    String?
 }
 
 model TemporaryVoiceChannel {

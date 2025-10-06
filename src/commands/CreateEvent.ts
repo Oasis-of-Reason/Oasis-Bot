@@ -12,7 +12,8 @@ import {
   TextChannel,
   ButtonBuilder, 
   ButtonStyle,
-  GuildMember
+  GuildMember,
+  Guild
 } from "discord.js";
 import { 
   userHasAllowedRole,
@@ -20,10 +21,7 @@ import {
 } from "../helpers/securityHelpers";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
-import { Prisma } from "@prisma/client";
 import { publishEvent } from "../helpers/publishEvent";
-
-const DRAFT_CHANNEL_ID = "937297789279416350";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -31,7 +29,12 @@ module.exports = {
     .setDescription("Start the event creation wizard"),
 
   async execute(interaction: ChatInputCommandInteraction) {
-    if (interaction.channelId !== DRAFT_CHANNEL_ID) {
+
+    const guildConfig = await prisma.guildConfig.findUnique({
+				where: { id: interaction.guildId as string }
+    });
+    
+    if (interaction.channelId !== (guildConfig?.draftChannelId ?? "")) {
       await interaction.reply({
         content: "❌ This command can only be used in the #draft-event channel.",
         flags: MessageFlags.Ephemeral,
@@ -595,7 +598,7 @@ module.exports = {
         }
 
         try {
-          await publishEvent(interaction.client, createdEvent.id);
+          await publishEvent(interaction.client, interaction.guild as Guild, createdEvent.id);
           await i.reply({content: `✅ Event published successfully!`,
             flags: MessageFlags.Ephemeral,
           });

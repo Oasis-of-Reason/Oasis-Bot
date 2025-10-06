@@ -3,7 +3,8 @@ import {
   ChatInputCommandInteraction,
   MessageFlags,
   PermissionFlagsBits,
-  GuildMember, 
+  GuildMember,
+  Guild, 
 } from "discord.js";
 import { 
   userHasAllowedRole,
@@ -41,8 +42,8 @@ module.exports = {
       });
       return;
     }
-
-    await publishEvent(interaction.client, id);
+    
+    await publishEvent(interaction.client, interaction.guild as Guild, id);
     await refreshPublishedCalender(interaction.client, interaction.guildId as string, true);
     interaction.reply({ content: `Successfully published event: ${id}.`, flags: MessageFlags.Ephemeral })
   }, 
