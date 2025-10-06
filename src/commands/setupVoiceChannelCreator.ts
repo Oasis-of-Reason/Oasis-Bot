@@ -1,7 +1,7 @@
-import { 
+import {
 	SlashCommandBuilder,
 	PermissionFlagsBits,
-	MessageFlags 
+	MessageFlags
 } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -70,9 +70,9 @@ module.exports = {
 				}
 			});
 
-			await interaction.reply({ 
-				content: `✅ Voice channel creator setup complete!\n\n**Voice Creator Room:** ${roomChannel.name}\n**Category:** ${categoryChannel.name}\n\nUsers can now join the voice creator room to automatically create temporary voice channels!`, 
-				flags: MessageFlags.Ephemeral 
+			await interaction.reply({
+				content: `✅ Voice channel creator setup complete!\n\n**Voice Creator Room:** ${roomChannel.name}\n**Category:** ${categoryChannel.name}\n\nUsers can now join the voice creator room to automatically create temporary voice channels!`,
+				flags: MessageFlags.Ephemeral
 			});
 		} catch (error) {
 			console.error('Error setting up voice channel creator:', error);

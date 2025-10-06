@@ -1,6 +1,6 @@
-import { 
-    GuildMember, 
-    RoleResolvable 
+import {
+	GuildMember,
+	RoleResolvable
 } from "discord.js";
 
 /**
@@ -12,7 +12,7 @@ import {
  * @returns true if the member's ID is in the allowed list, or they have an allowed role, false otherwise
  */
 export function userHasAllowedRoleOrId(member: GuildMember, allowedRoles: RoleResolvable[], allowedMemberIds: string[]): boolean {
-  return userHasAllowedRole(member, allowedRoles) || userHasAllowedId(member, allowedMemberIds);
+	return userHasAllowedRole(member, allowedRoles) || userHasAllowedId(member, allowedMemberIds);
 }
 
 /**
@@ -23,21 +23,21 @@ export function userHasAllowedRoleOrId(member: GuildMember, allowedRoles: RoleRe
  * @returns true if the user has one or more of the allowed roles, false otherwise
  */
 export function userHasAllowedRole(member: GuildMember, allowedRoles: RoleResolvable[]): boolean {
-  
-    if (!member || !member.roles?.cache) return false;
 
-    for (const role of allowedRoles) {
-        // RoleResolvable can be ID or name — check both
-        const hasRole =
-        member.roles.cache.has(role.toString()) ||
-        member.roles.cache.some(r => r.name === role.toString());
+	if (!member || !member.roles?.cache) return false;
 
-        if (hasRole) {
-            return true;
-        }
-    }
+	for (const role of allowedRoles) {
+		// RoleResolvable can be ID or name — check both
+		const hasRole =
+			member.roles.cache.has(role.toString()) ||
+			member.roles.cache.some(r => r.name === role.toString());
 
-    return false;
+		if (hasRole) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /**
@@ -48,26 +48,26 @@ export function userHasAllowedRole(member: GuildMember, allowedRoles: RoleResolv
  * @returns true if the member's ID is in the allowed list, false otherwise
  */
 export function userHasAllowedId(member: GuildMember, allowedMemberIds: string[]): boolean {
-  if (!member || !member.id) return false;
-  return allowedMemberIds.includes(member.id);
+	if (!member || !member.id) return false;
+	return allowedMemberIds.includes(member.id);
 }
 
 export function getStandardRolesAdmin(): RoleResolvable[] {
-    return ["Admins"];
+	return ["Admins"];
 }
 
 export function getStandardRolesMod(): RoleResolvable[] {
-    return ["Admins", "Moderator"];
+	return ["Admins", "Moderator"];
 }
 
 export function getStandardRolesOrganizer(): RoleResolvable[] {
-    return ["Admins", "Moderator", "Event Organizer"];
+	return ["Admins", "Moderator", "Event Organizer"];
 }
 
 export function getStandardRolesHost(): RoleResolvable[] {
-    return ["Admins", "Moderator", "Event Organizer", "Event Host"];
+	return ["Admins", "Moderator", "Event Organizer", "Event Host"];
 }
 
 export function getStandardRolesMember(): RoleResolvable[] {
-    return ["Admins", "Moderator", "Event Organizer", "Event Host", "Members"];
+	return ["Admins", "Moderator", "Event Organizer", "Event Host", "Members"];
 }

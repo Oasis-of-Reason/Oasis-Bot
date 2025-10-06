@@ -1,7 +1,7 @@
-import { 
+import {
 	SlashCommandBuilder,
 	PermissionFlagsBits,
-	MessageFlags 
+	MessageFlags
 } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -70,8 +70,8 @@ module.exports = {
 				}
 			});
 
-			await interaction.reply({ 
-				content: `✅ Event channel setup complete!\n\n**Draft Channel:** ${draftChannel.name}\n**Publishing Channel:** ${publishingChannel.name}`, 
+			await interaction.reply({
+				content: `✅ Event channel setup complete!\n\n**Draft Channel:** ${draftChannel.name}\n**Publishing Channel:** ${publishingChannel.name}`,
 				flags: MessageFlags.Ephemeral
 			});
 		} catch (error) {

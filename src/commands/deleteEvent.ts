@@ -1,12 +1,12 @@
-import { 
-	SlashCommandBuilder, 
-	PermissionFlagsBits, 
+import {
+	SlashCommandBuilder,
+	PermissionFlagsBits,
 	MessageFlags,
-	GuildMember 
+	GuildMember
 } from 'discord.js';
-import { 
-  userHasAllowedRoleOrId,
-  getStandardRolesMod
+import {
+	userHasAllowedRoleOrId,
+	getStandardRolesMod
 } from "../helpers/securityHelpers";
 import { PrismaClient } from '@prisma/client';
 
@@ -41,12 +41,12 @@ module.exports = {
 					id: id
 				}
 			});
-			
+
 			if (!userHasAllowedRoleOrId(interaction.member as GuildMember, getStandardRolesMod(), [event?.hostId as string])) {
 				// Bail if we arent a mod or the host
 				await interaction.reply({
-				content: "❌ You don't have permission for this command.",
-				flags: MessageFlags.Ephemeral,
+					content: "❌ You don't have permission for this command.",
+					flags: MessageFlags.Ephemeral,
 				});
 				return;
 			}

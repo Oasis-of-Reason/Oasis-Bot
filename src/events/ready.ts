@@ -2,7 +2,7 @@ import { Events } from 'discord.js';
 import { deployCommands } from '../utils/deploy-commands';
 import { config } from '../config';
 import { startReminderWorker } from '../reminders/reminderWorker';
-import { reinitialiseDraftEvents } from '../helpers/reinitialiseDraftEvents';
+import { reinitialiseDraftEvents } from '../helpers/refreshDraftEvents';
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
@@ -35,7 +35,7 @@ module.exports = {
 
 		// Uncomment the line below to fetch and log global commands
 		//const commands = await client.application.commands.fetch();
-        //console.log("Global commands:", commands.map((c: any) => c.name));
+		//console.log("Global commands:", commands.map((c: any) => c.name));
 
 		// Uncomment the line below to deploy commands to all guilds
 		// await deployCommands();
@@ -43,16 +43,15 @@ module.exports = {
 };
 
 
-async function initializeEventChannelIds(guildId: string)
-{
+async function initializeEventChannelIds(guildId: string) {
 	await prisma.$transaction([
 		prisma.guildConfig.updateMany({
 			where: { id: guildId, draftChannelId: null },
-			data:  { draftChannelId: config.DEFAULT_EVENT_DRAFT_CHANNEL_ID },
+			data: { draftChannelId: config.DEFAULT_EVENT_DRAFT_CHANNEL_ID },
 		}),
 		prisma.guildConfig.updateMany({
 			where: { id: guildId, publishingChannelId: null },
-			data:  { publishingChannelId: config.DEFAULT_EVENT_PUBLISHING_CHANNEL_ID },
+			data: { publishingChannelId: config.DEFAULT_EVENT_PUBLISHING_CHANNEL_ID },
 		}),
 	]);
 }

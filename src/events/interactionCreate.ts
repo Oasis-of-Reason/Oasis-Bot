@@ -1,16 +1,17 @@
-import { 
-	Events, 
+import {
+	Events,
 	Interaction,
-	ButtonInteraction, 
-	ModalBuilder, 
-	TextInputBuilder, 
-	TextInputStyle, 
-	ActionRowBuilder, 
-	ChannelType, 
-	StringSelectMenuBuilder, 
-	StringSelectMenuOptionBuilder, 
+	ButtonInteraction,
+	ModalBuilder,
+	TextInputBuilder,
+	TextInputStyle,
+	ActionRowBuilder,
+	ChannelType,
+	StringSelectMenuBuilder,
+	StringSelectMenuOptionBuilder,
 	VoiceChannel,
-	MessageFlags } from 'discord.js';
+	MessageFlags
+} from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 import { refreshEventMessages } from "../helpers/refreshEventMessages";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
@@ -24,7 +25,7 @@ module.exports = {
 			// Handle an event signup button
 			if (interaction.customId.startsWith('ev:')) {
 				await handleEventButtons(interaction); // <- your handler
-      			return;
+				return;
 			}
 
 			// Handle edit voice channel button
@@ -48,7 +49,7 @@ module.exports = {
 				}
 
 				// Extract the current name without "VC | " prefix
-				const currentName = channel.name.startsWith('VC | ') 
+				const currentName = channel.name.startsWith('VC | ')
 					? channel.name.substring(5) // Remove "VC | " prefix
 					: channel.name;
 
@@ -105,7 +106,7 @@ module.exports = {
 
 				// Get users in the voice channel
 				const members = channel.members.filter(member => member.id !== interaction.user.id);
-				
+
 				if (members.size === 0) {
 					await interaction.reply({ content: 'No users to kick from the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
@@ -155,7 +156,7 @@ module.exports = {
 
 				// Get users in the voice channel
 				const members = channel.members.filter(member => member.id !== interaction.user.id);
-				
+
 				if (members.size === 0) {
 					await interaction.reply({ content: 'No users to ban from the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
@@ -221,7 +222,7 @@ module.exports = {
 				try {
 					// Disconnect user from voice
 					await member.voice.disconnect();
-					
+
 					// Add permission override to prevent them from rejoining
 					await (channel as VoiceChannel).permissionOverwrites.create(member, {
 						Connect: false
@@ -266,8 +267,8 @@ module.exports = {
 				}
 
 				// Ensure the name always has "VC | " prefix
-				const finalName = nameInput.startsWith('VC | ') 
-					? nameInput 
+				const finalName = nameInput.startsWith('VC | ')
+					? nameInput
 					: `VC | ${nameInput}`;
 
 				try {
@@ -311,67 +312,67 @@ module.exports = {
 type ActionKind = "attend" | "interest" | "cohost";
 
 export async function handleEventButtons(interaction: Interaction) {
-  if (!interaction.isButton()) return;
+	if (!interaction.isButton()) return;
 
-  const m = interaction.customId.match(/^ev:(\d+):(attend|interest|cohost):(on|off)$/);
-  if (!m) return;
+	const m = interaction.customId.match(/^ev:(\d+):(attend|interest|cohost):(on|off)$/);
+	if (!m) return;
 
-  const [, eventIdStr, action, op] = m;
-  const eventId = Number(eventIdStr);
-  const userId = interaction.user.id;
+	const [, eventIdStr, action, op] = m;
+	const eventId = Number(eventIdStr);
+	const userId = interaction.user.id;
 
-  try {
-    switch (action as ActionKind) {
-      case "attend": {
-        if (op === "on") {
-          const existing = await prisma.eventSignUps.findFirst({ where: { eventId, userId } });
-          if (!existing) await prisma.eventSignUps.create({ data: { eventId, userId } });
-          await interaction.reply({ content: "✅ You’re signed up as an attendee.", flags: MessageFlags.Ephemeral });
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-        } else {
-          await prisma.eventSignUps.deleteMany({ where: { eventId, userId } });
-          await interaction.reply({ content: "❎ You’re no longer signed up.", flags: MessageFlags.Ephemeral });
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-        }
-        break;
-      }
-      case "interest": {
-        if (op === "on") {
-          const existing = await prisma.interestedSignUps.findFirst({ where: { eventId, userId } });
-          if (!existing) await prisma.interestedSignUps.create({ data: { eventId, userId } });
-          await interaction.reply({ content: "⭐ Marked as interested.", flags: MessageFlags.Ephemeral });
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-        } else {
-          await prisma.interestedSignUps.deleteMany({ where: { eventId, userId } });
-          await interaction.reply({ content: "⭐ Removed interest.", flags: MessageFlags.Ephemeral });
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-        }
-        break;
-      }
-      case "cohost": {
-        if (op === "on") {
-          const existing = await prisma.cohostsOnEvent.findFirst({ where: { eventId, userId: userId } });
-          if (!existing) await prisma.cohostsOnEvent.create({ data: { eventId, userId: userId } });
-          await interaction.reply({ content: "🧑‍🤝‍🧑 Added as a cohost.", flags: MessageFlags.Ephemeral });
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-        } else {
-          await prisma.cohostsOnEvent.deleteMany({ where: { eventId, userId: userId } });
-          await interaction.reply({ content: "🧑‍🤝‍🧑 Removed as a cohost.", flags: MessageFlags.Ephemeral });
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-        }
-        break;
-      }
-    }
+	try {
+		switch (action as ActionKind) {
+			case "attend": {
+				if (op === "on") {
+					const existing = await prisma.eventSignUps.findFirst({ where: { eventId, userId } });
+					if (!existing) await prisma.eventSignUps.create({ data: { eventId, userId } });
+					await interaction.reply({ content: "✅ You’re signed up as an attendee.", flags: MessageFlags.Ephemeral });
+					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				} else {
+					await prisma.eventSignUps.deleteMany({ where: { eventId, userId } });
+					await interaction.reply({ content: "❎ You’re no longer signed up.", flags: MessageFlags.Ephemeral });
+					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				}
+				break;
+			}
+			case "interest": {
+				if (op === "on") {
+					const existing = await prisma.interestedSignUps.findFirst({ where: { eventId, userId } });
+					if (!existing) await prisma.interestedSignUps.create({ data: { eventId, userId } });
+					await interaction.reply({ content: "⭐ Marked as interested.", flags: MessageFlags.Ephemeral });
+					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				} else {
+					await prisma.interestedSignUps.deleteMany({ where: { eventId, userId } });
+					await interaction.reply({ content: "⭐ Removed interest.", flags: MessageFlags.Ephemeral });
+					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				}
+				break;
+			}
+			case "cohost": {
+				if (op === "on") {
+					const existing = await prisma.cohostsOnEvent.findFirst({ where: { eventId, userId: userId } });
+					if (!existing) await prisma.cohostsOnEvent.create({ data: { eventId, userId: userId } });
+					await interaction.reply({ content: "🧑‍🤝‍🧑 Added as a cohost.", flags: MessageFlags.Ephemeral });
+					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				} else {
+					await prisma.cohostsOnEvent.deleteMany({ where: { eventId, userId: userId } });
+					await interaction.reply({ content: "🧑‍🤝‍🧑 Removed as a cohost.", flags: MessageFlags.Ephemeral });
+					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				}
+				break;
+			}
+		}
 
-    // Refresh both published messages with updated lists
-    await refreshEventMessages(interaction.client, eventId);
-  } catch (err) {
-    console.error("Button handler error:", err);
-    const bi = interaction as ButtonInteraction;
-    if (bi.deferred || bi.replied) {
-      await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
-    } else {
-      await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
-    }
-  }
+		// Refresh both published messages with updated lists
+		await refreshEventMessages(interaction.client, eventId);
+	} catch (err) {
+		console.error("Button handler error:", err);
+		const bi = interaction as ButtonInteraction;
+		if (bi.deferred || bi.replied) {
+			await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
+		} else {
+			await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
+		}
+	}
 }

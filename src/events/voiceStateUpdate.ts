@@ -112,7 +112,7 @@ module.exports = {
 									if (updatedChannel && updatedChannel.type === ChannelType.GuildVoice && updatedChannel.members.size === 0) {
 										// Delete the voice channel (this will also delete its chat)
 										await updatedChannel.delete();
-										
+
 										// Remove from database
 										await prisma.temporaryVoiceChannel.delete({
 											where: { channelId: channelId }
