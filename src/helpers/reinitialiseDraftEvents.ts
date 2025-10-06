@@ -292,7 +292,7 @@ export async function reinitialiseDraftEvents(client: Client) {
           }
 
           try {
-            await publishEvent(client, event.id);
+            await publishEvent(client, guild, event.id);
             await i.reply({content: `✅ Event published successfully!`,
               flags: MessageFlags.Ephemeral,
             });
