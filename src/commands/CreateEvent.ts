@@ -21,8 +21,9 @@ import {
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { Prisma } from "@prisma/client";
+import { publishEvent } from "../helpers/publishEvent";
 
-const DRAFT_CHANNEL_ID = "1218546731009179731";
+const DRAFT_CHANNEL_ID = "937297789279416350";
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -297,6 +298,7 @@ module.exports = {
       }
     }
 
+    
     // --- Step 7: Create thread + segmented embed ---
     const thread = await channel.threads.create({
       name: `Draft: ${title}`,
@@ -368,12 +370,16 @@ module.exports = {
         new ButtonBuilder().setCustomId("edit_start").setLabel("⏰ Edit Start Time").setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId("edit_length").setLabel("⏳ Edit Length").setStyle(ButtonStyle.Secondary)
       ),
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder().setCustomId("get_event_id").setLabel("🔑 Get Event ID").setStyle(ButtonStyle.Secondary),
+        new ButtonBuilder().setCustomId("publish_event").setLabel("🚀 Publish Event").setStyle(ButtonStyle.Success)
+      ),
     ];
 
     const sent = await thread.send({ embeds: [buildEmbed()], components });
 
-    // --- Step 8: Save to DB ---
-    await prisma.event.create({
+    // --- Step 8: Save to DB --- 
+    const createdEvent = await prisma.event.create({
       data: {
         guildId: interaction.guildId!,
         draftChannelId: interaction.channelId,
@@ -402,6 +408,7 @@ module.exports = {
       content: `✅ Event draft created in thread <#${thread.id}>`,
     });
 
+    const canPublish = userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost());
     // --- Step 10: Collector for edit buttons ---
     const collector = sent.createMessageComponentCollector({
       componentType: ComponentType.Button,
@@ -576,6 +583,27 @@ module.exports = {
           ],
           flags: MessageFlags.Ephemeral,
         });
+      }
+          if (i.customId === "get_event_id") {return i.reply({content: `This event's ID is: \`${createdEvent.id}\``,flags: MessageFlags.Ephemeral,
+          });
+      }
+      
+      if (i.customId === "publish_event" && canPublish) {
+        // Only allow the host to publish
+        if (i.user.id !== interaction.user.id) {return i.reply({content: "❌ Only the host can publish this event.",flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        try {
+          await publishEvent(interaction.client, createdEvent.id);
+          await i.reply({content: `✅ Event published successfully!`,
+            flags: MessageFlags.Ephemeral,
+          });
+        } catch (err) {console.error("Error publishing event:", err);
+          await i.reply({content: "⚠️ Something went wrong while publishing.",
+            flags: MessageFlags.Ephemeral,
+          });
+        }
       }
     }); // end collector.on
     interaction.client.on("interactionCreate", async (modalI) => {

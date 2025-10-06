@@ -53,21 +53,21 @@ export function userHasAllowedId(member: GuildMember, allowedMemberIds: string[]
 }
 
 export function getStandardRolesAdmin(): RoleResolvable[] {
-    return ["Admins"];
+    return ["Admins", "Admin"];
 }
 
 export function getStandardRolesMod(): RoleResolvable[] {
-    return ["Admins", "Moderator"];
+    return ["Admins", "Moderator", "Admin"];
 }
 
 export function getStandardRolesOrganizer(): RoleResolvable[] {
-    return ["Admins", "Moderator", "Event Organizer"];
+    return ["Admins", "Moderator", "Event Organizer", "Admin"];
 }
 
 export function getStandardRolesHost(): RoleResolvable[] {
-    return ["Admins", "Moderator", "Event Organizer", "Event Host"];
+    return ["Admins", "Moderator", "Event Organizer", "Event Host", "Admin"];
 }
 
 export function getStandardRolesMember(): RoleResolvable[] {
-    return ["Admins", "Moderator", "Event Organizer", "Event Host", "Members"];
+    return ["Admins", "Moderator", "Event Organizer", "Event Host", "Members", "Admin"];
 }
