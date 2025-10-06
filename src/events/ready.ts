@@ -50,8 +50,12 @@ async function initializeEventChannelIds(guildId: string) {
 			data: { draftChannelId: config.DEFAULT_EVENT_DRAFT_CHANNEL_ID },
 		}),
 		prisma.guildConfig.updateMany({
-			where: { id: guildId, publishingChannelId: null },
-			data: { publishingChannelId: config.DEFAULT_EVENT_PUBLISHING_CHANNEL_ID },
+			where: { id: guildId, publishingVRCChannelId: null },
+			data: { publishingVRCChannelId: config.DEFAULT_EVENT_PUBLISHING_VRC_CHANNEL_ID, },
+		}),
+		prisma.guildConfig.updateMany({
+			where: { id: guildId, publishingDiscordChannelId: null },
+			data: { publishingDiscordChannelId: config.DEFAULT_EVENT_PUBLISHING_DISCORD_CHANNEL_ID, },
 		}),
 	]);
 }

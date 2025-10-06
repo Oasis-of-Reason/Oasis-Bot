@@ -9,7 +9,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const guildConfig = await prisma.guildConfig.findUnique({
 		where: { id: guild.id as string }
 	});
-	const publishingChannelId = guildConfig?.publishingChannelId ?? "[No Guild Config]";
+	const publishingChannelId = guildConfig?.publishingVRCChannelId ?? "[No Guild Config]";
 
 	let channel;
 	try {

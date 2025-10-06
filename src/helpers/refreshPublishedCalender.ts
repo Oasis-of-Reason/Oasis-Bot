@@ -8,7 +8,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 	const guildConfig = await prisma.guildConfig.findUnique({
 		where: { id: guildId }
 	});
-	const channel = await client.channels.fetch(guildConfig?.publishingChannelId as string) as TextChannel;
+	const channel = await client.channels.fetch(guildConfig?.publishingVRCChannelId as string) as TextChannel;
 
 
 	const events = await prisma.event.findMany({
