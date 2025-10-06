@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { Client, TextChannel } from 'discord.js';
 import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
 const prisma = new PrismaClient();
-const PUBLISHING_CHANNEL_ID = "1423694714250465331";
 
 export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean)
 {
@@ -10,7 +9,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
     const guildConfig = await prisma.guildConfig.findUnique({
 				where: { id: guildId }
 			});
-    const channel = await client.channels.fetch(PUBLISHING_CHANNEL_ID) as TextChannel;
+    const channel = await client.channels.fetch(guildConfig?.publishingChannelId as string) as TextChannel;
     
 
     const events = await prisma.event.findMany({
@@ -30,7 +29,11 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
     let message;
     if(guildConfig?.eventCalenderMessageId)
     {
-        message = await channel.messages.fetch(guildConfig?.eventCalenderMessageId);
+        try {
+            message = await channel.messages.fetch(guildConfig?.eventCalenderMessageId);
+        } catch {
+            console.error("Couldnt find calender message.");
+        }
     }
 
     if(!deleteAndResend && message)
