@@ -1,6 +1,7 @@
 import {
 	EmbedBuilder,
 } from "discord.js";
+import { getEventCapacity } from "./generalHelpers";
 
 export function buildCalenderEmbed(events: any[], guildId: string): EmbedBuilder {
 	const groups = new Map<string, { date: Date; lines: string[] }>();
@@ -82,19 +83,14 @@ function formatEventLine(
 	const unix = Math.floor(dt.getTime() / 1000);
 	const draftText = ev.published ? "" : " • (Draft)";
 
-	const bits: string[] = [];
-	if (ev.type) bits.push(ev.type.toUpperCase());
-	if (ev.subtype) bits.push(ev.subtype.toUpperCase());
-	if (ev.scope) bits.push(ev.scope);
-
 	const link = eventLink(ev, guildId);
 	const title = link ? `[**${ev.title}**](${link})` : `**${ev.title}**`;
 
 	const capTotal = ev.capacityCap ?? 0;
-	const capBadge = ` ${signupCount}/${capTotal > 0 ? capTotal : '∞'}`;
+	const capBadge = ev.capacityCap + ev.capacity_base > 0 ? ` ${signupCount}/${getEventCapacity(ev)}` : ` ${signupCount}`;
 
 	// host mention brings in avatar+username hover card
-	return `> <t:${unix}:t> ${title} <t:${unix}:R> • ${capBadge}${draftText}`;
+	return `> <t:${unix}:t> ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
 function chunkString(str: string, size = 1024): string[] {
