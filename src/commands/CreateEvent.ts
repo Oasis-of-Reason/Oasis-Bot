@@ -181,10 +181,10 @@ module.exports = {
 				.setCustomId("event_requirements")
 				.setPlaceholder("Choose avatar performance requirement")
 				.addOptions(
-					{ label: "Very Poor", value: ":VeryPoor: No Restriction" },
-					{ label: "Poor", value: ":Poor: Poor or better" },
-					{ label: "Medium", value: ":Medium: Medium or better" },
-					{ label: "Good", value: ":Good: Good or better" },
+					{ label: "No Restriction", value: ":VeryPoor: No Restriction" },
+					{ label: "Poor or better", value: ":Poor: Poor or better" },
+					{ label: "Medium or better", value: ":Medium: Medium or better" },
+					{ label: "Good or better", value: ":Good: Good or better" },
 					{ label: "Excellent", value: ":VeryGood: Excellent" }
 				);
 
@@ -578,10 +578,10 @@ module.exports = {
 								.setCustomId("select_requirements")
 								.setPlaceholder("Choose avatar performance requirement")
 								.addOptions(
-									{ label: "Very Poor", value: ":VeryPoor: No Restriction" },
-									{ label: "Poor", value: ":Poor: Poor or better" },
-									{ label: "Medium", value: ":Medium: Medium or better" },
-									{ label: "Good", value: ":Good: Good or better" },
+									{ label: "No Restriction", value: ":VeryPoor: No Restriction" },
+									{ label: "Poor or better", value: ":Poor: Poor or better" },
+									{ label: "Medium or better", value: ":Medium: Medium or better" },
+									{ label: "Good or better", value: ":Good: Good or better" },
 									{ label: "Excellent", value: ":VeryGood: Excellent" }
 								)
 						),

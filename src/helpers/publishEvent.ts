@@ -30,7 +30,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	// Fire messages and create event (order important for desired order of messages in channel)
 	const sentChannel = await channel?.send({ embeds: [channelEmbed], components });
 	const thread = await channel?.threads.create({
-		name: `Event: ${publishingEvent}`,
+		name: `Event: ${publishingEvent.title}`,
 		autoArchiveDuration: 1440, // 24h
 	});
 	const sentThread = await thread?.send({ embeds: [channelEmbed], components });
