@@ -414,7 +414,7 @@ module.exports = {
 			content: `✅ Event draft created in thread <#${thread.id}>`,
 		});
 
-		const canPublish = userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost());
+		const canPublish = userHasAllowedRole(interaction.member as GuildMember, getStandardRolesOrganizer());
 		// --- Step 10: Collector for edit buttons ---
 		const collector = sent.createMessageComponentCollector({
 			componentType: ComponentType.Button,
