@@ -663,7 +663,7 @@ module.exports = {
 				}
 				if (modalI.customId === "modal_edit_length") {
 					const val = modalI.fields.getTextInputValue("new_length");
-					eventData.lengthMinutes = val ? parseInt(val, 10) : null;
+					eventData.lengthMinutes = val ? parseInt(val, 10) : 0;
 					await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { lengthMinutes: eventData.lengthMinutes } });
 				}
 
