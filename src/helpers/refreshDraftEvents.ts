@@ -244,7 +244,7 @@ export async function reinitialiseDraftEvents(client: Client) {
 									.setCustomId("select_platforms")
 									.setPlaceholder("Choose platform(s)")
 									.setMinValues(1)
-									.setMaxValues(3)
+									.setMaxValues(2)
 									.addOptions(
 										{ label: "PCVR", value: "PCVR" },
 										{ label: "Android", value: "Android" }

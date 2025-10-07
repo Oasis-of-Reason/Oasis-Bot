@@ -63,23 +63,29 @@ export async function buildEventEmbedWithLists(
 			});
 		}
 
-		embed.addFields({
-			name: "Type",
-			value: publishingEvent.subtype,
-			inline: true,
-		});
+		if(publishingEvent.subtype) {
+			embed.addFields({
+				name: "Type",
+				value: publishingEvent.subtype,
+				inline: true,
+			});
+		}
 
-		embed.addFields({
-			name: "Scope",
-			value: publishingEvent.scope === "Group" ? "Group Only" : "Group Plus",
-			inline: true,
-		});
+		if(publishingEvent.scope) {
+			embed.addFields({
+				name: "Scope",
+				value: publishingEvent.scope === "Group" ? "Group Only" : "Group Plus",
+				inline: true,
+			});
+		}
 
-		embed.addFields({
-			name: "Platforms",
-			value: `:${(JSON.parse(publishingEvent.platforms) as string[]).join(": :")}:`.toLowerCase(),
-			inline: false,
-		});
+		if(publishingEvent.platforms) {
+			embed.addFields({
+				name: "Platforms",
+				value: `:${(JSON.parse(publishingEvent.platforms) as string[]).join(": :")}:`.toLowerCase(),
+				inline: false,
+			});
+		}
 
 		embed.addFields(
 		{
