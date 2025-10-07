@@ -36,8 +36,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const sentThread = await thread?.send({ embeds: [channelEmbed], components });
 	
 	await channel?.send({ content: "Pings: " });
-
-	updatePublishedValues(eventId, publishingChannelId, thread?.id as string, sentChannel?.id as string, sentThread?.id as string);
+	await updatePublishedValues(eventId, publishingChannelId, thread?.id as string, sentChannel?.id as string, sentThread?.id as string);
 }
 
 async function updatePublishedValues(
