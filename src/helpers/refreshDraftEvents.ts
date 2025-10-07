@@ -65,12 +65,11 @@ export async function reinitialiseDraftEvents(client: Client) {
 					},
 					{
 						name: "Segment 3: Event Technical Reqs",
-						value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "None"}\n**Requirements:** ${eventData.requirements || "None"}\n**Capacity:** ${eventData.capacityBase} (up to ${eventData.capacityCap})`,
+						value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "None"}\n**Requirements:** ${eventData.requirements || "None"}\n**Capacity:** ${eventData.capacityCap})`,
 					},
 					{
 						name: "Segment 4: Event Timings",
-						value: `**Start:** <t:${Math.floor(eventData.startTime.getTime() / 1000)}:F>\n**Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} minutes` : "Not set"
-							}`,
+						value: `**Start:** <t:${Math.floor(eventData.startTime.getTime() / 1000)}:F>\n**Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} minutes` : "Not set"}`,
 					},
 				],
 			});
@@ -155,9 +154,6 @@ export async function reinitialiseDraftEvents(client: Client) {
 						.setCustomId("modal_edit_capacity")
 						.setTitle("Edit Capacity")
 						.addComponents(
-							new ActionRowBuilder<TextInputBuilder>().addComponents(
-								new TextInputBuilder().setCustomId("new_capacity_base").setLabel("Base Capacity").setStyle(TextInputStyle.Short).setRequired(true)
-							),
 							new ActionRowBuilder<TextInputBuilder>().addComponents(
 								new TextInputBuilder().setCustomId("new_capacity_cap").setLabel("Max Capacity").setStyle(TextInputStyle.Short).setRequired(true)
 							)
@@ -250,7 +246,6 @@ export async function reinitialiseDraftEvents(client: Client) {
 									.setMinValues(1)
 									.setMaxValues(3)
 									.addOptions(
-										{ label: "Quest", value: "Quest" },
 										{ label: "PCVR", value: "PCVR" },
 										{ label: "Android", value: "Android" }
 									)
@@ -267,12 +262,12 @@ export async function reinitialiseDraftEvents(client: Client) {
 							new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 								new StringSelectMenuBuilder()
 									.setCustomId("select_requirements")
-									.setPlaceholder("Choose requirement")
+									.setPlaceholder("Choose avatar performance requirement")
 									.addOptions(
-										{ label: "Very Poor", value: ":VeryPoor: Very Poor" },
-										{ label: "Poor", value: ":Poor: Poor" },
-										{ label: "Medium", value: ":Medium: Medium" },
-										{ label: "Good", value: ":Good: Good" },
+										{ label: "Very Poor", value: ":VeryPoor: No Restriction" },
+										{ label: "Poor", value: ":Poor: Poor or better" },
+										{ label: "Medium", value: ":Medium: Medium or better" },
+										{ label: "Good", value: ":Good: Good or better" },
 										{ label: "Excellent", value: ":VeryGood: Excellent" }
 									)
 							),

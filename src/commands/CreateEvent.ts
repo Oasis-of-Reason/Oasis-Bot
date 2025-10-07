@@ -76,12 +76,6 @@ module.exports = {
 			.setMaxLength(1000) //1024 max for embed field
 			.setRequired(false);
 
-		const baseInput = new TextInputBuilder()
-			.setCustomId("capacity_base")
-			.setLabel("Base Capacity")
-			.setStyle(TextInputStyle.Short)
-			.setRequired(true);
-
 		const capInput = new TextInputBuilder()
 			.setCustomId("capacity_cap")
 			.setLabel("Max Capacity")
@@ -92,7 +86,6 @@ module.exports = {
 			new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
 			new ActionRowBuilder<TextInputBuilder>().addComponents(activityInput),
 			new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
-			new ActionRowBuilder<TextInputBuilder>().addComponents(baseInput),
 			new ActionRowBuilder<TextInputBuilder>().addComponents(capInput),
 		);
 
@@ -109,9 +102,7 @@ module.exports = {
 		const activity = modalSubmit.fields.getTextInputValue("activity");
 		const description = modalSubmit.fields.getTextInputValue("description");
 
-		let capacityBase = parseInt(modalSubmit.fields.getTextInputValue("capacity_base"), 10) ?? 0;
 		let capacityCap = parseInt(modalSubmit.fields.getTextInputValue("capacity_cap"), 10) ?? 0;
-		if(Number.isNaN(capacityBase)) capacityBase = 0;
 		if(Number.isNaN(capacityCap)) capacityCap = 0;
 
 		// --- Step 2: Dropdowns (type, subtype, scope) ---
@@ -136,7 +127,7 @@ module.exports = {
 			.setCustomId("event_scope")
 			.setPlaceholder("Who can join?")
 			.addOptions([
-				{ label: "Group Only", value: "group" },
+				{ label: "Group Only", value: "Group" },
 				{ label: "Friends Can Join", value: "Friends" },
 			]);
 
@@ -180,23 +171,22 @@ module.exports = {
 				.setCustomId("event_platforms")
 				.setPlaceholder("Choose platform(s)")
 				.addOptions([
-					{ label: "Android", value: "android" },
-					{ label: "Quest", value: "quest" },
-					{ label: "PCVR", value: "pcvr" },
+					{ label: "Android", value: "Android" },
+					{ label: "PCVR", value: "PCVR" },
 				])
 				.setMinValues(1)
 				.setMaxValues(3);
 
 			const requirementsMenu = new StringSelectMenuBuilder()
 				.setCustomId("event_requirements")
-				.setPlaceholder("Avatar performance requirement")
-				.addOptions([
-					{ label: "Very Poor", value: ":VeryPoor: Very poor" },
-					{ label: "Poor", value: ":Poor: Poor" },
-					{ label: "Medium", value: ":Medium: Medium" },
-					{ label: "Good", value: ":Good: Good" },
-					{ label: "Excellent", value: ":VeryGood: Excellent" },
-				]);
+				.setPlaceholder("Choose avatar performance requirement")
+				.addOptions(
+					{ label: "Very Poor", value: ":VeryPoor: No Restriction" },
+					{ label: "Poor", value: ":Poor: Poor or better" },
+					{ label: "Medium", value: ":Medium: Medium or better" },
+					{ label: "Good", value: ":Good: Good or better" },
+					{ label: "Excellent", value: ":VeryGood: Excellent" }
+				);
 
 			await modalSubmit.followUp({
 				content: "VRC options:",
@@ -325,7 +315,6 @@ module.exports = {
 			scope,
 			platforms,
 			requirements,
-			capacityBase,
 			capacityCap,
 			startTime,
 			lengthMinutes,
@@ -356,7 +345,7 @@ module.exports = {
 				},
 				{
 					name: "Segment 3: Event Technical Reqs",
-					value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "None"}\n**Requirements:** ${eventData.requirements || "None"}\n**Capacity:** ${eventData.capacityBase} (up to ${eventData.capacityCap})`,
+					value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "None"}\n**Requirements:** ${eventData.requirements || "None"}\n**Capacity:** ${eventData.capacityCap})`,
 				},
 				{
 					name: "Segment 4: Event Timings",
@@ -406,10 +395,10 @@ module.exports = {
 				title: eventData.title,
 				type: eventData.type!,
 				subtype: eventData.subtype!,
-				capacityBase: eventData.capacityBase,
+				capacityBase: 0,
 				capacityCap: eventData.capacityCap,
 				startTime: eventData.startTime,
-				lengthMinutes: eventData.lengthMinutes ?? undefined,
+				lengthMinutes: eventData.lengthMinutes ?? 0,
 				published: false,
 				...(eventData.activity ? { activity: eventData.activity } : {}),
 				...(eventData.type === "VRC" && eventData.platforms.length ? { platforms: JSON.stringify(eventData.platforms) } : {}),
@@ -571,7 +560,6 @@ module.exports = {
 								.setMinValues(1)
 								.setMaxValues(3)
 								.addOptions(
-									{ label: "Quest", value: "Quest" },
 									{ label: "PCVR", value: "PCVR" },
 									{ label: "Android", value: "Android" }
 								)
@@ -588,12 +576,12 @@ module.exports = {
 						new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 							new StringSelectMenuBuilder()
 								.setCustomId("select_requirements")
-								.setPlaceholder("Choose requirement")
+								.setPlaceholder("Choose avatar performance requirement")
 								.addOptions(
-									{ label: "Very Poor", value: ":VeryPoor: Very Poor" },
-									{ label: "Poor", value: ":Poor: Poor" },
-									{ label: "Medium", value: ":Medium: Medium" },
-									{ label: "Good", value: ":Good: Good" },
+									{ label: "Very Poor", value: ":VeryPoor: No Restriction" },
+									{ label: "Poor", value: ":Poor: Poor or better" },
+									{ label: "Medium", value: ":Medium: Medium or better" },
+									{ label: "Good", value: ":Good: Good or better" },
 									{ label: "Excellent", value: ":VeryGood: Excellent" }
 								)
 						),
@@ -646,11 +634,11 @@ module.exports = {
 					await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { activity: eventData.activity } });
 				}
 				if (modalI.customId === "modal_edit_capacity") {
-					eventData.capacityBase = parseInt(modalI.fields.getTextInputValue("new_capacity_base"), 10);
 					eventData.capacityCap = parseInt(modalI.fields.getTextInputValue("new_capacity_cap"), 10);
+					if(Number.isNaN(eventData.capacityCap)) eventData.capacityCap = 0;
 					await prisma.event.update({
 						where: { draftThreadMessageId: sent.id },
-						data: { capacityBase: eventData.capacityBase, capacityCap: eventData.capacityCap },
+						data: { capacityCap: eventData.capacityCap },
 					});
 				}
 				if (modalI.customId === "modal_edit_start") {
@@ -664,6 +652,7 @@ module.exports = {
 				if (modalI.customId === "modal_edit_length") {
 					const val = modalI.fields.getTextInputValue("new_length");
 					eventData.lengthMinutes = val ? parseInt(val, 10) : 0;
+					if(Number.isNaN(eventData.lengthMinutes)) eventData.lengthMinutes = 0;
 					await prisma.event.update({ where: { draftThreadMessageId: sent.id }, data: { lengthMinutes: eventData.lengthMinutes } });
 				}
 

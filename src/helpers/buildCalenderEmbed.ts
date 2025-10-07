@@ -87,7 +87,7 @@ function formatEventLine(
 	const title = link ? `[**${ev.title}**](${link})` : `**${ev.title}**`;
 
 	const capTotal = ev.capacityCap ?? 0;
-	const capBadge = ev.capacityCap + ev.capacity_base > 0 ? ` ${signupCount}/${getEventCapacity(ev)}` : ` ${signupCount}`;
+	const capBadge = ev.capacityCap + ev.capacityBase > 0 ? `${signupCount}/${capTotal}` : `${signupCount}`;
 
 	// host mention brings in avatar+username hover card
 	return `> <t:${unix}:t> ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
