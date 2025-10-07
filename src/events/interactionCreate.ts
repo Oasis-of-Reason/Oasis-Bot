@@ -327,39 +327,12 @@ export async function handleEventButtons(interaction: Interaction) {
 				if (op === "on") {
 					const existing = await prisma.eventSignUps.findFirst({ where: { eventId, userId } });
 					if (!existing) await prisma.eventSignUps.create({ data: { eventId, userId } });
-					await interaction.reply({ content: "✅ You’re signed up as an attendee.", flags: MessageFlags.Ephemeral });
 					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
 				} else {
 					await prisma.eventSignUps.deleteMany({ where: { eventId, userId } });
-					await interaction.reply({ content: "❎ You’re no longer signed up.", flags: MessageFlags.Ephemeral });
 					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
 				}
-				break;
-			}
-			case "interest": {
-				if (op === "on") {
-					const existing = await prisma.interestedSignUps.findFirst({ where: { eventId, userId } });
-					if (!existing) await prisma.interestedSignUps.create({ data: { eventId, userId } });
-					await interaction.reply({ content: "⭐ Marked as interested.", flags: MessageFlags.Ephemeral });
-					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-				} else {
-					await prisma.interestedSignUps.deleteMany({ where: { eventId, userId } });
-					await interaction.reply({ content: "⭐ Removed interest.", flags: MessageFlags.Ephemeral });
-					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-				}
-				break;
-			}
-			case "cohost": {
-				if (op === "on") {
-					const existing = await prisma.cohostsOnEvent.findFirst({ where: { eventId, userId: userId } });
-					if (!existing) await prisma.cohostsOnEvent.create({ data: { eventId, userId: userId } });
-					await interaction.reply({ content: "🧑‍🤝‍🧑 Added as a cohost.", flags: MessageFlags.Ephemeral });
-					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-				} else {
-					await prisma.cohostsOnEvent.deleteMany({ where: { eventId, userId: userId } });
-					await interaction.reply({ content: "🧑‍🤝‍🧑 Removed as a cohost.", flags: MessageFlags.Ephemeral });
-					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-				}
+				await interaction.deferUpdate();
 				break;
 			}
 		}
