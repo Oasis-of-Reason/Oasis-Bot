@@ -4,6 +4,7 @@ import {
 	User,
 	GuildMember
 } from "discord.js";
+import { getEventCapacity } from "./generalHelpers"
 
 /** Build the event embed including attendees & cohosts lists. */
 export async function buildEventEmbedWithLists(
@@ -16,28 +17,30 @@ export async function buildEventEmbedWithLists(
 	const unix = Math.floor(dt.getTime() / 1000);
 
 	// Fetch host
-	const hostUser: User = await client.users.fetch(publishingEvent.hostId);
-
+	
 	// Get the guild so we can resolve nicknames
 	const guild = await client.guilds.fetch(publishingEvent.guildId);
 	await guild.members.fetch();
-
+	
+	
 	// Resolve attendees to nicknames (or usernames if no nickname)
 	const attendeeNames = await Promise.all(
 		attendees.map(async id => {
 			const snowflake = toSnowflake(id);
 			const member = await guild.members.cache.get(snowflake) ?? await guild.members.fetch(snowflake);
-			const rawName = member?.nickname || member?.user.username || "(No Name)";
-			return rawName.charAt(0).toUpperCase() + rawName.slice(1);
+			const rawName = member?.nickname || member?.user.displayName || "(No Name)";
+			return rawName;
 		})
 	);
-
+	
+	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember;
+	const hostName =  hostUser.nickname || hostUser?.displayName || "-";
 	// Resolve cohosts to nicknames
-	const cohostNames = await Promise.all(
+	let cohostNames = await Promise.all(
 		cohosts.map(async c => {
 			const member = guild.members.cache.get(c.userId) ?? await guild.members.fetch(c.userId);
-			const rawName = member?.nickname || member?.user.username || c.userId;
-			return rawName.charAt(0).toUpperCase() + rawName.slice(1);
+			const rawName = member?.nickname || member?.user.displayName || c.userId;
+			return rawName;
 		})
 	);
 
@@ -46,42 +49,50 @@ export async function buildEventEmbedWithLists(
 		.setColor(0x5865f2)
 		.setDescription(publishingEvent.description ?? "No description provided.")
 		.setAuthor({
-			name: `Hosted By: ${hostUser.username.charAt(0).toUpperCase() + hostUser.username.slice(1)}`,
-			iconURL: hostUser.displayAvatarURL({ forceStatic: false, size: 64 }),
+			name: `Hosted By: ${hostName}`,
+			iconURL: hostUser.user.displayAvatarURL({ forceStatic: false, size: 64 }),
 		})
-		.addFields(
-			{
-				name: `Attendees (${attendeeNames.length}/${publishingEvent.capacityCap})`,
-				value: attendeeNames.length > 0 ? attendeeNames.join("\n") : "—",
-				inline: false,
-			},
-			{
-				name: "Scope",
-				value: publishingEvent.scope ?? "—",
+		
+		// Only add Requirements if present
+		if (publishingEvent.Requirements && publishingEvent.Requirements.trim() !== "") {
+			embed.addFields({
+				name: "Requirements",
+				value: publishingEvent.Requirements,
 				inline: true,
-			},
-			{
-				name: "Start Time",
-				value: `<t:${unix}:f> (<t:${unix}:R>)`,
-				inline: true,
-			}
-		);
+			});
+		}
 
-	// Only add Requirements if present
-	if (publishingEvent.Requirements && publishingEvent.Requirements.trim() !== "") {
 		embed.addFields({
-			name: "Requirements",
-			value: publishingEvent.Requirements,
+			name: "Scope",
+			value: publishingEvent.scope === "group" ? "Group Only" : "Group Plus",
 			inline: true,
 		});
-	}
 
-	// Only add CoHosts if present (comma separated)
+		embed.addFields(
+		{
+			name: "Duration",
+			value: `${publishingEvent.Duration} minutes`,
+			inline: false,
+		});
+
+		embed.addFields(
+		{
+			name: "Start Time",
+			value: `<t:${unix}:f> (<t:${unix}:R>)`,
+			inline: false,
+		});
+		
+	embed.addFields({
+		name: `Attendees (${attendeeNames.length}/${getEventCapacity(publishingEvent)})`,
+		value: attendeeNames.length > 0 ? attendeeNames.join("\n") : "—",
+		inline: true,
+	});
+
 	if (cohostNames.length > 0) {
 		embed.addFields({
-			name: "CoHosts",
-			value: cohostNames.join(", "),
-			inline: false,
+			name: `Hosts (${cohostNames.length+1})`,
+			value: `**${hostName}**\n` + cohostNames.join("\n"),
+			inline: true,
 		});
 	}
 

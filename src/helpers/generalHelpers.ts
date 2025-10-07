@@ -20,3 +20,7 @@ export async function getEventById(eventId: number): Promise<(any & { _count: { 
 		return null;
 	}
 }
+
+export function getEventCapacity(event: any): number {
+	return (event.capacityBase > 0 ? Math.min(event.capacityBase * event.cohosts.length, event.capacityCap) : event.capacityCap) as number;
+}
