@@ -81,7 +81,8 @@ export async function buildEventEmbedWithLists(
 		
 		// Only add Requirements if present
 		if (publishingEvent.requirements && publishingEvent.requirements.trim() !== "") {
-		const emoji = emojiMap[publishingEvent.requirements.toLowerCase()] || "";
+			const key = publishingEvent.requirements.toLowerCase();
+			const emoji = emojiMap[key]?.emoji || "";
 		embed.addFields({
 			name: "Requirements",
 			value: `${emoji} ${publishingEvent.requirements}`,

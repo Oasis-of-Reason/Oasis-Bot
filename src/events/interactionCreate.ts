@@ -10,7 +10,8 @@ import {
 	StringSelectMenuBuilder,
 	StringSelectMenuOptionBuilder,
 	VoiceChannel,
-	MessageFlags
+	MessageFlags,
+	GuildMember,
 } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 import { refreshEventMessages } from "../helpers/refreshEventMessages";
@@ -323,19 +324,46 @@ export async function handleEventButtons(interaction: Interaction) {
 
 	try {
 		switch (action as ActionKind) {
-			case "attend": {
-				if (op === "on") {
-					const existing = await prisma.eventSignUps.findFirst({ where: { eventId, userId } });
-					if (!existing) await prisma.eventSignUps.create({ data: { eventId, userId } });
-					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-				} else {
-					await prisma.eventSignUps.deleteMany({ where: { eventId, userId } });
-					await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
-				}
-				await interaction.deferUpdate();
-				break;
-			}
+    case "attend": {
+      const guildId = interaction.guildId as string;
+      const userId = interaction.user.id;
+
+      // Fetch the event from your database
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+
+      if (!event || !event.publishedThreadId) {
+        console.warn("Event or publishedThreadId not found");
+        break;
+      }
+
+      // Fetch the thread from Discord
+      const thread = await interaction.client.channels.fetch(event.publishedThreadId);
+
+      if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
+        console.warn("Channel is not a thread");
+        break;
+      }
+
+      if (op === "on") {
+        const existing = await prisma.eventSignUps.findFirst({ where: { eventId: event.id, userId } });
+        if (!existing) await prisma.eventSignUps.create({ data: { eventId: event.id, userId } });
+
+        // ✅ Add user to thread
+        await thread.members.add(userId);
+
+        await refreshPublishedCalender(interaction.client, guildId, false);
+      } else {
+        await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
+
+        // ✅ Remove user from thread
+        await thread.members.remove(userId);
+
+        await refreshPublishedCalender(interaction.client, guildId, false);
+      		}
 		}
+	}
 
 		// Refresh both published messages with updated lists
 		await refreshEventMessages(interaction.client, eventId);
