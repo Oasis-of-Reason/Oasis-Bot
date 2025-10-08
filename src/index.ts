@@ -82,7 +82,7 @@ client.login(config.DISCORD_TOKEN)
 	.then(() => {
 		client.user?.setPresence({
 			activities: [{
-				name: 'Planning Events 🏓',
+				name: 'Oasis planning events',
 				type: ActivityType.Streaming,
 				url: 'https://vrchat.com/home'
 			}],

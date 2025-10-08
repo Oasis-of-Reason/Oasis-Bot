@@ -5,6 +5,31 @@ import {
 	GuildMember
 } from "discord.js";
 
+// Map for avatar performance requirement emojis
+const emojiMap: Record<string, { emoji: string; label: string }> = {
+  verypoor: {
+    emoji: "<:VeryPoor:1423045477242503319>",
+    label: "No Restriction",
+  },
+  poor: {
+    emoji: "<:Poor:1423045444354965527>",
+    label: "Poor or better",
+  },
+  medium: {
+    emoji: "<:Medium:1423045576567689226>",
+    label: "Medium or better",
+  },
+  good: {
+    emoji: "<:Good:1423045376423760092>",
+    label: "Good or better",
+  },
+  excellent: {
+    emoji: "<:VeryGood:1423045342760275989>",
+    label: "Excellent or better",
+  },
+};
+
+
 /** Build the event embed including attendees & cohosts lists. */
 export async function buildEventEmbedWithLists(
 	client: Client,
@@ -56,11 +81,12 @@ export async function buildEventEmbedWithLists(
 		
 		// Only add Requirements if present
 		if (publishingEvent.requirements && publishingEvent.requirements.trim() !== "") {
-			embed.addFields({
-				name: "Requirements",
-				value: publishingEvent.requirements,
-				inline: true,
-			});
+		const emoji = emojiMap[publishingEvent.requirements.toLowerCase()] || "";
+		embed.addFields({
+			name: "Requirements",
+			value: `${emoji} ${publishingEvent.requirements}`,
+			inline: true,
+		});
 		}
 
 		if(publishingEvent.subtype) {

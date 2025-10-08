@@ -182,11 +182,11 @@ module.exports = {
 				.setCustomId("event_requirements")
 				.setPlaceholder("Choose avatar performance requirement")
 				.addOptions(
-					{ label: "No Restriction", value: "<:VRChat_VeryPoor:1425560164798304307> No Restriction" },
-					{ label: "Poor or better", value: "<:VRChat_Poor:1425560228149334016> Poor or better" },
-					{ label: "Medium or better", value: "<:VRChat_Medium:1425560237900828813> Medium or better" },
-					{ label: "Good or better", value: "<:VRChat_Good:1425560249523507210> Good or better" },
-					{ label: "Excellent", value: "<:VRChat_Excellent:1425560260432892095> Excellent" }
+					{ label: "No Restriction", value: "verypoor" },
+					{ label: "Poor or better", value: "poor" },
+					{ label: "Medium or better", value: "medium" },
+					{ label: "Good or better", value: "good" },
+					{ label: "Excellent", value: "excellent" }
 				);
 
 			await modalSubmit.followUp({
@@ -579,11 +579,11 @@ module.exports = {
 								.setCustomId("select_requirements")
 								.setPlaceholder("Choose avatar performance requirement")
 								.addOptions(
-									{ label: "No Restriction", value: "<:VRChat_VeryPoor:1425560164798304307> No Restriction" },
-									{ label: "Poor or better", value: "<:VRChat_Poor:1425560228149334016> Poor or better" },
-									{ label: "Medium or better", value: "<:VRChat_Medium:1425560237900828813> Medium or better" },
-									{ label: "Good or better", value: "<:VRChat_Good:1425560249523507210> Good or better" },
-									{ label: "Excellent", value: "<:VRChat_Excellent:1425560260432892095> Excellent" }
+											{ label: "No Restriction", value: "verypoor" },
+											{ label: "Poor or better", value: "poor" },
+											{ label: "Medium or better", value: "medium" },
+											{ label: "Good or better", value: "good" },
+											{ label: "Excellent", value: "excellent" }
 								)
 						),
 					],

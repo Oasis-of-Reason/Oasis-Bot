@@ -7,9 +7,9 @@ export async function reinitialiseDraftEvents(client: Client) {
 	try {
 		// Fetch all active events from the database
 		const activeEvents = await prisma.event.findMany({
-			where: {
+			/*where: {
 				published: false, // Assuming you only want to re-initialize drafts
-			},
+			},*/
 		});
 
 		// Loop through each active event
