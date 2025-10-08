@@ -17,7 +17,8 @@ import {
 } from "discord.js";
 import {
 	userHasAllowedRole,
-	getStandardRolesHost
+	getStandardRolesHost,
+	getStandardRolesOrganizer
 } from "../helpers/securityHelpers";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
