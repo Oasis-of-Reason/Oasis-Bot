@@ -364,7 +364,7 @@ export async function handleEventButtons(interaction: Interaction) {
       		}
 		}
 	}
-
+		await interaction.deferUpdate();
 		// Refresh both published messages with updated lists
 		await refreshEventMessages(interaction.client, eventId);
 	} catch (err) {
