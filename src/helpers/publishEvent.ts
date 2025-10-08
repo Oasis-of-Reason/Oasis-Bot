@@ -11,7 +11,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	});
 	
 	const publishingEvent = await getEventById(eventId as number);
-	const publishingChannelId = (publishingEvent.type === "VRC" ? guildConfig?.publishingVRCChannelId : guildConfig?.publishingDiscordChannelId) ?? "[No Guild Config]";
+	const publishingChannelId = (publishingEvent.type.toLowerCase() === "vrc" ? guildConfig?.publishingVRCChannelId : guildConfig?.publishingDiscordChannelId) ?? "[No Guild Config]";
 
 	let channel;
 	try {
