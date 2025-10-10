@@ -55,7 +55,7 @@ export function buildDraftEmbed(eventData: {
 			},
 			{
 				name: "Description",
-				value: `**Description:** ${eventData.description || "—"}}>`,
+				value: `**Description:** ${eventData.description || "—"}`,
 			},
 			{
 				name: "Type",
@@ -63,13 +63,11 @@ export function buildDraftEmbed(eventData: {
 			},
 			{
 				name: "Technical",
-				value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "—"
-					}\n**Requirements:** ${eventData.requirements ?? "—"}\n**Capacity:** ${eventData.capacityCap}`,
+				value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "—"}\n**Requirements:** ${eventData.requirements ?? "—"}\n**Capacity:** ${eventData.capacityCap}`,
 			},
 			{
 				name: "Timing",
-				value: `**Start:** <t:${toUnix(eventData.startTime)}:F> (<t:${toUnix(eventData.startTime)}:R>)\n**Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} min` : "Not set"
-					}`,
+				value: `**Start:** <t:${toUnix(eventData.startTime)}:F> (<t:${toUnix(eventData.startTime)}:R>)\n**Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} min` : "Not set"}`,
 			}
 		);
 }
