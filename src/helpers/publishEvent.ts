@@ -1,67 +1,158 @@
-import { TextChannel, Client, Guild } from "discord.js";
+// src/helpers/publishEvent.ts
+import {
+	Client,
+	Guild,
+	TextChannel,
+	AnyThreadChannel,
+	ChannelType,
+	Message,
+} from "discord.js";
 import { prisma } from "../utils/prisma";
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
 import { getEventById } from "./generalHelpers";
 
-export async function publishEvent(client: Client, guild: Guild, eventId: number) {
+/* ---------- small helpers ---------- */
 
-	const guildConfig = await prisma.guildConfig.findUnique({
-		where: { id: guild.id as string }
-	});
-	
-	const publishingEvent = await getEventById(eventId as number);
-	const publishingChannelId = (publishingEvent.type.toLowerCase() === "vrc" ? guildConfig?.publishingVRCChannelId : guildConfig?.publishingDiscordChannelId) ?? "[No Guild Config]";
-
-	let channel;
-	try {
-		// Try cache first
-		channel = client.channels.cache.get(publishingChannelId) as TextChannel;
-		if (!channel) {
-			// Fetch from API if not in cache
-			channel = await client.channels.fetch(publishingChannelId) as TextChannel;
-		}
-	} catch (err) {
-		console.error(`Failed to fetch channel ${publishingChannelId}:`, err);
-	}
-	const channelEmbed = await buildEventEmbedWithLists(client, publishingEvent, [], []);
-	const components = getEventButtons(eventId as number);
-
-	// Fire messages and create event (order important for desired order of messages in channel)
-	const sentChannel = await channel?.send({ embeds: [channelEmbed], components });
-	const thread = await channel?.threads.create({
-		name: `Event: ${publishingEvent.title}`,
-		autoArchiveDuration: 1440, // 24h
-	});
-	const sentThread = await thread?.send({ embeds: [channelEmbed], components });
-	
-	await channel?.send({ content: "Pings: " });
-	await updatePublishedValues(eventId, publishingChannelId, thread?.id as string, sentChannel?.id as string, sentThread?.id as string);
+async function fetchTextChannel(client: Client, id?: string | null): Promise<TextChannel | null> {
+	if (!id) return null;
+	const cached = client.channels.cache.get(id);
+	if (cached?.type === ChannelType.GuildText) return cached as TextChannel;
+	const fetched = await client.channels.fetch(id).catch(() => null);
+	return fetched?.type === ChannelType.GuildText ? (fetched as TextChannel) : null;
 }
 
-async function updatePublishedValues(
-	eventId: number,
-	publishedChannelId: string,
-	publishedThreadId: string,
-	publishedChannelMessageId: string,
-	publishedThreadMessageId: string
-) {
-	try {
-		const updatedEvent = await prisma.event.update({
-			where: { id: eventId },
-			data: {
-				published: true,
-				publishedChannelId,
-				publishedThreadId,
-				publishedChannelMessageId,
-				publishedThreadMessageId,
-			},
-		});
-
-		console.log(`✅ Updated event #${eventId} as published`);
-		return updatedEvent;
-	} catch (error) {
-		console.error(`❌ Failed to update published values for event #${eventId}:`, error);
-		throw error;
+async function fetchThread(guild: Guild, id?: string | null): Promise<AnyThreadChannel | null> {
+	if (!id) return null;
+	const ch = await guild.channels.fetch(id).catch(() => null);
+	if (!ch || (ch.type !== ChannelType.PublicThread && ch.type !== ChannelType.PrivateThread)) return null;
+	const thread = ch as AnyThreadChannel;
+	if (thread.archived) {
+		try { await thread.setArchived(false, "Temporarily unarchive to edit event"); } catch { }
 	}
+	return thread;
+}
+
+async function fetchMsgInChannel(channel: TextChannel, messageId?: string | null): Promise<Message | null> {
+	if (!messageId) return null;
+	return await channel.messages.fetch(messageId).catch(() => null);
+}
+async function fetchMsgInThread(thread: AnyThreadChannel, messageId?: string | null): Promise<Message | null> {
+	if (!messageId) return null;
+	return await thread.messages.fetch(messageId).catch(() => null);
+}
+
+/* ---------- load signups/interest from DB ---------- */
+
+async function loadSignupUserIds(eventId: number) {
+	// Adjust field names if yours differ (assuming tables: EventSignUps, InterestedSignUps with userId fields)
+	const [signups, cohosts] = await Promise.all([
+		prisma.eventSignUps.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
+		prisma.cohostsOnEvent.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
+	]);
+	return {
+		signupUserIds: signups.map(s => s.userId),
+		cohostsUserIds: cohosts.map(s => s.userId),
+	};
+}
+
+/* ---------- main ---------- */
+
+export async function publishEvent(client: Client, guild: Guild, eventId: number) {
+	const guildConfig = await prisma.guildConfig.findUnique({ where: { id: guild.id } });
+	const publishingEvent = await getEventById(eventId);
+
+	// Always load latest signup/interest lists before rendering
+	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
+
+	const defaultPublishingChannelId =
+		(publishingEvent.type?.toLowerCase() === "vrc"
+			? guildConfig?.publishingVRCChannelId
+			: guildConfig?.publishingDiscordChannelId) ?? "";
+
+	const embed = await buildEventEmbedWithLists(client, publishingEvent, signupUserIds, cohostsUserIds);
+	const components = getEventButtons(eventId);
+
+	// If already published → edit existing messages (or recreate missing ones)
+	if (publishingEvent.published) {
+		const publishedChannel = await fetchTextChannel(client, publishingEvent.publishedChannelId);
+		const publishedThread = await fetchThread(guild, publishingEvent.publishedThreadId ?? null);
+
+		let channelMsgId = publishingEvent.publishedChannelMessageId ?? null;
+		let threadId = publishingEvent.publishedThreadId ?? null;
+		let threadMsgId = publishingEvent.publishedThreadMessageId ?? null;
+
+		// Channel message
+		if (publishedChannel) {
+			const existing = await fetchMsgInChannel(publishedChannel, channelMsgId);
+			if (existing) {
+				await existing.edit({ embeds: [embed], components });
+			} else {
+				const sent = await publishedChannel.send({ embeds: [embed], components });
+				channelMsgId = sent.id;
+			}
+		}
+
+		// Thread message
+		if (publishedThread) {
+			const existing = await fetchMsgInThread(publishedThread, threadMsgId);
+			if (existing) {
+				await existing.edit({ embeds: [embed], components });
+			} else {
+				const sent = await publishedThread.send({ embeds: [embed], components });
+				threadMsgId = sent.id;
+			}
+			threadId = publishedThread.id;
+
+			// Re-archive if we had unarchived earlier
+			if (publishedThread.archived) {
+				try { await publishedThread.setArchived(true, "Restore archived state after edit"); } catch { }
+			}
+		}
+
+		// Persist any recreated pointers
+		if (
+			channelMsgId !== publishingEvent.publishedChannelMessageId ||
+			threadMsgId !== publishingEvent.publishedThreadMessageId ||
+			threadId !== publishingEvent.publishedThreadId
+		) {
+			await prisma.event.update({
+				where: { id: eventId },
+				data: {
+					published: true,
+					...(publishingEvent.publishedChannelId ? { publishedChannelId: publishingEvent.publishedChannelId } : {}),
+					...(threadId ? { publishedThreadId: threadId } : {}),
+					...(channelMsgId ? { publishedChannelMessageId: channelMsgId } : {}),
+					...(threadMsgId ? { publishedThreadMessageId: threadMsgId } : {}),
+				},
+			});
+		}
+
+		return; // done editing
+	}
+
+	// First-time publish → send new messages
+	const channel = await fetchTextChannel(client, defaultPublishingChannelId);
+	if (!channel) throw new Error(`Publish channel not found: ${defaultPublishingChannelId}`);
+
+	const sentChannel = await channel.send({ embeds: [embed], components });
+
+	const thread = await channel.threads.create({
+		name: `Event: ${publishingEvent.title}`,
+		autoArchiveDuration: 1440,
+	});
+	const sentThread = await thread.send({ embeds: [embed], components });
+
+	await channel.send({ content: "Pings: " });
+
+	await prisma.event.update({
+		where: { id: eventId },
+		data: {
+			published: true,
+			publishedChannelId: channel.id,
+			publishedThreadId: thread.id,
+			publishedChannelMessageId: sentChannel.id,
+			publishedThreadMessageId: sentThread.id,
+		},
+	});
 }

@@ -19,7 +19,7 @@ export async function refreshEventMessages(client: Client, eventId: number) {
 	const attendees = ev.signups.map(s => `<${s.userId}>`);
 	const cohosts = ev.cohosts.map(c => `<${c.userId}>`);
 
-	const embed = await buildEventEmbedWithLists(client, ev, attendees, ev.cohosts);
+	const embed = await buildEventEmbedWithLists(client, ev, attendees, cohosts);
 	const components = getEventButtons(eventId);
 
 	// Edit the published channel message
