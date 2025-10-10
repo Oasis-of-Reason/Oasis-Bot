@@ -26,7 +26,7 @@ module.exports = {
 		const guildConfig = await prisma.guildConfig.findUnique({ where: { id: interaction.guildId as string } });
 
 		if (interaction.channelId !== (guildConfig?.draftChannelId ?? "")) {
-			await interaction.reply({ content: "❌ This command can only be used in the #draft-event channel.", ephemeral: true });
+			await interaction.reply({ content: "❌ This command can only be used in the event drafting channel.", ephemeral: true });
 			return;
 		}
 
@@ -206,7 +206,7 @@ module.exports = {
 			.setTitle("Event Timing")
 			.addComponents(
 				new ActionRowBuilder<TextInputBuilder>().addComponents(
-					new TextInputBuilder().setCustomId("start").setLabel("When does it start? (e.g. 'tomorrow 8pm')").setStyle(TextInputStyle.Short).setRequired(true)
+					new TextInputBuilder().setCustomId("start").setLabel("When does it start? (e.g. 'tomorrow 8pm GMT')").setStyle(TextInputStyle.Short).setRequired(true)
 				),
 				new ActionRowBuilder<TextInputBuilder>().addComponents(
 					new TextInputBuilder().setCustomId("length").setLabel("Length in minutes").setStyle(TextInputStyle.Short)
