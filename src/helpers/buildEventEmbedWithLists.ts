@@ -130,7 +130,7 @@ export async function buildEventEmbedWithLists(
 		});
 	attendeeNamesSplit
 	embed.addFields({
-		name: `Attendees (${attendeeNamesSplit[0].length}/${publishingEvent.capacityCap})`,
+		name: `Attendees (${attendeeNamesSplit[0].length}` + (publishingEvent.capacityCap > 0 ? `/${publishingEvent.capacityCap})` : `)`),
 		value: attendeeNamesSplit[0].length > 0 ? "> " + attendeeNamesSplit[0].join("\n> ") : "> —",
 		inline: true,
 	});

@@ -23,6 +23,7 @@ import { prisma } from "../utils/prisma";
 import { publishEvent } from "../helpers/publishEvent";
 import { getStandardRolesOrganizer, userHasAllowedRole } from "../helpers/securityHelpers";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
+import { validateNumber } from "./generalHelpers";
 
 /* ───────────────────────────── UI helpers ───────────────────────────── */
 
@@ -59,7 +60,7 @@ export function buildDraftEmbed(eventData: {
 			},
 			{
 				name: "General Information",
-				value: `> **Type:** ${eventData.type ?? "—"}\n> **Subtype:** ${eventData.subtype ?? "—"}\n> **Activity:** ${eventData.activity ?? "—"}\n> **Capacity:** ${eventData.capacityCap}`,
+				value: `> **Type:** ${eventData.type ?? "—"}\n> **Subtype:** ${eventData.subtype ?? "—"}\n> **Activity:** ${eventData.activity ?? "—"}\n> **Capacity:** ${eventData.capacityCap > 0 ? eventData.capacityCap : "Unlimited"}`,
 			}
 		);
 
@@ -210,10 +211,9 @@ export async function handleDraftButton(
 				time: 120_000,
 			});
 			await sub.deferReply({ ephemeral: true });
-			let newCap = parseInt(sub.fields.getTextInputValue("new_capacity_cap"), 10);
-			if (Number.isNaN(newCap)) newCap = 0;
-			eventData.capacityCap = newCap;
-			await updateDraftByMsgId(message.id, { capacityCap: newCap });
+			let val = validateNumber(sub.fields.getTextInputValue("new_capacity_cap"));
+			eventData.capacityCap = val;
+			await updateDraftByMsgId(message.id, { capacityCap: val });
 			await sub.editReply({ content: "✅ Capacity updated!" });
 			await rerender();
 			break;
@@ -233,8 +233,7 @@ export async function handleDraftButton(
 		}
 		case "edit_length": {
 			const sub = await modalInput("modal_edit_length", "Edit Length", "new_length", "Length in minutes");
-			let val = parseInt(sub.fields.getTextInputValue("new_length") || "0", 10);
-			if (Number.isNaN(val)) val = 0;
+			let val = validateNumber(sub.fields.getTextInputValue("new_length"));
 			eventData.lengthMinutes = val;
 			await updateDraftByMsgId(message.id, { lengthMinutes: val });
 			await sub.editReply({ content: "✅ Length updated!" });
@@ -300,7 +299,7 @@ export async function handleDraftButton(
 		}
 		case "edit_scope": {
 			const msg = await i.reply({
-				content: "Select a new scope:",
+				content: "Select a new instance type:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("select_scope", "Choose scope", [
@@ -362,7 +361,7 @@ export async function handleDraftButton(
 		}
 		case "edit_requirements": {
 			const msg = await i.reply({
-				content: "Select new requirements:",
+				content: "Select new avatar performance requirement:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("select_requirements", "Avatar performance", [
