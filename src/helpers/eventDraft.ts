@@ -44,32 +44,37 @@ export function buildDraftEmbed(eventData: {
 	lengthMinutes?: number | null;
 	posterUrl?: string | null;
 }) {
-	return new EmbedBuilder()
+	const embed = new EmbedBuilder()
 		.setTitle("📅 Event Draft")
 		.setColor(0x5865f2)
 		.setImage(eventData.posterUrl ?? null)
 		.addFields(
 			{
-				name: "Event",
-				value: `**Title:** ${eventData.title}\n**Host:** <@${eventData.hostId}>`,
+				name: "Event Information",
+				value: `> **Title:** ${eventData.title}\n> **Host:** <@${eventData.hostId}>`,
 			},
 			{
 				name: "Description",
-				value: `**Description:** ${eventData.description || "—"}`,
+				value: `> ${eventData.description || "—"}`,
 			},
 			{
-				name: "Type",
-				value: `**Type:** ${eventData.type ?? "—"}\n**Subtype:** ${eventData.subtype ?? "—"}\n**Activity:** ${eventData.activity ?? "—"}\n**Scope:** ${eventData.scope ?? "—"}`,
-			},
-			{
-				name: "Technical",
-				value: `**Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "—"}\n**Requirements:** ${eventData.requirements ?? "—"}\n**Capacity:** ${eventData.capacityCap}`,
-			},
-			{
-				name: "Timing",
-				value: `**Start:** <t:${toUnix(eventData.startTime)}:F> (<t:${toUnix(eventData.startTime)}:R>)\n**Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} min` : "Not set"}`,
+				name: "General Information",
+				value: `> **Type:** ${eventData.type ?? "—"}\n> **Subtype:** ${eventData.subtype ?? "—"}\n> **Activity:** ${eventData.activity ?? "—"}\n> **Capacity:** ${eventData.capacityCap}`,
 			}
 		);
+
+	if (eventData.type?.toLowerCase() === "vrc") {
+		embed.addFields({
+			name: "VRC Information",
+			value: `> **Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "—"}\n> **Avatar Requirements:** ${eventData.requirements ?? "—"}\n> **Instance Type:** ${eventData.scope ?? "—"}`,
+		});
+	}
+	embed.addFields({
+		name: "Timing",
+		value: `> **Start:** <t:${toUnix(eventData.startTime)}:F> (<t:${toUnix(eventData.startTime)}:R>)\n> **Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} min` : "Not set"}`,
+	});
+
+	return embed;
 }
 
 export function editButtons() {
@@ -423,8 +428,9 @@ export async function registerEventDraftCollectors(client: Client) {
 
 	// pull all unpublished drafts
 	const now = new Date();
+	const nowMinusDay = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 	const drafts = await prisma.event.findMany({
-		where: { startTime: { gte: now }, },
+		where: { startTime: { gte: nowMinusDay }, },
 		select: {
 			id: true,
 			guildId: true,

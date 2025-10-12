@@ -74,7 +74,7 @@ export async function buildEventEmbedWithLists(
 	const embed = new EmbedBuilder()
 		.setTitle(publishingEvent.title)
 		.setColor(0x5865f2)
-		.setDescription(publishingEvent.description ?? "No description provided.")
+		.setDescription("> " + (publishingEvent.description ?? "No description provided."))
 		.setAuthor({
 			name: `Hosted By: ${hostName}`,
 			iconURL: hostUser.user.displayAvatarURL({ forceStatic: false, size: 64 }),
@@ -86,7 +86,7 @@ export async function buildEventEmbedWithLists(
 		const emoji = emojiMap[key]?.emoji || "";
 		embed.addFields({
 			name: "Requirements",
-			value: `${emoji} ${publishingEvent.requirements}`,
+			value: `> ${emoji} ${publishingEvent.requirements}`,
 			inline: true,
 		});
 	}
@@ -94,15 +94,15 @@ export async function buildEventEmbedWithLists(
 	if (publishingEvent.subtype) {
 		embed.addFields({
 			name: "Type",
-			value: publishingEvent.subtype,
+			value: "> " + publishingEvent.subtype,
 			inline: true,
 		});
 	}
 
 	if (publishingEvent.scope) {
 		embed.addFields({
-			name: "Scope",
-			value: publishingEvent.scope === "Group" ? "Group Only" : "Group Plus",
+			name: "Instance Type",
+			value: publishingEvent.scope === "Group" ? "> Group Only" : "> Group Plus",
 			inline: true,
 		});
 	}
@@ -110,7 +110,7 @@ export async function buildEventEmbedWithLists(
 	if (publishingEvent.platforms) {
 		embed.addFields({
 			name: "Platforms",
-			value: `:${(JSON.parse(publishingEvent.platforms) as string[]).join(": :")}:`.toLowerCase(),
+			value: `> :${(JSON.parse(publishingEvent.platforms) as string[]).join(": :")}:`.toLowerCase(),
 			inline: false,
 		});
 	}
@@ -118,26 +118,26 @@ export async function buildEventEmbedWithLists(
 	embed.addFields(
 		{
 			name: "Duration",
-			value: `${publishingEvent.lengthMinutes} minutes`,
+			value: `> ${publishingEvent.lengthMinutes} minutes`,
 			inline: false,
 		});
 
 	embed.addFields(
 		{
 			name: "Start Time",
-			value: `<t:${unix}:f> (<t:${unix}:R>)`,
+			value: `> <t:${unix}:f> (<t:${unix}:R>)`,
 			inline: false,
 		});
 	attendeeNamesSplit
 	embed.addFields({
 		name: `Attendees (${attendeeNamesSplit[0].length}/${publishingEvent.capacityCap})`,
-		value: attendeeNamesSplit[0].length > 0 ? attendeeNamesSplit[0].join("\n") : "—",
+		value: attendeeNamesSplit[0].length > 0 ? "> " + attendeeNamesSplit[0].join("\n> ") : "> —",
 		inline: true,
 	});
 	if (attendeeNamesSplit[1].length > 0) {
 		embed.addFields({
 			name: `Waiting List (${attendeeNamesSplit[1].length})`,
-			value: attendeeNamesSplit[1].join("\n"),
+			value: "> " + attendeeNamesSplit[1].join("\n> "),
 			inline: true,
 		});
 	}

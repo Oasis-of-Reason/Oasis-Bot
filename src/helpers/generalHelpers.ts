@@ -24,3 +24,11 @@ export async function getEventById(eventId: number): Promise<(any & { _count: { 
 export function getEventCapacity(event: any): number {
 	return (event.capacityBase > 0 ? Math.min(event.capacityBase * (event.cohosts.length + 1), event.capacityCap) : event.capacityCap) as number;
 }
+
+export function validateNumber(numberString: string): number{
+	
+	let myNumber = numberString ? parseInt(numberString, 10) : 0;
+	if (Number.isNaN(myNumber) || myNumber < 0) myNumber = 0;
+
+	return Math.min(myNumber, 99999);
+}
