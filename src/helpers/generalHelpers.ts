@@ -25,10 +25,36 @@ export function getEventCapacity(event: any): number {
 	return (event.capacityBase > 0 ? Math.min(event.capacityBase * (event.cohosts.length + 1), event.capacityCap) : event.capacityCap) as number;
 }
 
-export function validateNumber(numberString: string): number{
-	
+export function validateNumber(numberString: string): number {
+
 	let myNumber = numberString ? parseInt(numberString, 10) : 0;
 	if (Number.isNaN(myNumber) || myNumber < 0) myNumber = 0;
 
 	return Math.min(myNumber, 99999);
+}
+
+/**
+ * Ensures a user has default reminder settings.
+ * If the user doesn't exist, it creates one with default values.
+ * @param userId Discord user ID
+ * @returns The user's settings record
+ */
+export async function ensureUserReminderDefaults(userId: string) {
+	const existing = await prisma.user.findUnique({
+		where: { id: userId },
+	});
+
+	if (existing) {
+		return;
+	}
+
+	// Create new defaults if none exist
+	const created = await prisma.user.create({
+		data: {
+			id: userId,
+			reminderNotifications: true,
+			eventStartingNotifications: true,
+			reminderMinutesBefore: 30,
+		},
+	});
 }

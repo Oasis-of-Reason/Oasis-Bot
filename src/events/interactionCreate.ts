@@ -16,6 +16,7 @@ import {
 import { PrismaClient } from '@prisma/client';
 import { refreshEventMessages } from "../helpers/refreshEventMessages";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { ensureUserReminderDefaults } from '../helpers/generalHelpers';
 
 const prisma = new PrismaClient();
 
@@ -352,7 +353,7 @@ export async function handleEventButtons(interaction: Interaction) {
 
         // ✅ Add user to thread
         await thread.members.add(userId);
-
+		await ensureUserReminderDefaults(userId);
         await refreshPublishedCalender(interaction.client, guildId, false);
       } else {
         await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
