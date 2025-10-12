@@ -57,7 +57,7 @@ module.exports = {
 
 			await interaction.reply({
 				content: `✅ Event deleted!\n\n**Event Name:** ${deletedEvent.title}\n**Start DateTime:** ${deletedEvent.startTime.toLocaleString()}`,
-				ephemeral: true
+				flags: MessageFlags.Ephemeral
 			});
 		} catch (error: any) {
 			if (error.code === 'P2025') {

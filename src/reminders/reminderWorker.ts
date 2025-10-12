@@ -20,13 +20,14 @@ export function startReminderWorker(client: Client) {
 
 async function runOnce(client: Client) {
 	const now = new Date();
+	const windowMinutesAgo = new Date(now.getTime() - WINDOW_MINUTES * 60 * 1000);
 	const horizon = new Date(now.getTime() + LOOKAHEAD_HOURS * 60 * 60 * 1000);
 
 	// 1) Get upcoming published events
 	const events = await prisma.event.findMany({
 		where: {
 			published: true,
-			startTime: { gt: now, lte: horizon },
+			startTime: { gt: windowMinutesAgo, lte: horizon },
 		},
 		include: {
 			signups: true, // must include userId
@@ -93,9 +94,9 @@ async function runOnce(client: Client) {
 				}
 			}
 
-			// --- B) Event is starting now (global) ---
+			// --- B) Event is starting now ---
 			if (prefs.eventStartingNotifications) {
-				if (deltaMinutes >= -WINDOW_MINUTES && deltaMinutes <= 0) {
+				if (deltaMinutes >= (-WINDOW_MINUTES) && deltaMinutes <= 0) {
 					const key = `${uid}:${ev.id}:START`;
 					if (!sentKey.has(key)) {
 						const ok = await sendReminderDM(client, uid, ev, unix, 'START');

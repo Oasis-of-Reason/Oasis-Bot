@@ -17,6 +17,7 @@ import {
 	TextChannel,
 	ChannelType,
 	AnyThreadChannel,
+	MessageFlags,
 } from "discord.js";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
@@ -167,7 +168,7 @@ export async function handleDraftButton(
 			filter: (x) => x.customId === id && x.user.id === i.user.id,
 			time: 120_000,
 		});
-		await sub.deferReply({ ephemeral: true });
+		await sub.deferReply({ flags: MessageFlags.Ephemeral });
 		return sub;
 	};
 
@@ -210,7 +211,7 @@ export async function handleDraftButton(
 				filter: (x) => x.customId === "modal_edit_capacity" && x.user.id === i.user.id,
 				time: 120_000,
 			});
-			await sub.deferReply({ ephemeral: true });
+			await sub.deferReply({ flags: MessageFlags.Ephemeral });
 			let val = validateNumber(sub.fields.getTextInputValue("new_capacity_cap"));
 			eventData.capacityCap = val;
 			await updateDraftByMsgId(message.id, { capacityCap: val });
@@ -251,7 +252,7 @@ export async function handleDraftButton(
 						])
 					),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
 
@@ -280,7 +281,7 @@ export async function handleDraftButton(
 						])
 					),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
 
@@ -308,7 +309,7 @@ export async function handleDraftButton(
 						])
 					),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
 
@@ -342,7 +343,7 @@ export async function handleDraftButton(
 						)
 					),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
 
@@ -373,7 +374,7 @@ export async function handleDraftButton(
 						])
 					),
 				],
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
 
@@ -391,22 +392,22 @@ export async function handleDraftButton(
 			break;
 		}
 		case "get_event_id":
-			await i.reply({ content: `This event's ID is \`${eventData.id}\``, ephemeral: true });
+			await i.reply({ content: `This event's ID is \`${eventData.id}\``, flags: MessageFlags.Ephemeral });
 			break;
 
 		case "publish_event": {
 			const guild = i.guild as Guild;
 			if (!userHasAllowedRole(i.member as GuildMember, getStandardRolesOrganizer())) {
-				await i.reply({ content: "❌ Only organizers can publish.", ephemeral: true });
+				await i.reply({ content: "❌ Only organizers can publish.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 			try {
 				await publishEvent(i.client, guild, eventData.id);
-				await i.reply({ content: "✅ Event published!", ephemeral: true });
+				await i.reply({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
 				await refreshPublishedCalender(i.client, guild.id, true);
 			} catch (err) {
 				console.error("Publish error:", err);
-				await i.reply({ content: "⚠️ Something went wrong while publishing.", ephemeral: true });
+				await i.reply({ content: "⚠️ Something went wrong while publishing.", flags: MessageFlags.Ephemeral });
 			}
 			break;
 		}
