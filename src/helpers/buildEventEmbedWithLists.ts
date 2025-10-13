@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 
 // Map for avatar performance requirement emojis
-const emojiMap: Record<string, { emoji: string; label: string }> = {
+const emojiMapRequirements: Record<string, { emoji: string; label: string }> = {
 	verypoor: {
 		emoji: "<:VeryPoor:1423045477242503319>",
 		label: "No Restriction",
@@ -28,6 +28,37 @@ const emojiMap: Record<string, { emoji: string; label: string }> = {
 		label: "Excellent or better",
 	},
 };
+
+export function getRequirementsString(value: string) {
+	const key = value.toLowerCase();
+	return `${emojiMapRequirements[key]?.emoji || ""} ${emojiMapRequirements[key].label}`
+}
+
+// Map for avatar performance requirement emojis
+const emojiMapPlatforms: Record<string, { emoji: string; label: string }> = {
+	pcvr: {
+		emoji: "<:pcvr:1427326857216528428>",
+		label: "PCVR",
+	},
+	android: {
+		emoji: "<:android:1427326899201245397>",
+		label: "Android",
+	},
+};
+
+export function getPlatformsString(value: string) {
+	const platforms = JSON.parse(value) as string[];
+	return getPlatformsArray(platforms);
+}
+
+export function getPlatformsArray(platforms: string[]) {
+	let platformString = "";
+	platforms.forEach(element => {
+		const key = element.toLowerCase();
+		platformString = platformString + `${emojiMapPlatforms[key]?.emoji || ""} `
+	});
+	return platformString;
+}
 
 
 /** Build the event embed including attendees & cohosts lists. */
@@ -82,11 +113,9 @@ export async function buildEventEmbedWithLists(
 
 	// Only add Requirements if present
 	if (publishingEvent.requirements && publishingEvent.requirements.trim() !== "") {
-		const key = publishingEvent.requirements.toLowerCase();
-		const emoji = emojiMap[key]?.emoji || "";
 		embed.addFields({
 			name: "Requirements",
-			value: `> ${emoji} ${emojiMap.label}`,
+			value: `> ${getRequirementsString(publishingEvent.requirements)}`,
 			inline: true,
 		});
 	}
@@ -110,7 +139,7 @@ export async function buildEventEmbedWithLists(
 	if (publishingEvent.platforms) {
 		embed.addFields({
 			name: "Platforms",
-			value: `> :${(JSON.parse(publishingEvent.platforms) as string[]).join(": :")}:`.toLowerCase(),
+			value: `> ${getPlatformsString(publishingEvent.platforms)}`,
 			inline: false,
 		});
 	}

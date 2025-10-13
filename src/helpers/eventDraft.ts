@@ -14,7 +14,6 @@ import {
 	Client,
 	Guild,
 	GuildMember,
-	TextChannel,
 	ChannelType,
 	AnyThreadChannel,
 	MessageFlags,
@@ -25,6 +24,7 @@ import { publishEvent } from "../helpers/publishEvent";
 import { getStandardRolesOrganizer, userHasAllowedRole } from "../helpers/securityHelpers";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { validateNumber } from "./generalHelpers";
+import { getPlatformsArray, getRequirementsString } from "./buildEventEmbedWithLists";
 
 /* ───────────────────────────── UI helpers ───────────────────────────── */
 
@@ -68,7 +68,7 @@ export function buildDraftEmbed(eventData: {
 	if (eventData.type?.toLowerCase() === "vrc") {
 		embed.addFields({
 			name: "VRC Information",
-			value: `> **Platforms:** ${eventData.platforms?.length ? eventData.platforms.join(", ") : "—"}\n> **Avatar Requirements:** ${eventData.requirements ?? "—"}\n> **Instance Type:** ${eventData.scope ?? "—"}`,
+			value: `> **Platforms:** ${eventData.platforms?.length ? getPlatformsArray(eventData.platforms) : "—"}\n> **Avatar Requirements:** ${eventData.requirements ? getRequirementsString(eventData.requirements) : "—"}\n> **Instance Type:** ${eventData.scope ?? "—"}`,
 		});
 	}
 	embed.addFields({
