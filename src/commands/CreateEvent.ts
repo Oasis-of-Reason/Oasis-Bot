@@ -163,11 +163,11 @@ module.exports = {
 					),
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("event_requirements", "Choose avatar performance requirement:", [
-							{ label: "No Restriction", value: "No Restriction" },
-							{ label: "Poor or better", value: "Poor or better" },
-							{ label: "Medium or better", value: "Medium or better" },
-							{ label: "Good or better", value: "Good or better" },
-							{ label: "Excellent", value: "Excellent" },
+							{ label: "No Restriction", value: "verypoor" },
+							{ label: "Poor or better", value: "poor" },
+							{ label: "Medium or better", value: "medium" },
+							{ label: "Good or better", value: "good" },
+							{ label: "Excellent", value: "excellent" },
 						])
 					),
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(

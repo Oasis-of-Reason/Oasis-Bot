@@ -86,7 +86,7 @@ export async function buildEventEmbedWithLists(
 		const emoji = emojiMap[key]?.emoji || "";
 		embed.addFields({
 			name: "Requirements",
-			value: `> ${emoji} ${publishingEvent.requirements}`,
+			value: `> ${emoji} ${emojiMap.label}`,
 			inline: true,
 		});
 	}
