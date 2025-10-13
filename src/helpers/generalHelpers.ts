@@ -59,27 +59,36 @@ export async function ensureUserReminderDefaults(userId: string) {
 	});
 }
 
+export const allowedPingRoles = [
+	`1416811955074891776`,
+	`1425104014084673556`,
+	`1422352173622366358`,
+	`1416812117423816867`,
+	`1419732188202533036`,
+	`1425104189444460636`
+];
+
 export const pingMap: Record<string, Record<string, { label: string }>> = {
 	vrc: {
 		gaming: {
-			label: "@VRChat Gaming Events",
+			label: "<@&1416811955074891776>",
 		},
 		social: {
-			label: "@VRChat Social Events",
+			label: "<@&1425104014084673556>",
 		},
 		cinema: {
-			label: "@VRChat Cinema Events",
+			label: "<@&1422352173622366358>",
 		},
 	},
 	discord: {
 		gaming: {
-			label: "@Discord Gaming Events",
+			label: "<@&1416812117423816867>",
 		},
 		social: {
-			label: "@Discord Social Events",
+			label: "<@&1419732188202533036>",
 		},
 		cinema: {
-			label: "@Discord Cinema Events",
+			label: "<@&1425104189444460636>",
 		},
 	}
 };
