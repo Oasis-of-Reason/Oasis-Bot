@@ -137,13 +137,14 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 
 	const sentChannel = await channel.send({ embeds: [embed], components });
 
+	await sentChannel.reply({ content: "Pings: " });
+
 	const thread = await channel.threads.create({
 		name: `Event: ${publishingEvent.title}`,
 		autoArchiveDuration: 1440,
 	});
 	const sentThread = await thread.send({ embeds: [embed], components });
 
-	await channel.send({ content: "Pings: " });
 
 	await prisma.event.update({
 		where: { id: eventId },

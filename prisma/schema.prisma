@@ -59,7 +59,7 @@ model UserEventReminder {
   sentAt           DateTime         @default(now())
 
   user  User  @relation(fields: [userId], references: [id])
-  event Event @relation(fields: [eventId], references: [id])
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventId, notificationType]) // never send same type twice
   @@index([eventId, notificationType])
@@ -105,7 +105,7 @@ model Event {
 
 model CohostsOnEvent {
   id      Int    @id @default(autoincrement())
-  event   Event  @relation(fields: [eventId], references: [id])
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId Int
   userId  String
   createdAt                 DateTime            @default(now())
@@ -113,7 +113,7 @@ model CohostsOnEvent {
 
 model EventSignUps {
   id      Int    @id @default(autoincrement())
-  event   Event  @relation(fields: [eventId], references: [id])
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId Int
   userId  String
   createdAt                 DateTime            @default(now())
@@ -121,7 +121,7 @@ model EventSignUps {
 
 model InterestedSignUps {
   id      Int    @id @default(autoincrement())
-  event   Event  @relation(fields: [eventId], references: [id])
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId Int
   userId  String
   createdAt                 DateTime            @default(now())
