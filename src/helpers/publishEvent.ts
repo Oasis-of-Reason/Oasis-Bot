@@ -10,7 +10,7 @@ import {
 import { prisma } from "../utils/prisma";
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
-import { getEventById } from "./generalHelpers";
+import { getEventById, pingMap } from "./generalHelpers";
 
 /* ---------- small helpers ---------- */
 
@@ -137,14 +137,13 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 
 	const sentChannel = await channel.send({ embeds: [embed], components });
 
-	await sentChannel.reply({ content: "Pings: " });
+	await sentChannel.reply({ content: "Pings: " + pingMap[publishingEvent.type.toLowerCase()][publishingEvent.subtype.toLowerCase()].label});
 
 	const thread = await channel.threads.create({
 		name: `Event: ${publishingEvent.title}`,
 		autoArchiveDuration: 1440,
 	});
 	const sentThread = await thread.send({ embeds: [embed], components });
-
 
 	await prisma.event.update({
 		where: { id: eventId },

@@ -58,3 +58,28 @@ export async function ensureUserReminderDefaults(userId: string) {
 		},
 	});
 }
+
+export const pingMap: Record<string, Record<string, { label: string }>> = {
+	vrc: {
+		gaming: {
+			label: "@VRChat Gaming Events",
+		},
+		social: {
+			label: "@VRChat Social Events",
+		},
+		cinema: {
+			label: "@VRChat Cinema Events",
+		},
+	},
+	discord: {
+		gaming: {
+			label: "@Discord Gaming Events",
+		},
+		social: {
+			label: "@Discord Social Events",
+		},
+		cinema: {
+			label: "@Discord Cinema Events",
+		},
+	}
+};
