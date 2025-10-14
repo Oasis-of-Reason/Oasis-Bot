@@ -18,17 +18,20 @@ import {
 	AnyThreadChannel,
 	MessageFlags,
 } from "discord.js";
+import { 
+	validateNumber,
+	getPlatformsArray,
+	getRequirementsString,
+	toUnix
+ } from "./generalHelpers";
+ import { 
+	getStandardRolesOrganizer, 
+	userHasAllowedRole 
+} from "../helpers/securityHelpers";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { publishEvent } from "../helpers/publishEvent";
-import { getStandardRolesOrganizer, userHasAllowedRole } from "../helpers/securityHelpers";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
-import { validateNumber } from "./generalHelpers";
-import { getPlatformsArray, getRequirementsString } from "./buildEventEmbedWithLists";
-
-/* ───────────────────────────── UI helpers ───────────────────────────── */
-
-export const toUnix = (d: Date) => Math.floor(d.getTime() / 1000);
 
 export function buildDraftEmbed(eventData: {
 	id?: number;

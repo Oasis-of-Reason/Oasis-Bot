@@ -1,65 +1,10 @@
 import {
 	EmbedBuilder,
 	Client,
-	User,
 	GuildMember
 } from "discord.js";
-
-// Map for avatar performance requirement emojis
-const emojiMapRequirements: Record<string, { emoji: string; label: string }> = {
-	verypoor: {
-		emoji: "<:VeryPoor:1423045477242503319>",
-		label: "No Restriction",
-	},
-	poor: {
-		emoji: "<:Poor:1423045444354965527>",
-		label: "Poor or better",
-	},
-	medium: {
-		emoji: "<:Medium:1423045576567689226>",
-		label: "Medium or better",
-	},
-	good: {
-		emoji: "<:Good:1423045376423760092>",
-		label: "Good or better",
-	},
-	excellent: {
-		emoji: "<:VeryGood:1423045342760275989>",
-		label: "Excellent or better",
-	},
-};
-
-export function getRequirementsString(value: string) {
-	const key = value.toLowerCase();
-	return `${emojiMapRequirements[key]?.emoji || ""} ${emojiMapRequirements[key].label}`
-}
-
-// Map for avatar performance requirement emojis
-const emojiMapPlatforms: Record<string, { emoji: string; label: string }> = {
-	pcvr: {
-		emoji: "<:pcvr:1427326857216528428>",
-		label: "PCVR",
-	},
-	android: {
-		emoji: "<:android:1427326899201245397>",
-		label: "Android",
-	},
-};
-
-export function getPlatformsString(value: string) {
-	const platforms = JSON.parse(value) as string[];
-	return getPlatformsArray(platforms);
-}
-
-export function getPlatformsArray(platforms: string[]) {
-	let platformString = "";
-	platforms.forEach(element => {
-		const key = element.toLowerCase();
-		platformString = platformString + `${emojiMapPlatforms[key]?.emoji || ""} `
-	});
-	return platformString;
-}
-
+import { getPlatformsString, getRequirementsString, splitArray } from "./generalHelpers";
+import { toSnowflake } from "./discordHelpers";
 
 /** Build the event embed including attendees & cohosts lists. */
 export async function buildEventEmbedWithLists(
@@ -71,14 +16,9 @@ export async function buildEventEmbedWithLists(
 	const dt = new Date(publishingEvent.startTime);
 	const unix = Math.floor(dt.getTime() / 1000);
 
-	// Fetch host
-
-	// Get the guild so we can resolve nicknames
 	const guild = await client.guilds.fetch(publishingEvent.guildId);
 	await guild.members.fetch();
 
-
-	// Resolve attendees to nicknames (or usernames if no nickname)
 	const attendeeNames = await Promise.all(
 		attendees.map(async id => {
 			const snowflake = toSnowflake(id);
@@ -92,6 +32,7 @@ export async function buildEventEmbedWithLists(
 
 	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember;
 	const hostName = hostUser.nickname || hostUser?.displayName || "-";
+	/*
 	// Resolve cohosts to nicknames
 	let cohostNames = await Promise.all(
 		cohosts.map(async id => {
@@ -101,7 +42,7 @@ export async function buildEventEmbedWithLists(
 			return rawName;
 		})
 	);
-
+	*/
 	const embed = new EmbedBuilder()
 		.setTitle(publishingEvent.title)
 		.setColor(0x5865f2)
@@ -157,12 +98,13 @@ export async function buildEventEmbedWithLists(
 			value: `> <t:${unix}:f> (<t:${unix}:R>)`,
 			inline: false,
 		});
-	attendeeNamesSplit
+	
 	embed.addFields({
 		name: `Attendees (${attendeeNamesSplit[0].length}` + (publishingEvent.capacityCap > 0 ? `/${publishingEvent.capacityCap})` : `)`),
 		value: attendeeNamesSplit[0].length > 0 ? "> " + attendeeNamesSplit[0].join("\n> ") : "> —",
 		inline: true,
 	});
+
 	if (attendeeNamesSplit[1].length > 0) {
 		embed.addFields({
 			name: `Waiting List (${attendeeNamesSplit[1].length})`,
@@ -170,33 +112,10 @@ export async function buildEventEmbedWithLists(
 			inline: true,
 		});
 	}
-	/*
-	if (cohostNames.length > 0) {
-		embed.addFields({
-			name: `Hosts (${cohostNames.length+1})`,
-			value: `**${hostName}**\n` + cohostNames.join("\n"),
-			inline: true,
-		});
-	}
-	*/
+
 	if (publishingEvent.imageUrl) {
 		embed.setImage(publishingEvent.imageUrl);
 	}
 
 	return embed;
-}
-
-/** Accepts a User, GuildMember, or string (ID/mention) and returns a clean snowflake string. */
-function toSnowflake(target: string | User | GuildMember): string {
-	if (typeof target !== "string") return target.id;
-	// Strip <@...> or <@!...> and keep only digits
-	const m = target.match(/\d{17,20}/);
-	if (!m) throw new Error(`Invalid user reference: "${target}"`);
-	return m[0];
-}
-
-function splitArray<T>(arr: T[], maxFirst: number): [T[], T[]] {
-	const first = arr.slice(0, maxFirst);
-	const second = arr.slice(maxFirst);
-	return [first, second];
 }

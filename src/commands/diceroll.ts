@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from "discord.js";
+import { getRandomInt } from "../helpers/generalHelpers";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -8,7 +9,3 @@ module.exports = {
 		await interaction.reply('Dice roll! ' + (interaction.member.nickname ?? interaction.member.user.globalName) + ' rolled: ' + getRandomInt(1, 20) + " 🎲");
 	},
 };
-
-function getRandomInt(min: number, max: number): number {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}

@@ -1,4 +1,5 @@
 import { prisma } from "../utils/prisma";
+import { emojiMapPlatforms, emojiMapRequirements, pingMap } from "./generalConstants";
 
 export async function getEventById(eventId: number): Promise<(any & { _count: { signups: number; interested: number } }) | null> {
 	try {
@@ -59,36 +60,37 @@ export async function ensureUserReminderDefaults(userId: string) {
 	});
 }
 
-export const allowedPingRoles = [
-	`1416811955074891776`,
-	`1425104014084673556`,
-	`1422352173622366358`,
-	`1416812117423816867`,
-	`1419732188202533036`,
-	`1425104189444460636`
-];
+export function getRandomInt(min: number, max: number): number {
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-export const pingMap: Record<string, Record<string, { label: string }>> = {
-	vrc: {
-		gaming: {
-			label: "<@&1416811955074891776>",
-		},
-		social: {
-			label: "<@&1425104014084673556>",
-		},
-		cinema: {
-			label: "<@&1422352173622366358>",
-		},
-	},
-	discord: {
-		gaming: {
-			label: "<@&1416812117423816867>",
-		},
-		social: {
-			label: "<@&1419732188202533036>",
-		},
-		cinema: {
-			label: "<@&1425104189444460636>",
-		},
-	}
-};
+export function getPingString(eventType: string, eventSubtype: string): string {
+	return pingMap[eventType.toLowerCase()][eventSubtype.toLowerCase()].value;
+}
+
+export function getRequirementsString(value: string) {
+	const key = value.toLowerCase();
+	return `${emojiMapRequirements[key]?.emoji || ""} ${emojiMapRequirements[key].label}`
+}
+
+export function getPlatformsString(value: string) {
+	const platforms = JSON.parse(value) as string[];
+	return getPlatformsArray(platforms);
+}
+
+export function getPlatformsArray(platforms: string[]) {
+	let platformString = "";
+	platforms.forEach(element => {
+		const key = element.toLowerCase();
+		platformString = platformString + `${emojiMapPlatforms[key]?.emoji || ""} `
+	});
+	return platformString;
+}
+
+export function splitArray<T>(arr: T[], maxFirst: number): [T[], T[]] {
+	const first = arr.slice(0, maxFirst);
+	const second = arr.slice(maxFirst);
+	return [first, second];
+}
+
+export const toUnix = (d: Date) => Math.floor(d.getTime() / 1000);

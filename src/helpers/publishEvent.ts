@@ -1,62 +1,21 @@
-// src/helpers/publishEvent.ts
 import {
 	Client,
 	Guild,
-	TextChannel,
-	AnyThreadChannel,
-	ChannelType,
-	Message,
 } from "discord.js";
+import { 
+	getEventById, 
+	getPingString
+} from "./generalHelpers";
+import { 
+	fetchTextChannel, 
+	fetchThread, 
+	fetchMsgInChannel, 
+	fetchMsgInThread
+} from "./discordHelpers";
 import { prisma } from "../utils/prisma";
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
-import { allowedPingRoles, getEventById, pingMap } from "./generalHelpers";
-
-/* ---------- small helpers ---------- */
-
-async function fetchTextChannel(client: Client, id?: string | null): Promise<TextChannel | null> {
-	if (!id) return null;
-	const cached = client.channels.cache.get(id);
-	if (cached?.type === ChannelType.GuildText) return cached as TextChannel;
-	const fetched = await client.channels.fetch(id).catch(() => null);
-	return fetched?.type === ChannelType.GuildText ? (fetched as TextChannel) : null;
-}
-
-async function fetchThread(guild: Guild, id?: string | null): Promise<AnyThreadChannel | null> {
-	if (!id) return null;
-	const ch = await guild.channels.fetch(id).catch(() => null);
-	if (!ch || (ch.type !== ChannelType.PublicThread && ch.type !== ChannelType.PrivateThread)) return null;
-	const thread = ch as AnyThreadChannel;
-	if (thread.archived) {
-		try { await thread.setArchived(false, "Temporarily unarchive to edit event"); } catch { }
-	}
-	return thread;
-}
-
-async function fetchMsgInChannel(channel: TextChannel, messageId?: string | null): Promise<Message | null> {
-	if (!messageId) return null;
-	return await channel.messages.fetch(messageId).catch(() => null);
-}
-async function fetchMsgInThread(thread: AnyThreadChannel, messageId?: string | null): Promise<Message | null> {
-	if (!messageId) return null;
-	return await thread.messages.fetch(messageId).catch(() => null);
-}
-
-/* ---------- load signups/interest from DB ---------- */
-
-async function loadSignupUserIds(eventId: number) {
-	// Adjust field names if yours differ (assuming tables: EventSignUps, InterestedSignUps with userId fields)
-	const [signups, cohosts] = await Promise.all([
-		prisma.eventSignUps.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
-		prisma.cohostsOnEvent.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
-	]);
-	return {
-		signupUserIds: signups.map(s => s.userId),
-		cohostsUserIds: cohosts.map(s => s.userId),
-	};
-}
-
-/* ---------- main ---------- */
+import { allowedPingRoles } from "./generalConstants";
 
 export async function publishEvent(client: Client, guild: Guild, eventId: number) {
 	const guildConfig = await prisma.guildConfig.findUnique({ where: { id: guild.id } });
@@ -128,7 +87,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 			});
 		}
 
-		return; // done editing
+		return;
 	}
 
 	// First-time publish → send new messages
@@ -137,7 +96,8 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 
 	const sentChannel = await channel.send({ embeds: [embed], components });
 
-	await sentChannel.reply({ content: "Pings: " + pingMap[publishingEvent.type.toLowerCase()][publishingEvent.subtype.toLowerCase()].label,
+	// Send pings message
+	await sentChannel.reply({ content: "Pings: " + getPingString(publishingEvent.type, publishingEvent.subtype),
 							  allowedMentions: { roles: allowedPingRoles },
 	});
 
@@ -157,4 +117,16 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 			publishedThreadMessageId: sentThread.id,
 		},
 	});
+}
+
+async function loadSignupUserIds(eventId: number) {
+	
+	const [signups, cohosts] = await Promise.all([
+		prisma.eventSignUps.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
+		prisma.cohostsOnEvent.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
+	]);
+	return {
+		signupUserIds: signups.map(s => s.userId),
+		cohostsUserIds: cohosts.map(s => s.userId),
+	};
 }
