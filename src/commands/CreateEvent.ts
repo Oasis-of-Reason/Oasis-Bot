@@ -1,9 +1,7 @@
 import {
 	SlashCommandBuilder,
-	StringSelectMenuInteraction,
 	ChatInputCommandInteraction,
 	ActionRowBuilder,
-	StringSelectMenuBuilder,
 	ModalBuilder,
 	TextInputBuilder,
 	TextInputStyle,
@@ -14,13 +12,108 @@ import {
 	GuildMember,
 	Message,
 	MessageFlags,
-	Collection,
 } from "discord.js";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { userHasAllowedRole, getStandardRolesHost } from "../helpers/securityHelpers";
-import { buildDraftEmbed, editButtons, mkSelect, handleDraftButton } from "../helpers/eventDraft";
+import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { validateNumber } from "../helpers/generalHelpers";
+
+// ---------- helpers for button UIs ----------
+function row(...btns: ButtonBuilder[]) {
+	return new ActionRowBuilder<ButtonBuilder>().addComponents(...btns);
+}
+function styleSingleChoice(current: string | null, value: string) {
+	return current === value ? ButtonStyle.Primary : ButtonStyle.Secondary;
+}
+function styleMultiChoice(current: Set<string>, value: string) {
+	return current.has(value) ? ButtonStyle.Success : ButtonStyle.Secondary;
+}
+function canContinue(type: string | null, subtype: string | null, platforms: Set<string>, req: string | null, scope: string | null) {
+	if (!type || !subtype) return false;
+	if (type !== "VRC") return true; // Discord-only flow
+	return platforms.size > 0 && !!req && !!scope;
+}
+
+function buildAllRows(
+	type: string | null,
+	subtype: string | null,
+	platforms: Set<string>,
+	requirements: string | null,
+	scope: string | null
+) {
+	const isVRC = type === "VRC";
+
+	const typeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("type:VRC").setLabel("VRC").setStyle(styleSingleChoice(type, "VRC")),
+		new ButtonBuilder().setCustomId("type:Discord").setLabel("Discord").setStyle(styleSingleChoice(type, "Discord")),
+	);
+
+	const subRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder().setCustomId("sub:Gaming").setLabel("Gaming").setStyle(styleSingleChoice(subtype, "Gaming")),
+		new ButtonBuilder().setCustomId("sub:Social").setLabel("Social").setStyle(styleSingleChoice(subtype, "Social")),
+		new ButtonBuilder().setCustomId("sub:Cinema").setLabel("Cinema").setStyle(styleSingleChoice(subtype, "Cinema")),
+	);
+
+	const platRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder()
+			.setCustomId("plat:Android")
+			.setLabel("Android")
+			.setStyle(styleMultiChoice(platforms, "Android"))
+			.setDisabled(!isVRC),
+		new ButtonBuilder()
+			.setCustomId("plat:PCVR")
+			.setLabel("PCVR")
+			.setStyle(styleMultiChoice(platforms, "PCVR"))
+			.setDisabled(!isVRC),
+	);
+
+	const reqRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder()
+			.setCustomId("req:verypoor")
+			.setLabel("No Restriction")
+			.setStyle(styleSingleChoice(requirements, "verypoor"))
+			.setDisabled(!isVRC),
+		new ButtonBuilder()
+			.setCustomId("req:poor")
+			.setLabel("Poor+")
+			.setStyle(styleSingleChoice(requirements, "poor"))
+			.setDisabled(!isVRC),
+		new ButtonBuilder()
+			.setCustomId("req:medium")
+			.setLabel("Medium+")
+			.setStyle(styleSingleChoice(requirements, "medium"))
+			.setDisabled(!isVRC),
+		new ButtonBuilder()
+			.setCustomId("req:good")
+			.setLabel("Good+")
+			.setStyle(styleSingleChoice(requirements, "good"))
+			.setDisabled(!isVRC),
+		new ButtonBuilder()
+			.setCustomId("req:excellent")
+			.setLabel("Excellent")
+			.setStyle(styleSingleChoice(requirements, "excellent"))
+			.setDisabled(!isVRC),
+	);
+
+	const scopeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder()
+			.setCustomId("scope:Group")
+			.setLabel("Group Only")
+			.setStyle(styleSingleChoice(scope, "Group"))
+			.setDisabled(!isVRC),
+		new ButtonBuilder()
+			.setCustomId("scope:Friends")
+			.setLabel("Group Plus")
+			.setStyle(styleSingleChoice(scope, "Friends"))
+			.setDisabled(!isVRC),
+	);
+
+	// Exactly 5 rows
+	return [typeRow, subRow, platRow, reqRow, scopeRow];
+}
+
+
 
 module.exports = {
 	data: new SlashCommandBuilder().setName("create-event").setDescription("Start the event creation wizard"),
@@ -72,7 +165,7 @@ module.exports = {
 			new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput),
 			new ActionRowBuilder<TextInputBuilder>().addComponents(activityInput),
 			new ActionRowBuilder<TextInputBuilder>().addComponents(descInput),
-			new ActionRowBuilder<TextInputBuilder>().addComponents(capInput)
+			new ActionRowBuilder<TextInputBuilder>().addComponents(capInput),
 		);
 
 		await interaction.showModal(modal);
@@ -81,7 +174,6 @@ module.exports = {
 			filter: (i) => i.customId === "event_modal" && i.user.id === interaction.user.id,
 			time: 600_000,
 		});
-		// This creates the **ephemeral original reply** we will delete later
 		await modalSubmit.deferReply({ flags: MessageFlags.Ephemeral });
 
 		const title = modalSubmit.fields.getTextInputValue("title");
@@ -90,132 +182,84 @@ module.exports = {
 		const capacityCapText = modalSubmit.fields.getTextInputValue("capacity_cap");
 		let capacityCap = validateNumber(capacityCapText);
 
-		// Step 2: type/subtype via a message-scoped collector
-		const menusMsg = (await modalSubmit.editReply({
-			content: "Choose Event Type and Subtype:",
-			components: [
-				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-					mkSelect("event_type", "Choose event type:", [
-						{ label: "VRC", value: "VRC" },
-						{ label: "Discord", value: "Discord" },
-					])
-				),
-				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-					mkSelect("event_subtype", "Choose subtype:", [
-						{ label: "Gaming", value: "Gaming" },
-						{ label: "Social", value: "Social" },
-						{ label: "Cinema", value: "Cinema" },
-					])
-				),
-			],
-		})) as Message;
-
+		// Step 2: show ALL buttons at once
 		let type: string | null = null;
 		let subtype: string | null = null;
-		const pending = new Set(["event_type", "event_subtype"]);
-
-		const triadCollector = menusMsg.createMessageComponentCollector({
-			componentType: ComponentType.StringSelect,
-			time: 120_000,
-			filter: (i) => i.user.id === interaction.user.id && pending.has(i.customId),
-		});
-
-		await new Promise<void>((resolve) => {
-			triadCollector.on("collect", async (i) => {
-				const v = (i as any as StringSelectMenuInteraction).values[0];
-				if (i.customId === "event_type") type = v;
-				if (i.customId === "event_subtype") subtype = v;
-				pending.delete(i.customId);
-				await i.deferUpdate();
-				if (pending.size === 0) {
-					triadCollector.stop("done");
-					resolve();
-				}
-			});
-			triadCollector.on("end", async () => {
-				// delete the ephemeral select message
-				try {
-					await modalSubmit.deleteReply(menusMsg.id).catch(() => { });
-				} catch { }
-			});
-		});
-
-		// Step 3: VRC extras
-		let platforms: string[] = [];
+		let platformsSet = new Set<string>();
 		let requirements: string | null = null;
 		let scope: string | null = null;
 
-		if (type === "VRC") {
-			const vrcMsg = (await modalSubmit.followUp({
-				content: "VRC Specific options:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect(
-							"event_platforms",
-							"Choose platform(s)",
-							[
-								{ label: "Android", value: "Android" },
-								{ label: "PCVR", value: "PCVR" },
-							],
-							1,
-							2
-						)
-					),
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("event_requirements", "Choose avatar performance requirement:", [
-							{ label: "No Restriction", value: "verypoor" },
-							{ label: "Poor or better", value: "poor" },
-							{ label: "Medium or better", value: "medium" },
-							{ label: "Good or better", value: "good" },
-							{ label: "Excellent", value: "excellent" },
-						])
-					),
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("event_scope", "Instance Type:", [
-							{ label: "Group Only", value: "Group" },
-							{ label: "Group Plus", value: "Friends" },
-						])
-					),
-				],
-				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
-			})) as Message;
+		const allMsg = (await modalSubmit.editReply({
+			content:
+				"**Configure your event:**\n" +
+				"• Event Type\n" +
+				"• Event Subtype\n" +
+				"• VRC Platforms (Select multiple)\n" +
+				"• VRC Avatar performance restrictions\n" +
+				"• VRC instance type\n" +
+				"**When all required fields are set, you'll continue automatically.**",
+			components: buildAllRows(type, subtype, platformsSet, requirements, scope),
+		})) as Message;
 
-			const vrcPending = new Set(["event_platforms", "event_requirements", "event_scope"]);
-			const vrcCollector = vrcMsg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: 120_000,
-				filter: (i) => i.user.id === interaction.user.id && vrcPending.has(i.customId),
+		const proceed = await new Promise<boolean>((resolve) => {
+			const coll = allMsg.createMessageComponentCollector({
+				componentType: ComponentType.Button,
+				time: 300_000,
+				filter: (i) => i.user.id === interaction.user.id,
 			});
 
-			await new Promise<void>((resolve) => {
-				vrcCollector.on("collect", async (i: StringSelectMenuInteraction) => {
-					const v = (i as any as StringSelectMenuInteraction).values[0];
-					if (i.customId === "event_platforms") platforms = i.values;
-					if (i.customId === "event_requirements") requirements = v;
-					if (i.customId === "event_scope") scope = v;
-					vrcPending.delete(i.customId);
-					await i.deferUpdate();
-					if (vrcPending.size === 0) {
-						vrcCollector.stop("done");
-						resolve();
+			const isReady = () =>
+				!!type &&
+				!!subtype &&
+				(type !== "VRC" || (platformsSet.size > 0 && !!requirements && !!scope));
+
+			coll.on("collect", async (i) => {
+				const [kind, value] = i.customId.split(":");
+
+				if (kind === "type") {
+					type = value;
+					if (type !== "VRC") {
+						// clear VRC-only values
+						platformsSet.clear();
+						requirements = null;
+						scope = null;
 					}
-				});
-				vrcCollector.on("end", async () => {
-					try {
-						await modalSubmit.deleteReply(vrcMsg.id).catch(() => { });
-					} catch { }
-				});
-			});
-		}
+				} else if (kind === "sub") {
+					subtype = value;
+				} else if (kind === "plat" && type === "VRC") {
+					if (platformsSet.has(value)) platformsSet.delete(value);
+					else platformsSet.add(value);
+				} else if (kind === "req" && type === "VRC") {
+					requirements = value;
+				} else if (kind === "scope" && type === "VRC") {
+					scope = value;
+				}
 
-		// Step 4: timing prompt → modal
+				// Update visual state
+				await i.update({
+					content: i.message.content,
+					components: buildAllRows(type, subtype, platformsSet, requirements, scope),
+				});
+
+				// Auto-advance if complete
+				if (isReady()) {
+					coll.stop("done");
+					resolve(true);
+				}
+			});
+
+			coll.on("end", async (_c, reason) => {
+				// delete this config ephemeral
+				try { await modalSubmit.deleteReply(allMsg.id).catch(() => { }); } catch { }
+				if (reason !== "done") resolve(false);
+			});
+		});
+
+		// Step 3: timing prompt → modal
 		const timingMsg = (await modalSubmit.followUp({
 			content: "✅ Event basics captured. Now set the timing:",
 			components: [
-				new ActionRowBuilder<ButtonBuilder>().addComponents(
-					new ButtonBuilder().setCustomId("set_timing").setLabel("⏰ Set Timing").setStyle(ButtonStyle.Primary)
-				),
+				row(new ButtonBuilder().setCustomId("set_timing").setLabel("⏰ Set Timing").setStyle(ButtonStyle.Primary)),
 			],
 			flags: MessageFlags.Ephemeral,
 			fetchReply: true,
@@ -231,13 +275,11 @@ module.exports = {
 			c.on("end", (collected) => collected.size === 0 && resolve(null));
 		});
 
-		// remove the ephemeral "set timing" prompt once clicked/timed out
 		try {
 			await modalSubmit.deleteReply(timingMsg.id).catch(() => { });
 		} catch { }
 
 		if (!timingBtn) {
-			// delete the modalSubmit's ephemeral reply, user will see nothing stale
 			try {
 				await modalSubmit.deleteReply();
 			} catch { }
@@ -253,11 +295,11 @@ module.exports = {
 						.setCustomId("start")
 						.setLabel("When does it start? (e.g. 'tomorrow 8pm GMT')")
 						.setStyle(TextInputStyle.Short)
-						.setRequired(true)
+						.setRequired(true),
 				),
 				new ActionRowBuilder<TextInputBuilder>().addComponents(
-					new TextInputBuilder().setCustomId("length").setLabel("Length in minutes").setStyle(TextInputStyle.Short)
-				)
+					new TextInputBuilder().setCustomId("length").setLabel("Length in minutes").setStyle(TextInputStyle.Short),
+				),
 			);
 
 		await timingBtn.showModal(timingModal);
@@ -266,14 +308,12 @@ module.exports = {
 			filter: (i: any) => i.customId === "event_timing_modal" && i.user.id === interaction.user.id,
 			time: 120_000,
 		});
-		// This creates another ephemeral reply we will delete later
 		await timingSubmit.deferReply({ flags: MessageFlags.Ephemeral });
 
 		const startText = timingSubmit.fields.getTextInputValue("start");
 		const parsed = chrono.parseDate(startText);
 		if (!parsed) {
 			await timingSubmit.editReply({ content: "❌ Could not parse that date/time." });
-			// clean up both ephemeral replies before exiting
 			try {
 				await timingSubmit.deleteReply();
 			} catch { }
@@ -286,12 +326,12 @@ module.exports = {
 		const lengthStr = timingSubmit.fields.getTextInputValue("length");
 		let lengthMinutes = validateNumber(lengthStr);
 
-		// Step 5: optional poster upload
+		// Step 4: optional poster upload
 		const imageMessage = await timingSubmit.followUp({
 			content:
 				"📌 If you’d like to add a poster image, please upload it in this channel now (you have 60 seconds). Otherwise, ignore this message.",
 			flags: MessageFlags.Ephemeral,
-			fetchReply: true
+			fetchReply: true,
 		});
 
 		const channel = interaction.channel as TextChannel;
@@ -303,16 +343,15 @@ module.exports = {
 
 		let posterUrl: string | null = null;
 		if (collected.size > 0) {
-			const collectedMsg =  collected.first();
+			const collectedMsg = collected.first();
 			const attachment = collectedMsg!.attachments.first();
 			if (attachment && attachment.contentType?.startsWith("image/")) posterUrl = attachment.url;
 		}
-		// delete the ephemeral "upload poster" message
 		try {
 			await timingSubmit.deleteReply(imageMessage.id).catch(() => { });
 		} catch { }
 
-		// Step 6: create draft thread + message
+		// Step 5: create draft thread + message
 		const thread = await channel.threads.create({
 			name: `Draft: ${title}`,
 			autoArchiveDuration: 1440,
@@ -325,7 +364,7 @@ module.exports = {
 			type,
 			subtype,
 			scope,
-			platforms,
+			platforms: Array.from(platformsSet),
 			requirements,
 			capacityCap,
 			startTime,
@@ -338,10 +377,10 @@ module.exports = {
 			embeds: [buildDraftEmbed(eventData)],
 			components: editButtons(),
 		});
-		
+
 		await thread.members.add(interaction.user.id);
 
-		// Step 7: save to DB
+		// Step 6: save to DB
 		const createdEvent = await prisma.event.create({
 			data: {
 				guildId: interaction.guildId!,
@@ -368,7 +407,7 @@ module.exports = {
 			},
 		});
 
-		// CLEANUP: delete both ephemeral interaction replies (modal & timing)
+		// Clean up ephemeral replies (only final success remains)
 		try {
 			await timingSubmit.deleteReply();
 		} catch { }
@@ -376,14 +415,12 @@ module.exports = {
 			await modalSubmit.deleteReply();
 		} catch { }
 
-
-		// FINAL COMPLETION MESSAGE (the only ephemeral we keep visible)
 		await interaction.followUp({
 			content: `✅ Event draft created in thread <#${thread.id}>`,
 			flags: MessageFlags.Ephemeral,
 		});
 
-		// Step 8: attach button collector (scoped)
+		// Step 7: attach button collector (scoped)
 		const hydrated = {
 			id: createdEvent.id,
 			hostId: createdEvent.hostId,
@@ -404,7 +441,7 @@ module.exports = {
 		const btnCollector = sent.createMessageComponentCollector({
 			componentType: ComponentType.Button,
 			time: 10 * 60_000,
-			filter: (i) => i.user.id === interaction.user.id, // host-only
+			filter: (i) => i.user.id === interaction.user.id,
 		});
 
 		btnCollector.on("collect", async (i) => handleDraftButton(i, hydrated, sent));
