@@ -42,10 +42,14 @@ module.exports = {
 			});
 			return;
 		}
-		
+
 		await interaction.deferReply({ ephemeral: true });
-		await publishEvent(interaction.client, interaction.guild as Guild, id);
-		await refreshPublishedCalender(interaction.client, interaction.guildId as string, true);
-		await interaction.editReply({ content: `Successfully published event: ${id}.` })
+		try {
+			await publishEvent(interaction.client, interaction.guild as Guild, id);
+			await refreshPublishedCalender(interaction.client, interaction.guildId as string, true);
+			await interaction.editReply({ content: `Successfully published event: ${id}.` })
+		} catch (e) {
+			await interaction.editReply({ content: `Error publishing event: ${e}.` })
+		}
 	},
 }; 

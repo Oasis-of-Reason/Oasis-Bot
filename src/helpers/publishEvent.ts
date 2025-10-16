@@ -2,14 +2,14 @@ import {
 	Client,
 	Guild,
 } from "discord.js";
-import { 
-	getEventById, 
+import {
+	getEventById,
 	getPingString
 } from "./generalHelpers";
-import { 
-	fetchTextChannel, 
-	fetchThread, 
-	fetchMsgInChannel, 
+import {
+	fetchTextChannel,
+	fetchThread,
+	fetchMsgInChannel,
 	fetchMsgInThread
 } from "./discordHelpers";
 import { prisma } from "../utils/prisma";
@@ -20,6 +20,11 @@ import { allowedPingRoles } from "./generalConstants";
 export async function publishEvent(client: Client, guild: Guild, eventId: number) {
 	const guildConfig = await prisma.guildConfig.findUnique({ where: { id: guild.id } });
 	const publishingEvent = await getEventById(eventId);
+
+	if (!publishingEvent) {
+		console.error(`Could not find event to publish: ${eventId}`);
+		throw new Error(`Could not find event to publish: ${eventId}`);
+	}
 
 	// Always load latest signup/interest lists before rendering
 	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
@@ -97,8 +102,9 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const sentChannel = await channel.send({ embeds: [embed], components });
 
 	// Send pings message
-	await sentChannel.reply({ content: "Pings: " + getPingString(publishingEvent.type, publishingEvent.subtype),
-							  allowedMentions: { roles: allowedPingRoles },
+	await sentChannel.reply({
+		content: "Pings: " + getPingString(publishingEvent.type, publishingEvent.subtype),
+		allowedMentions: { roles: allowedPingRoles },
 	});
 
 	const thread = await channel.threads.create({
@@ -120,7 +126,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 }
 
 async function loadSignupUserIds(eventId: number) {
-	
+
 	const [signups, cohosts] = await Promise.all([
 		prisma.eventSignUps.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
 		prisma.cohostsOnEvent.findMany({ where: { eventId }, select: { userId: true }, orderBy: { createdAt: "asc" } }).catch(() => [] as { userId: string }[]),
