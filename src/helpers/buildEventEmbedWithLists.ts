@@ -46,7 +46,7 @@ export async function buildEventEmbedWithLists(
 	const embed = new EmbedBuilder()
 		.setTitle(publishingEvent.title)
 		.setColor(0x5865f2)
-		.setDescription("> " + (publishingEvent.description ?? "No description provided."))
+		.setDescription((publishingEvent.description ?? "No description provided."))
 		.setAuthor({
 			name: `Hosted By: ${hostName}`,
 			iconURL: hostUser.user.displayAvatarURL({ forceStatic: false, size: 64 }),

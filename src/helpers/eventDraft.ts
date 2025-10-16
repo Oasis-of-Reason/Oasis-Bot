@@ -60,7 +60,7 @@ export function buildDraftEmbed(eventData: {
 			},
 			{
 				name: "Description",
-				value: `> ${eventData.description || "—"}`,
+				value: `${eventData.description || "—"}`,
 			},
 			{
 				name: "General Information",
