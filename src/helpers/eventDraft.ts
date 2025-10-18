@@ -64,7 +64,7 @@ export function buildDraftEmbed(eventData: {
 			},
 			{
 				name: "General Information",
-				value: `> **Type:** ${eventData.type ?? "—"}\n> **Subtype:** ${eventData.subtype ?? "—"}\n> **Activity:** ${eventData.activity ?? "—"}\n> **Capacity:** ${eventData.capacityCap > 0 ? eventData.capacityCap : "Unlimited"}`,
+				value: `> **Id:** ${eventData.id}\n> **Type:** ${eventData.type ?? "—"}\n> **Subtype:** ${eventData.subtype ?? "—"}\n> **Activity:** ${eventData.activity ?? "—"}\n> **Capacity:** ${eventData.capacityCap > 0 ? eventData.capacityCap : "Unlimited"}`,
 			}
 		);
 

@@ -358,6 +358,7 @@ module.exports = {
 		});
 
 		const eventData = {
+			id: 0,
 			title,
 			description,
 			activity,
@@ -373,20 +374,12 @@ module.exports = {
 			hostId: interaction.user.id,
 		};
 
-		const sent = await thread.send({
-			embeds: [buildDraftEmbed(eventData)],
-			components: editButtons(),
-		});
-
-		await thread.members.add(interaction.user.id);
-
-		// Step 6: save to DB
 		const createdEvent = await prisma.event.create({
 			data: {
 				guildId: interaction.guildId!,
 				draftChannelId: interaction.channelId,
 				draftThreadId: thread.id,
-				draftThreadMessageId: sent.id,
+				draftThreadMessageId: "",
 				hostId: interaction.user.id,
 				title: eventData.title,
 				type: eventData.type ?? "Discord",
@@ -407,6 +400,20 @@ module.exports = {
 			},
 		});
 
+		eventData.id = createdEvent.id
+
+		const sent = await thread.send({
+			embeds: [buildDraftEmbed(eventData)],
+			components: editButtons(),
+		});
+
+		await prisma.event.update({
+			where: { id: createdEvent.id },
+			data: { draftThreadMessageId: sent.id },
+		});
+
+		await thread.members.add(interaction.user.id);
+		
 		// Clean up ephemeral replies (only final success remains)
 		try {
 			await timingSubmit.deleteReply();
