@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
@@ -15,18 +15,114 @@ datasource db {
 }
 
 model GuildConfig {
-  id                    String @id
-  voiceCreatorRoomId   String?
-  voiceCreatorCategory String?
+  id                     		String  @id
+  voiceCreatorRoomId     		String?
+  voiceCreatorCategory   		String?
+  discordEventCalenderMessageId String?
+  vrcEventCalenderMessageId 	String?
+  draftChannelId         		String?
+  publishingDiscordChannelId    String?
+  publishingVRCChannelId    	String?
 }
 
 model TemporaryVoiceChannel {
-  id          String   @id @default(cuid())
-  channelId   String   @unique
-  guildId     String
-  createdBy   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id        String   @id @default(cuid())
+  channelId String   @unique
+  guildId   String
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("temporary_voice_channels")
+}
+
+enum NotificationType {
+  REMINDER
+  START
+}
+
+model User {
+  // Discord user ID
+  id                         String  @id
+  reminderMinutesBefore      Int     @default(30)
+  reminderNotifications      Boolean @default(true) // controls pre-reminders
+  eventStartingNotifications Boolean @default(true) // controls "event is starting" pings
+
+  reminders UserEventReminder[]
+}
+
+model UserEventReminder {
+  id               Int              @id @default(autoincrement())
+  userId           String
+  eventId          Int
+  notificationType NotificationType
+  sentAt           DateTime         @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, eventId, notificationType]) // never send same type twice
+  @@index([eventId, notificationType])
+}
+
+model Event {
+  id                        Int                 @id @default(autoincrement())
+  guildId                   String // Guild Discord Server ID
+  draftChannelId            String // ChannelID 
+  draftThreadId             String
+  draftThreadMessageId      String              @unique
+  publishedChannelId        String? // ChannelID 
+  publishedThreadId         String?
+  publishedChannelMessageId String?             @unique
+  publishedThreadMessageId  String?             @unique
+  community                 String? // Can include other community hosting event name
+  communityLink             String? // Can include a link to VRC Group               
+  title                     String
+  type                      String // Whether it is Discord or VRC
+  subtype                   String // Where its Gaming, Social or Cinema
+  activity                  String? // Free field for the activity name
+  platforms                 String? // Multi Select when event is VRC only Android, Quest or PCVR
+  rolePings                 String? // for pings
+  requirements              String? // Avatar requirement - Please have X or better (Very Poor, Poor, Medium, Good)
+  description               String?             @db.Text
+  imageUrl                  String?             @db.Text
+  hostId                    String
+  scope                     String? // Discord or VRC, Open to Friends or Closed to Group 
+  published                 Boolean             @default(false)
+  capacityCap               Int // How many people can join the event In Total - limits to cap on event size
+  capacityBase              Int // Base Capacity. if lower than cap then cohosts increase capacity. 
+  capacityCohosts           Int? // Maximum capacity of cohosts .
+  capacityPerCohost         Int? // Additional capacity per cohost. 
+  cohosts                   CohostsOnEvent[] // in case the event grows and we need more co hosts
+  signups                   EventSignUps[] // Tracking the people that signed up so we can determine group size, waitlist etc
+  interested                InterestedSignUps[] // Seperate tracking of those interested as we apply different logic 
+  startTime                 DateTime
+  lengthMinutes             Int?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  UserEventReminder         UserEventReminder[]
+}
+
+model CohostsOnEvent {
+  id      Int    @id @default(autoincrement())
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int
+  userId  String
+  createdAt                 DateTime            @default(now())
+}
+
+model EventSignUps {
+  id      Int    @id @default(autoincrement())
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int
+  userId  String
+  createdAt                 DateTime            @default(now())
+}
+
+model InterestedSignUps {
+  id      Int    @id @default(autoincrement())
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId Int
+  userId  String
+  createdAt                 DateTime            @default(now())
 }

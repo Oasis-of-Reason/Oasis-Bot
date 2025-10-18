@@ -1,5 +1,22 @@
-import { Events, Interaction, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, VoiceChannel } from 'discord.js';
+import {
+	Events,
+	Interaction,
+	ButtonInteraction,
+	ModalBuilder,
+	TextInputBuilder,
+	TextInputStyle,
+	ActionRowBuilder,
+	ChannelType,
+	StringSelectMenuBuilder,
+	StringSelectMenuOptionBuilder,
+	VoiceChannel,
+	MessageFlags,
+	GuildMember,
+} from 'discord.js';
 import { PrismaClient } from '@prisma/client';
+import { refreshEventMessages } from "../helpers/refreshEventMessages";
+import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { ensureUserReminderDefaults } from '../helpers/generalHelpers';
 
 const prisma = new PrismaClient();
 
@@ -7,13 +24,19 @@ module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction: Interaction) {
 		if (interaction.isButton()) {
+			// Handle an event signup button
+			if (interaction.customId.startsWith('ev:')) {
+				await handleEventButtons(interaction); // <- your handler
+				return;
+			}
+
 			// Handle edit voice channel button
 			if (interaction.customId.startsWith('edit_voice_')) {
 				const channelId = interaction.customId.split('_')[2];
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -23,12 +46,12 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				// Extract the current name without "VC | " prefix
-				const currentName = channel.name.startsWith('VC | ') 
+				const currentName = channel.name.startsWith('VC | ')
 					? channel.name.substring(5) // Remove "VC | " prefix
 					: channel.name;
 
@@ -69,7 +92,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -79,15 +102,15 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can kick users.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can kick users.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				// Get users in the voice channel
 				const members = channel.members.filter(member => member.id !== interaction.user.id);
-				
+
 				if (members.size === 0) {
-					await interaction.reply({ content: 'No users to kick from the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'No users to kick from the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -110,7 +133,7 @@ module.exports = {
 
 				const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-				await interaction.reply({ content: 'Select a user to kick from the voice channel:', components: [row], ephemeral: true });
+				await interaction.reply({ content: 'Select a user to kick from the voice channel:', components: [row], flags: MessageFlags.Ephemeral });
 			}
 
 			// Handle ban user button
@@ -119,7 +142,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -129,15 +152,15 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can ban users.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can ban users.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				// Get users in the voice channel
 				const members = channel.members.filter(member => member.id !== interaction.user.id);
-				
+
 				if (members.size === 0) {
-					await interaction.reply({ content: 'No users to ban from the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'No users to ban from the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -160,7 +183,7 @@ module.exports = {
 
 				const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
 
-				await interaction.reply({ content: 'Select a user to ban from the voice channel:', components: [row], ephemeral: true });
+				await interaction.reply({ content: 'Select a user to ban from the voice channel:', components: [row], flags: MessageFlags.Ephemeral });
 			}
 		}
 
@@ -173,16 +196,16 @@ module.exports = {
 				const member = interaction.guild?.members.cache.get(userId);
 
 				if (!channel || !member) {
-					await interaction.reply({ content: 'User or channel not found.', ephemeral: true });
+					await interaction.reply({ content: 'User or channel not found.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				try {
 					await member.voice.disconnect();
-					await interaction.reply({ content: `Successfully kicked ${member.user.username} from the voice channel.`, ephemeral: true });
+					await interaction.reply({ content: `Successfully kicked ${member.user.username} from the voice channel.`, flags: MessageFlags.Ephemeral });
 				} catch (error) {
 					console.error('Error kicking user:', error);
-					await interaction.reply({ content: 'Failed to kick user from voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Failed to kick user from voice channel.', flags: MessageFlags.Ephemeral });
 				}
 			}
 
@@ -194,23 +217,23 @@ module.exports = {
 				const member = interaction.guild?.members.cache.get(userId);
 
 				if (!channel || !member) {
-					await interaction.reply({ content: 'User or channel not found.', ephemeral: true });
+					await interaction.reply({ content: 'User or channel not found.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				try {
 					// Disconnect user from voice
 					await member.voice.disconnect();
-					
+
 					// Add permission override to prevent them from rejoining
 					await (channel as VoiceChannel).permissionOverwrites.create(member, {
 						Connect: false
 					});
 
-					await interaction.reply({ content: `Successfully banned ${member.user.username} from the voice channel.`, ephemeral: true });
+					await interaction.reply({ content: `Successfully banned ${member.user.username} from the voice channel.`, flags: MessageFlags.Ephemeral });
 				} catch (error) {
 					console.error('Error banning user:', error);
-					await interaction.reply({ content: 'Failed to ban user from voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Failed to ban user from voice channel.', flags: MessageFlags.Ephemeral });
 				}
 			}
 		}
@@ -222,7 +245,7 @@ module.exports = {
 				const channel = interaction.guild?.channels.cache.get(channelId);
 
 				if (!channel || channel.type !== ChannelType.GuildVoice) {
-					await interaction.reply({ content: 'Channel not found or is not a voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Channel not found or is not a voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -232,7 +255,7 @@ module.exports = {
 				});
 
 				if (!tempChannel || tempChannel.createdBy !== interaction.user.id) {
-					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Only the room owner can edit the voice channel.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
@@ -241,13 +264,13 @@ module.exports = {
 
 				// Validate inputs
 				if (userLimit < 0 || userLimit > 99) {
-					await interaction.reply({ content: 'User limit must be between 0 and 99.', ephemeral: true });
+					await interaction.reply({ content: 'User limit must be between 0 and 99.', flags: MessageFlags.Ephemeral });
 					return;
 				}
 
 				// Ensure the name always has "VC | " prefix
-				const finalName = nameInput.startsWith('VC | ') 
-					? nameInput 
+				const finalName = nameInput.startsWith('VC | ')
+					? nameInput
 					: `VC | ${nameInput}`;
 
 				try {
@@ -256,10 +279,10 @@ module.exports = {
 						userLimit: userLimit
 					});
 
-					await interaction.reply({ content: 'Voice channel updated successfully!', ephemeral: true });
+					await interaction.reply({ content: 'Voice channel updated successfully!', flags: MessageFlags.Ephemeral });
 				} catch (error) {
 					console.error('Error updating voice channel:', error);
-					await interaction.reply({ content: 'Failed to update voice channel.', ephemeral: true });
+					await interaction.reply({ content: 'Failed to update voice channel.', flags: MessageFlags.Ephemeral });
 				}
 			}
 		}
@@ -278,11 +301,80 @@ module.exports = {
 			} catch (error) {
 				console.error(error);
 				if (interaction.replied || interaction.deferred) {
-					await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+					await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
 				} else {
-					await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+					await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
 				}
 			}
 		}
 	},
 };
+
+// map action -> prisma client + shape
+type ActionKind = "attend" | "interest" | "cohost";
+
+export async function handleEventButtons(interaction: Interaction) {
+	if (!interaction.isButton()) return;
+
+	const m = interaction.customId.match(/^ev:(\d+):(attend|interest|cohost):(on|off)$/);
+	if (!m) return;
+
+	const [, eventIdStr, action, op] = m;
+	const eventId = Number(eventIdStr);
+	const userId = interaction.user.id;
+
+	try {
+		switch (action as ActionKind) {
+    case "attend": {
+      const guildId = interaction.guildId as string;
+      const userId = interaction.user.id;
+
+      // Fetch the event from your database
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+
+      if (!event || !event.publishedThreadId) {
+        console.warn("Event or publishedThreadId not found");
+        break;
+      }
+
+      // Fetch the thread from Discord
+      const thread = await interaction.client.channels.fetch(event.publishedThreadId);
+
+      if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
+        console.warn("Channel is not a thread");
+        break;
+      }
+
+      if (op === "on") {
+        const existing = await prisma.eventSignUps.findFirst({ where: { eventId: event.id, userId } });
+        if (!existing) await prisma.eventSignUps.create({ data: { eventId: event.id, userId } });
+
+        // ✅ Add user to thread
+        await thread.members.add(userId);
+		await ensureUserReminderDefaults(userId);
+        await refreshPublishedCalender(interaction.client, guildId, false);
+      } else {
+        await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
+
+        // ✅ Remove user from thread
+        await thread.members.remove(userId);
+
+        await refreshPublishedCalender(interaction.client, guildId, false);
+      		}
+		}
+	}
+		await interaction.deferUpdate();
+		// Refresh both published messages with updated lists
+		await refreshEventMessages(interaction.client, eventId);
+	} catch (err) {
+		console.error("Button handler error:", err);
+		const bi = interaction as ButtonInteraction;
+		if (bi.deferred || bi.replied) {
+			await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
+		} else {
+			await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
+		}
+	}
+}
