@@ -11,7 +11,7 @@ import {
  * @param allowedMemberIds An array of allowed Discord user IDs
  * @returns true if the member's ID is in the allowed list, or they have an allowed role, false otherwise
  */
-export function userHasAllowedRoleOrId(member: GuildMember, allowedRoles: RoleResolvable[], allowedMemberIds: string[]): boolean {
+export function userHasAllowedRoleOrId(member: GuildMember, allowedRoles: RoleResolvable[], allowedMemberIds: string[] = []): boolean {
 	return userHasAllowedRole(member, allowedRoles) || userHasAllowedId(member, allowedMemberIds);
 }
 

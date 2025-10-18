@@ -10,6 +10,7 @@ import {
 import {
 	userHasAllowedRoleOrId,
 	getStandardRolesMod,
+	getStandardRolesOrganizer,
 } from "../helpers/securityHelpers";
 import { PrismaClient } from "@prisma/client";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
@@ -57,13 +58,9 @@ module.exports = {
 				return;
 			}
 
-			// Permission check
-			if (
-				!userHasAllowedRoleOrId(
-					interaction.member as GuildMember,
-					getStandardRolesMod(),
-					[event.hostId as string]
-				)
+			// Permission check: mod if published, organizer||event's host if not
+			if ((!event.published && !userHasAllowedRoleOrId(interaction.member as GuildMember, getStandardRolesOrganizer(), [event.hostId]) ||
+				!userHasAllowedRoleOrId(interaction.member as GuildMember, getStandardRolesMod()))
 			) {
 				await interaction.reply({
 					content: "❌ You don't have permission for this command.",
