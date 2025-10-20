@@ -65,6 +65,23 @@ model UserEventReminder {
   @@index([eventId, notificationType])
 }
 
+model Cookies {
+  id          String        @id // Guild ID
+  cookieUsers CookiesUser[]
+}
+
+model CookiesUser {
+  id                Int      @id @default(autoincrement())
+  guildId           String
+  userId            String   // Discord user ID
+  lastCookieAttempt DateTime
+  cookies           Int      @default(0)
+
+  cookiesParent     Cookies  @relation(fields: [guildId], references: [id])
+
+  @@unique([guildId, userId]) // prevent duplicates per guild
+}
+
 model Event {
   id                        Int                 @id @default(autoincrement())
   guildId                   String // Guild Discord Server ID
