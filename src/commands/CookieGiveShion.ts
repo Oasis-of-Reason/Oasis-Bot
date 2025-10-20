@@ -75,10 +75,17 @@ module.exports = {
 			}
 
 			// Public announcement
-			await ch.send({
-				content: `🍪 Shion has received a cookie from <@${giverId}>! They now have **${receiverUpdated.cookies}** cookies.`,
-				allowedMentions: { users: [giverId, receiverId] },
-			});
+			if (receiverId === giverId) {
+				await ch.send({
+					content: `🍪 <@${giverId}> got himself a cookie! His greed knows no bounds! They now have **${receiverUpdated.cookies}** cookies.`,
+					allowedMentions: { users: [giverId] },
+				});
+			} else {
+				await ch.send({
+					content: `🍪 Shion has received a cookie from <@${giverId}>! They now have **${receiverUpdated.cookies}** cookies.`,
+					allowedMentions: { users: [giverId] },
+				});
+			}
 
 			// Finalize ephemeral confirmation (or delete it if you prefer no ephemeral)
 			await interaction.editReply({ content: "✅ Cookie sent!" });
