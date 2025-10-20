@@ -46,7 +46,7 @@ module.exports = {
 			const since = now.getTime() - new Date(thiefRow.lastCookieAttempt).getTime();
 			if (since < COOLDOWN_MS) {
 				const remaining = COOLDOWN_MS - since;
-				await interaction.editReply({ content: `⏳ You can attempt another steal in **${formatRemaining(remaining)}**.` });
+				await interaction.editReply({ content: `⏳ You can attempt a steal in **${formatRemaining(remaining)}**.` });
 				return;
 			}
 		}

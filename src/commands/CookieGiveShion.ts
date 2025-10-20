@@ -47,7 +47,7 @@ module.exports = {
 				if (since < COOLDOWN_MS) {
 					const remaining = COOLDOWN_MS - since;
 					await interaction.editReply({
-						content: `⏳ You can give another cookie in **${formatRemaining(remaining)}**.`,
+						content: `⏳ You can give a cookie in **${formatRemaining(remaining)}**.`,
 					});
 					return;
 				}
