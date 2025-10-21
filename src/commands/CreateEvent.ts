@@ -153,11 +153,13 @@ module.exports = {
 		const descInput = new TextInputBuilder()
 			.setCustomId("description")
 			.setLabel("Description")
+			.setPlaceholder("Provide a brief description of your event.")
 			.setStyle(TextInputStyle.Paragraph)
 			.setMaxLength(1000);
 		const capInput = new TextInputBuilder()
 			.setCustomId("capacity_cap")
 			.setLabel("Max Capacity")
+			.setPlaceholder("How many attendess? Over Cap go waitlist. Dont forget hosts & co-hosts!")
 			.setStyle(TextInputStyle.Short)
 			.setRequired(true);
 

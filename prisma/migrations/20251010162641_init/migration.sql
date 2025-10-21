@@ -3,9 +3,11 @@ CREATE TABLE `GuildConfig` (
     `id` VARCHAR(191) NOT NULL,
     `voiceCreatorRoomId` VARCHAR(191) NULL,
     `voiceCreatorCategory` VARCHAR(191) NULL,
-    `eventCalenderMessageId` VARCHAR(191) NULL,
+    `discordEventCalenderMessageId` VARCHAR(191) NULL,
+    `vrcEventCalenderMessageId` VARCHAR(191) NULL,
     `draftChannelId` VARCHAR(191) NULL,
-    `publishingChannelId` VARCHAR(191) NULL,
+    `publishingDiscordChannelId` VARCHAR(191) NULL,
+    `publishingVRCChannelId` VARCHAR(191) NULL,
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -62,8 +64,9 @@ CREATE TABLE `Event` (
     `title` VARCHAR(191) NOT NULL,
     `type` VARCHAR(191) NOT NULL,
     `subtype` VARCHAR(191) NOT NULL,
-    `game` VARCHAR(191) NULL,
+    `activity` VARCHAR(191) NULL,
     `platforms` VARCHAR(191) NULL,
+    `rolePings` VARCHAR(191) NULL,
     `requirements` VARCHAR(191) NULL,
     `description` TEXT NULL,
     `imageUrl` TEXT NULL,
@@ -90,6 +93,7 @@ CREATE TABLE `CohostsOnEvent` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `eventId` INTEGER NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -99,6 +103,7 @@ CREATE TABLE `EventSignUps` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `eventId` INTEGER NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -108,6 +113,7 @@ CREATE TABLE `InterestedSignUps` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `eventId` INTEGER NOT NULL,
     `userId` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

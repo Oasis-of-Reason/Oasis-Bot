@@ -43,7 +43,7 @@ module.exports = {
 			return;
 		}
 
-		await interaction.deferReply({ ephemeral: true });
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		try {
 			await publishEvent(interaction.client, interaction.guild as Guild, id);
 			await refreshPublishedCalender(interaction.client, interaction.guildId as string, true);

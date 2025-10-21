@@ -3,6 +3,7 @@ import {
 	ChatInputCommandInteraction,
 	TextChannel,
 	ThreadChannel,
+	MessageFlags,
 } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { formatRemaining } from "../helpers/generalHelpers";
@@ -16,7 +17,7 @@ module.exports = {
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		if (!interaction.guild) {
-			await interaction.reply({ content: "❌ This command can only be used in a server.", ephemeral: true });
+			await interaction.reply({ content: "❌ This command can only be used in a server.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -25,7 +26,7 @@ module.exports = {
 		const giverId = interaction.user.id;
 
 		// ✅ Acknowledge immediately
-		await interaction.deferReply({ ephemeral: true });
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
 		try {
 			// Ensure guild Cookies row exists

@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-
+import { writeLog } from './helpers/logger';
 import { config } from './config';
 import { Client, Collection, GatewayIntentBits, ActivityType, Partials } from 'discord.js';
 import path from 'path';
@@ -88,6 +88,7 @@ client.login(config.DISCORD_TOKEN)
 			}],
 			status: 'online'
 		});
+		writeLog('Bot started and presence set.');
 		console.log(`Logged in as ${client.user?.tag}!`);
 
 	})

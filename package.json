@@ -9,7 +9,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "build": "tsup src/index.ts --minify"
+    "build": "tsup src/index.ts --minify",
+	"pm2:start": "pm2 start dist/index.js --name oasis-bot --watch",
+	"pm2:stop": "pm2 stop oasis-bot",
+	"pm2:restart": "pm2 restart oasis-bot",
+	"pm2:logs": "pm2 logs oasis-bot"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.12",
