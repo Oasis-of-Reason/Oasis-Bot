@@ -32,6 +32,7 @@ import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { publishEvent } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
+import { writeLog } from "./logger";
 
 export function buildDraftEmbed(eventData: {
 	id?: number;
@@ -53,14 +54,11 @@ export function buildDraftEmbed(eventData: {
 		.setTitle("📅 Event Draft")
 		.setColor(0x5865f2)
 		.setImage(eventData.posterUrl ?? null)
+		.setDescription(eventData.description?.slice(0, 4096) || 'No description')
 		.addFields(
 			{
 				name: "Event Information",
 				value: `> **Title:** ${eventData.title}\n> **Host:** <@${eventData.hostId}>`,
-			},
-			{
-				name: "Description",
-				value: `${eventData.description || "—"}`,
 			},
 			{
 				name: "General Information",
@@ -164,6 +162,7 @@ export async function handleDraftButton(
 						.setLabel(label)
 						.setStyle(paragraph ? TextInputStyle.Paragraph : TextInputStyle.Short)
 						.setRequired(false)
+						.setMaxLength(paragraph ? 4000 : 100)
 				)
 			);
 		await i.showModal(modal);
@@ -431,7 +430,7 @@ export async function registerEventDraftCollectors(client: Client) {
 
 	// pull all unpublished drafts
 	const now = new Date();
-	const nowMinusDay = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+	const nowMinusDay = new Date(now.getTime() - 168 * 60 * 60 * 1000); // added 7 days buffer for old drafts
 	const drafts = await prisma.event.findMany({
 		where: { startTime: { gte: nowMinusDay }, },
 		select: {
@@ -441,7 +440,7 @@ export async function registerEventDraftCollectors(client: Client) {
 			draftThreadMessageId: true,
 		},
 	});
-
+		writeLog(`Restoring ${drafts.length} event draft collectors`)
 	for (const draft of drafts) {
 		try {
 			const guild = await client.guilds.fetch(draft.guildId);
@@ -517,8 +516,10 @@ export async function registerEventDraftCollectors(client: Client) {
 			}
 
 			console.log(`✅ Restored draft buttons for event ${ev.id}`);
+			writeLog(`Restored draft buttons for event ${ev.id}`);
 		} catch (err) {
 			console.error(`❌ Failed to restore draft ${draft.id}:`, err);
+			writeLog(`Failed to restore draft ${draft.id}: ${err}`);	
 		}
 	}
 }
