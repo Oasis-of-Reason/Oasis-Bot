@@ -155,7 +155,7 @@ module.exports = {
 			.setLabel("Description")
 			.setPlaceholder("Provide a brief description of your event.")
 			.setStyle(TextInputStyle.Paragraph)
-			.setMaxLength(1000);
+			.setMaxLength(4000);
 		const capInput = new TextInputBuilder()
 			.setCustomId("capacity_cap")
 			.setLabel("Max Capacity")
