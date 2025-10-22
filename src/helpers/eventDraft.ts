@@ -17,6 +17,7 @@ import {
 	ChannelType,
 	AnyThreadChannel,
 	MessageFlags,
+	ModalSubmitInteraction
 } from "discord.js";
 import { 
 	validateNumber,
@@ -151,7 +152,7 @@ export async function handleDraftButton(
 		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons() });
 	};
 
-	const modalInput = async (id: string, title: string, field: string, label: string, paragraph = false) => {
+	const modalInput = async (id: string, title: string, field: string, label: string, paragraph = false): Promise<ModalSubmitInteraction | null>  => {
 		const modal = new ModalBuilder()
 			.setCustomId(id)
 			.setTitle(title)
@@ -164,19 +165,23 @@ export async function handleDraftButton(
 						.setRequired(false)
 						.setMaxLength(paragraph ? 4000 : 100)
 				)
-			);
+			);		
 		await i.showModal(modal);
+		
+		try {
 		const sub = await i.awaitModalSubmit({
 			filter: (x) => x.customId === id && x.user.id === i.user.id,
 			time: 120_000,
 		});
 		await sub.deferReply({ flags: MessageFlags.Ephemeral });
 		return sub;
+		} catch (e) { writeLog("Modal submit timed out or errored."); return null; }
 	};
 
 	switch (i.customId) {
 		case "edit_title": {
 			const sub = await modalInput("modal_edit_title", "Edit Title", "new_title", "New Title");
+			if (!sub) return;
 			eventData.title = sub.fields.getTextInputValue("new_title") || eventData.title;
 			await updateDraftByMsgId(message.id, { title: eventData.title });
 			await sub.editReply({ content: "✅ Title updated!" });
@@ -185,6 +190,7 @@ export async function handleDraftButton(
 		}
 		case "edit_description": {
 			const sub = await modalInput("modal_edit_description", "Edit Description", "new_description", "New Description", true);
+			if (!sub) return;
 			eventData.description = sub.fields.getTextInputValue("new_description") || null;
 			await updateDraftByMsgId(message.id, { description: eventData.description });
 			await sub.editReply({ content: "✅ Description updated!" });
@@ -193,6 +199,7 @@ export async function handleDraftButton(
 		}
 		case "edit_activity": {
 			const sub = await modalInput("modal_edit_activity", "Edit Activity", "new_activity", "Activity");
+			if (!sub) return;
 			eventData.activity = sub.fields.getTextInputValue("new_activity") || null;
 			await updateDraftByMsgId(message.id, { activity: eventData.activity });
 			await sub.editReply({ content: "✅ Activity updated!" });
@@ -213,6 +220,7 @@ export async function handleDraftButton(
 				filter: (x) => x.customId === "modal_edit_capacity" && x.user.id === i.user.id,
 				time: 120_000,
 			});
+			if (!sub) return;
 			await sub.deferReply({ flags: MessageFlags.Ephemeral });
 			let val = validateNumber(sub.fields.getTextInputValue("new_capacity_cap"));
 			eventData.capacityCap = val;
@@ -223,6 +231,7 @@ export async function handleDraftButton(
 		}
 		case "edit_start": {
 			const sub = await modalInput("modal_edit_start", "Edit Start Time", "new_start", "When does it start?");
+			if (!sub) return;
 			const parsed = chrono.parseDate(sub.fields.getTextInputValue("new_start"));
 			if (parsed) {
 				eventData.startTime = parsed;
@@ -236,6 +245,7 @@ export async function handleDraftButton(
 		}
 		case "edit_length": {
 			const sub = await modalInput("modal_edit_length", "Edit Length", "new_length", "Length in minutes");
+			if (!sub) return;
 			let val = validateNumber(sub.fields.getTextInputValue("new_length"));
 			eventData.lengthMinutes = val;
 			await updateDraftByMsgId(message.id, { lengthMinutes: val });
@@ -258,6 +268,7 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: 120_000,
@@ -287,6 +298,7 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: 120_000,
@@ -315,6 +327,7 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: 120_000,
@@ -348,7 +361,8 @@ export async function handleDraftButton(
 				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
-
+			
+			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: 120_000,
@@ -379,7 +393,7 @@ export async function handleDraftButton(
 				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
-
+			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: 120_000,
