@@ -103,7 +103,7 @@ function buildAllRows(
 			.setStyle(styleSingleChoice(scope, "Group"))
 			.setDisabled(!isVRC),
 		new ButtonBuilder()
-			.setCustomId("scope:Friends")
+			.setCustomId("scope:Group+")
 			.setLabel("Group Plus")
 			.setStyle(styleSingleChoice(scope, "Friends"))
 			.setDisabled(!isVRC),
@@ -295,7 +295,7 @@ module.exports = {
 				new ActionRowBuilder<TextInputBuilder>().addComponents(
 					new TextInputBuilder()
 						.setCustomId("start")
-						.setLabel("When does it start? (e.g. 'tomorrow 8pm GMT')")
+						.setLabel("When does it start? (e.g. 'tomorrow 8pm GMT or in 3 days at 4pm')")
 						.setStyle(TextInputStyle.Short)
 						.setRequired(true),
 				),
