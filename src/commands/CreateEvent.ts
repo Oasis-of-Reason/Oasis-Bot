@@ -295,7 +295,8 @@ module.exports = {
 				new ActionRowBuilder<TextInputBuilder>().addComponents(
 					new TextInputBuilder()
 						.setCustomId("start")
-						.setLabel("When does it start? (e.g. 'tomorrow 8pm GMT or in 3 days at 4pm')")
+						.setLabel("When does it start?")
+						.setPlaceholder('e.g tomorrow 8pm GMT | in 3 days at 4pm')
 						.setStyle(TextInputStyle.Short)
 						.setRequired(true),
 				),
