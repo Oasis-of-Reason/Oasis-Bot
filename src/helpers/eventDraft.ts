@@ -318,8 +318,8 @@ export async function handleDraftButton(
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("select_scope", "Choose scope", [
-							{ label: "Group Only", value: "Group" },
-							{ label: "Friends Can Join", value: "Friends" },
+							{ label: "Group Members Only", value: "Group" },
+							{ label: "Friends Can Join : Group+", value: "Group+" },
 						])
 					),
 				],

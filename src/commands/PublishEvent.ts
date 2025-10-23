@@ -8,10 +8,12 @@ import {
 } from "discord.js";
 import {
 	userHasAllowedRole,
-	getStandardRolesOrganizer
+	getStandardRolesOrganizer,
+	getStandardRolesHost
 } from "../helpers/securityHelpers";
 import { publishEvent } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { writeLog } from "../helpers/logger";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -25,8 +27,9 @@ module.exports = {
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
 	async execute(interaction: ChatInputCommandInteraction) {
-
-		if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesOrganizer())) {
+		writeLog(`PublishEvent command invoked by user ${interaction.member} tagged ${interaction.user.tag} (${interaction.user.id}) in guild ${interaction.guild?.name} (${interaction.guildId})`);
+		
+		if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost())) {
 			await interaction.reply({
 				content: "❌ You don't have permission for this command.",
 				flags: MessageFlags.Ephemeral,
