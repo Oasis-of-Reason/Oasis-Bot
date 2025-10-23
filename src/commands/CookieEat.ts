@@ -57,7 +57,7 @@ module.exports = {
 
 				await interaction.editReply({ content: "😕 You don’t have any cookies to eat." });
 				await ch.send({
-					content: `<@${userId}> Tried to eat a cookie, but they don't have any! How sad! :(`,
+					content: `> <@${userId}> Tried to eat a cookie, but they don't have any! How sad! :(`,
 					allowedMentions: { users: [userId] },
 				});
 				return;
@@ -74,7 +74,7 @@ module.exports = {
 
 			// Public announcement
 			await ch.send({
-				content: `😋 <@${userId}> just ate a cookie! 🍪 They now have **${remaining}** cookie${remaining === 1 ? "" : "s"} left.`,
+				content: `> 😋 <@${userId}> just ate a cookie! 🍪 They now have **${remaining}** cookie${remaining === 1 ? "" : "s"} left.`,
 				allowedMentions: { users: [userId] },
 			});
 			await interaction.editReply({ content: "✅ You successfully ate a cookie." });
