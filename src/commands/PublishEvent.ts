@@ -8,7 +8,8 @@ import {
 } from "discord.js";
 import {
 	userHasAllowedRole,
-	getStandardRolesOrganizer
+	getStandardRolesOrganizer,
+	getStandardRolesHost
 } from "../helpers/securityHelpers";
 import { publishEvent } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
@@ -26,7 +27,7 @@ module.exports = {
 
 	async execute(interaction: ChatInputCommandInteraction) {
 
-		if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesOrganizer())) {
+		if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost())) {
 			await interaction.reply({
 				content: "❌ You don't have permission for this command.",
 				flags: MessageFlags.Ephemeral,
