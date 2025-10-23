@@ -54,12 +54,19 @@ module.exports = {
 				}
 			}
 
+			const rand = Math.random();
+
+			let cookieAmount = 1;
+			if (rand > 0.95) {
+				cookieAmount = 10;
+			}
+
 			// Transaction: increment receiver; set giver's last attempt
 			const [receiverUpdated] = await prisma.$transaction([
 				prisma.cookiesUser.upsert({
 					where: { guildId_userId: { guildId, userId: receiverId } },
-					update: { cookies: { increment: 1 } },
-					create: { guildId, userId: receiverId, cookies: 1, lastCookieAttempt: new Date(0) },
+					update: { cookies: { increment: cookieAmount } },
+					create: { guildId, userId: receiverId, cookies: cookieAmount, lastCookieAttempt: new Date(0) },
 				}),
 				prisma.cookiesUser.upsert({
 					where: { guildId_userId: { guildId, userId: giverId } },
@@ -67,6 +74,21 @@ module.exports = {
 					create: { guildId, userId: giverId, cookies: 0, lastCookieAttempt: now },
 				}),
 			]);
+
+			let cookieSuccessMessage = `> 🍪 Shion has received a cookie from <@${giverId}>! They now have **${receiverUpdated.cookies}** cookies.`;
+			if (receiverId === giverId) {
+				if (rand > 0.95) {
+					cookieSuccessMessage = `> 🍪 <@${giverId}> got himself a cookie! They now have **${receiverUpdated.cookies}** cookies.`
+				} else {
+
+					cookieSuccessMessage = `> 🍪 Shion has got himself an entire **PACK** of cookies from <@${giverId}>! His greed knows no bounds! They now have **${receiverUpdated.cookies}** cookies.`
+				}
+			}
+			else {
+				if (rand > 0.95) {
+					cookieSuccessMessage = `> 🍪 Shion has received an entire **PACK** of cookies from <@${giverId}>! How generous! They now have **${receiverUpdated.cookies}** cookies.`
+				}
+			}
 
 			// Make sure channel supports send()
 			const ch = interaction.channel;
@@ -76,17 +98,10 @@ module.exports = {
 			}
 
 			// Public announcement
-			if (receiverId === giverId) {
-				await ch.send({
-					content: `🍪 <@${giverId}> got himself a cookie! His greed knows no bounds! They now have **${receiverUpdated.cookies}** cookies.`,
-					allowedMentions: { users: [giverId] },
-				});
-			} else {
-				await ch.send({
-					content: `🍪 Shion has received a cookie from <@${giverId}>! They now have **${receiverUpdated.cookies}** cookies.`,
-					allowedMentions: { users: [giverId] },
-				});
-			}
+			await ch.send({
+				content: cookieSuccessMessage,
+				allowedMentions: { users: [giverId] },
+			});
 
 			// Finalize ephemeral confirmation (or delete it if you prefer no ephemeral)
 			await interaction.editReply({ content: "✅ Cookie sent!" });

@@ -109,6 +109,7 @@ module.exports = {
 				return {
 					success,
 					transferHappened,
+					targetHasCookies,
 					thiefCookies: updatedThiefCookies,
 					targetCookies: updatedTargetCookies,
 				};
@@ -122,23 +123,23 @@ module.exports = {
 			// Announce publicly in the channel
 			if (result.transferHappened) {
 				await ch.send({
-					content: `🕵️‍♂️ <@${thiefId}> **successfully stole** a cookie from Shion! 🍪\n` +
-						`<@${thiefId}> now has **${result.thiefCookies}** cookies. ` +
+					content: `> 🕵️‍♂️ <@${thiefId}> **successfully stole** a cookie from Shion! 🍪\n` +
+						`> <@${thiefId}> now has **${result.thiefCookies}** cookies. ` +
 						`Shion now has **${result.targetCookies}** cookies.`,
 					allowedMentions: { users: [thiefId, targetId] },
 				});
 				await interaction.editReply({ content: "✅ Steal Succeeded!." });
 			} else {
 				// failed steal (either RNG fail, or target had no cookies)
-				if (!result.success) {
+				if (!result.success && result.targetHasCookies) {
 					await ch.send({
-						content: `❌ <@${thiefId}> attempted to steal a cookie but Shion guarded fiercely. Better luck next time!`,
+						content: `> ❌ <@${thiefId}> attempted to steal a cookie but Shion guarded fiercely. Better luck next time!`,
 						allowedMentions: { users: [thiefId] },
 					});
 				} else {
 					// success==true but transferHappened==false implies target had no cookies
 					await ch.send({
-						content: `❌ <@${thiefId}> tried to steal from Shion, but they have no cookies to steal.`,
+						content: `> ❌ <@${thiefId}> tried to steal from Shion, but they have no cookies to steal.`,
 						allowedMentions: { users: [thiefId] },
 					});
 				}
