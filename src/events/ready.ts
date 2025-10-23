@@ -1,9 +1,10 @@
-import { Events } from 'discord.js';
+import { Client, Events } from 'discord.js';
 import { deployCommands } from '../utils/deploy-commands';
 import { config } from '../config';
 import { startReminderWorker } from '../reminders/reminderWorker';
 import { PrismaClient } from '@prisma/client';
 import { registerEventDraftCollectors } from '../helpers/eventDraft';
+import { startCookieWorker } from '../helpers/cookieWorker';
 const prisma = new PrismaClient();
 
 module.exports = {
@@ -17,11 +18,13 @@ module.exports = {
 				await deployCommands({ guildId: guildId });
 				console.log(`Deployed commands to guild: ${guildId}`);
 				initializeEventChannelIds(guildId);
+				//startCookieWorker(client, client.guilds.cache.get(guildId));
 			}
 		} else {
 			await deployCommands({ guildId: config.isDev });
 			console.log(`Deployed commands to test guild: ${config.isDev}`);
 			initializeEventChannelIds(config.isDev);
+			//startCookieWorker(client, client.guilds.cache.get(config.isDev));
 		}
 
 		await registerEventDraftCollectors(client);

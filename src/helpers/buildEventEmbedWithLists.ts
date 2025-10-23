@@ -28,7 +28,7 @@ export async function buildEventEmbedWithLists(
 		})
 	);
 
-	const attendeeNamesSplit = splitArray(attendeeNames, publishingEvent.capacityCap);
+	const attendeeNamesSplit = publishingEvent.capacityCap === 0 ? [attendeeNames,[]] : splitArray(attendeeNames, publishingEvent.capacityCap);
 
 	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember;
 	const hostName = hostUser.nickname || hostUser?.displayName || "-";
