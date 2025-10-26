@@ -17,19 +17,24 @@ import {
 	ChannelType,
 	AnyThreadChannel,
 	MessageFlags,
-	ModalSubmitInteraction
+	ModalSubmitInteraction,
+	TextChannel,
+	ThreadChannel,
 } from "discord.js";
+
 import { 
 	validateNumber,
 	getPlatformsArray,
 	getRequirementsString,
 	toUnix
  } from "./generalHelpers";
+
  import { 
 	getStandardRolesHost,
 	getStandardRolesOrganizer, 
 	userHasAllowedRole 
 } from "../helpers/securityHelpers";
+
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
 import { publishEvent } from "../helpers/publishEvent";
@@ -102,6 +107,7 @@ export function editButtons() {
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId("edit_start").setLabel("Edit Start Time").setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder().setCustomId("edit_length").setLabel("Edit Length").setStyle(ButtonStyle.Secondary),
+			new ButtonBuilder().setCustomId("edit_poster").setLabel("Edit Poster").setStyle(ButtonStyle.Secondary),
 		),
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId("get_event_id").setLabel("🔑 Get ID").setStyle(ButtonStyle.Secondary),
@@ -408,6 +414,54 @@ export async function handleDraftButton(
 			});
 			break;
 		}
+			case "edit_poster": {
+			await i.reply({
+				content: "Please upload a new poster image in this thread within 15 seconds.",
+				flags: MessageFlags.Ephemeral,
+			});
+			const channelLink = i.channel as TextChannel | ThreadChannel;
+			const collected = await channelLink.awaitMessages({
+				filter: (m) => m.author.id === i.user.id && m.attachments.size > 0,
+				max: 1,
+				time: 15_000,
+			});
+
+			if (collected.size > 0) {
+				const msg = collected.first()!
+				const attachment = msg.attachments.first();
+				if (attachment && attachment.contentType?.startsWith("image/")) {
+				const posterUrl = attachment.url;
+
+				// Update DB
+				await prisma.event.update({
+					where: { id: eventData.id },
+					data: { imageUrl: posterUrl },
+				});
+
+				// Update hydrated object
+				eventData.posterUrl = posterUrl;
+
+				// Update embed
+				await message.edit({
+					embeds: [buildDraftEmbed(eventData)],
+					components: editButtons(),
+				});
+				// Clean up the uploaded message
+					try {
+						await msg.delete();
+					} catch {
+						// ignore if already deleted or missing perms
+						writeLog("Could not delete poster upload message.");
+					}
+
+				await i.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
+				}
+			} else {
+				await i.followUp({ content: "❌ No image uploaded.", flags: MessageFlags.Ephemeral });
+			}
+			break;
+			}
+
 		case "get_event_id":
 			await i.reply({ content: `This event's ID is \`${eventData.id}\``, flags: MessageFlags.Ephemeral });
 			break;

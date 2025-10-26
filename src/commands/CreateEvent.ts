@@ -425,10 +425,10 @@ module.exports = {
 			await modalSubmit.deleteReply();
 		} catch { }
 
-		await interaction.followUp({
+		/*await interaction.followUp({
 			content: `✅ Event draft created in thread <#${thread.id}>`,
 			flags: MessageFlags.Ephemeral,
-		});
+		});*/
 
 		// Step 7: attach button collector (scoped)
 		const hydrated = {

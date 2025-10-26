@@ -58,7 +58,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   if (result.win) {
     return interaction.reply(
-      `> 🎉 **WIN!** <@${userId}> doubled their cookies from **${result.before} → ${result.after}**. Enjoy the crumbs of victory! 🍪🍪`
+      `> 🎉 **WIN!** <@${userId}> doubled their cookies from **${result.before} → ${result.after}**. Enjoy the crumbs of victory! 🍪`
     );
   } else {
     return interaction.reply(
