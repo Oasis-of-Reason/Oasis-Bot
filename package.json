@@ -13,7 +13,8 @@
 	"pm2:start": "pm2 start dist/index.js --name oasis-bot --watch",
 	"pm2:stop": "pm2 stop oasis-bot",
 	"pm2:restart": "pm2 restart oasis-bot",
-	"pm2:logs": "pm2 logs oasis-bot"
+	"pm2:logs": "pm2 logs oasis-bot",
+	"pm2:deploy": "npm run pm2:stop && npm run build && npx prisma generate && pm2 start dist/index.js --name oasis-bot --watch && pm2 logs oasis-bot"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.12",

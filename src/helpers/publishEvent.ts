@@ -107,20 +107,19 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		allowedMentions: { roles: allowedPingRoles },
 	});
 
-	const thread = await channel.threads.create({
-		name: `Event: ${publishingEvent.title}`,
+	const thread = await sentChannel.startThread({
+		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: 1440,
 	});
-	const sentThread = await thread.send({ embeds: [embed], components });
-
+	
 	await prisma.event.update({
 		where: { id: eventId },
 		data: {
 			published: true,
-			publishedChannelId: channel.id,
+			publishedChannelId: sentChannel.id,
 			publishedThreadId: thread.id,
 			publishedChannelMessageId: sentChannel.id,
-			publishedThreadMessageId: sentThread.id,
+			publishedThreadMessageId: null,
 		},
 	});
 }
