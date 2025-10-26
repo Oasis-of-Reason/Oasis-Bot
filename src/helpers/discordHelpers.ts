@@ -7,6 +7,8 @@ import {
 	Message,
 	User,
 	GuildMember,
+	APIEmbed,
+	EmbedBuilder,
 } from "discord.js";
 
 export async function fetchTextChannel(client: Client, id?: string | null): Promise<TextChannel | null> {
@@ -45,4 +47,57 @@ export function toSnowflake(target: string | User | GuildMember): string {
 	const m = target.match(/\d{17,20}/);
 	if (!m) throw new Error(`Invalid user reference: "${target}"`);
 	return m[0];
+}
+
+/**
+ * Checks if a message's first embed matches a given embed.
+ * Returns true if they are deeply equivalent.
+ */
+export function messageEmbedEquals(
+	message: Message,
+	expected: APIEmbed | EmbedBuilder
+): boolean {
+	if (!message || !message.embeds || message.embeds.length === 0) return false;
+
+	const actual = message.embeds[0];
+	return embedsAreEqual(actual as APIEmbed, expected as APIEmbed);
+}
+
+/**
+ * Deep equality check for two Discord embeds.
+ * Works with EmbedBuilder, MessageEmbed, or raw APIEmbed objects.
+ */
+export function embedsAreEqual(a: APIEmbed, b: APIEmbed): boolean {
+	// quick reference check
+	if (a === b) return true;
+	if (!a || !b) return false;
+
+	// Convert to JSON if needed (EmbedBuilder or MessageEmbed)
+	const embedA = typeof (a as any).toJSON === "function" ? (a as any).toJSON() : a;
+	const embedB = typeof (b as any).toJSON === "function" ? (b as any).toJSON() : b;
+
+	return deepEmbedEqual(embedA, embedB);
+}
+
+/**
+ * Generic deep equality check that handles arrays, objects, and primitives.
+ */
+function deepEmbedEqual(a: any, b: any): boolean {
+	if (a === b) return true;
+	if (typeof a !== typeof b) return false;
+	if (a === null || b === null) return false;
+
+	// Handle objects
+	if (typeof a === "object" && typeof b === "object") {
+        if (a.fields.length !== b.fields.length)
+            return false;
+        for (let i = 0; i < a.fields.length; i++) {
+            if(a.fields[i].value !== b.fields[i].value)
+				return false;
+        }
+        return true;
+    }
+
+	// fallback for primitives
+	return a === b;
 }

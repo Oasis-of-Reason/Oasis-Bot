@@ -55,5 +55,13 @@ async function initializeEventChannelIds(guildId: string) {
 			where: { id: guildId, publishingDiscordChannelId: null },
 			data: { publishingDiscordChannelId: config.DEFAULT_EVENT_PUBLISHING_DISCORD_CHANNEL_ID, },
 		}),
+		prisma.guildConfig.updateMany({
+			where: { id: guildId, upcomingEventsChannelId: null },
+			data: { upcomingEventsChannelId: config.DEFAULT_EVENT_UPCOMING_EVENTS_CHANNEL_ID, },
+		}),
+		prisma.guildConfig.updateMany({
+			where: { id: guildId, cookieChannelId: null },
+			data: { cookieChannelId: config.DEFAULT_EVENT_COOKIE_CHANNEL_ID, },
+		}),
 	]);
 }
