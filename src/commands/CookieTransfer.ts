@@ -92,8 +92,7 @@ module.exports = {
       ]);
 
       await interaction.reply({
-        content: `✅ You sent **${amount} cookie${amount === 1 ? "" : "s"}** to ${recipient.toString()}! 🍪`,
-        flags: MessageFlags.Ephemeral,
+        content: `🍪 <@${senderId}> gave **${amount} cookie${amount === 1 ? "" : "s"}** to ${recipient.toString()}! 🍪`
       });
     } catch (error) {
       console.error("Error transferring cookies:", error);
