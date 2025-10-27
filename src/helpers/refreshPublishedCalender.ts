@@ -81,7 +81,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		}
 	}
 
-	if (!messageEmbedEquals(discordMessage as Message, discordEmbed)) {
+	if (!messageEmbedEquals(discordMessage as Message, discordEmbed) || (deleteAndResend && !(discordMessage?.channel.lastMessageId === discordMessage?.id))) {
 		if (!deleteAndResend && discordMessage) {
 			await discordMessage.edit({ embeds: [discordEmbed] });
 		}
@@ -107,7 +107,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		}
 	}
 
-	if (!messageEmbedEquals(vrcMessage as Message, vrcEmbed)) {
+	if (!messageEmbedEquals(vrcMessage as Message, vrcEmbed) || (deleteAndResend && !(vrcMessage?.channel.lastMessageId === vrcMessage?.id))) {
 		if (!deleteAndResend && vrcMessage) {
 			await vrcMessage.edit({ embeds: [vrcEmbed] });
 		}
@@ -133,7 +133,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		}
 	}
 
-	if (!messageEmbedEquals(allMessage as Message, allEmbed)) {
+	if (!messageEmbedEquals(allMessage as Message, allEmbed) || (deleteAndResend && !(allMessage?.channel.lastMessageId === allMessage?.id))) {
 		if (!deleteAndResend && allMessage) {
 			await allMessage.edit({ embeds: [allEmbed] });
 		}
