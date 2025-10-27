@@ -22,17 +22,17 @@ import {
 	ThreadChannel,
 } from "discord.js";
 
-import { 
+import {
 	validateNumber,
 	getPlatformsArray,
 	getRequirementsString,
 	toUnix
- } from "./generalHelpers";
+} from "./generalHelpers";
 
- import { 
+import {
 	getStandardRolesHost,
-	getStandardRolesOrganizer, 
-	userHasAllowedRole 
+	getStandardRolesOrganizer,
+	userHasAllowedRole
 } from "../helpers/securityHelpers";
 
 import * as chrono from "chrono-node";
@@ -40,6 +40,9 @@ import { prisma } from "../utils/prisma";
 import { publishEvent } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { writeLog } from "./logger";
+
+const TIMEOUT_TIME_LONG = 120_000;
+const TIMEOUT_TIME_SHORT = 30_000;
 
 export function buildDraftEmbed(eventData: {
 	id?: number;
@@ -159,7 +162,7 @@ export async function handleDraftButton(
 		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons() });
 	};
 
-	const modalInput = async (id: string, title: string, field: string, label: string, paragraph = false): Promise<ModalSubmitInteraction | null>  => {
+	const modalInput = async (id: string, title: string, field: string, label: string, paragraph = false): Promise<ModalSubmitInteraction | null> => {
 		const modal = new ModalBuilder()
 			.setCustomId(id)
 			.setTitle(title)
@@ -172,16 +175,16 @@ export async function handleDraftButton(
 						.setRequired(false)
 						.setMaxLength(paragraph ? 4000 : 100)
 				)
-			);		
+			);
 		await i.showModal(modal);
-		
+
 		try {
-		const sub = await i.awaitModalSubmit({
-			filter: (x) => x.customId === id && x.user.id === i.user.id,
-			time: 120_000,
-		});
-		await sub.deferReply({ flags: MessageFlags.Ephemeral });
-		return sub;
+			const sub = await i.awaitModalSubmit({
+				filter: (x) => x.customId === id && x.user.id === i.user.id,
+				time: TIMEOUT_TIME_LONG,
+			});
+			await sub.deferReply({ flags: MessageFlags.Ephemeral });
+			return sub;
 		} catch (e) { writeLog("Modal submit timed out or errored."); return null; }
 	};
 
@@ -214,24 +217,10 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_capacity": {
-			const modal = new ModalBuilder()
-				.setCustomId("modal_edit_capacity")
-				.setTitle("Edit Capacity")
-				.addComponents(
-					new ActionRowBuilder<TextInputBuilder>().addComponents(
-						new TextInputBuilder().setCustomId("new_capacity_cap").setLabel("Max Capacity").setStyle(TextInputStyle.Short).setRequired(true)
-					)
-				);
-			await i.showModal(modal);
-			const sub = await i.awaitModalSubmit({
-				filter: (x) => x.customId === "modal_edit_capacity" && x.user.id === i.user.id,
-				time: 120_000,
-			});
+			const sub = await modalInput("modal_edit_capacity", "Edit Capacity", "new_capacity_cap", "Max Capacity");
 			if (!sub) return;
-			await sub.deferReply({ flags: MessageFlags.Ephemeral });
-			let val = validateNumber(sub.fields.getTextInputValue("new_capacity_cap"));
-			eventData.capacityCap = val;
-			await updateDraftByMsgId(message.id, { capacityCap: val });
+			eventData.capacityCap = validateNumber(sub.fields.getTextInputValue("new_activity"));
+			await updateDraftByMsgId(message.id, { capacityCap: eventData.capacityCap });
 			await sub.editReply({ content: "✅ Capacity updated!" });
 			await rerender();
 			break;
@@ -253,9 +242,8 @@ export async function handleDraftButton(
 		case "edit_length": {
 			const sub = await modalInput("modal_edit_length", "Edit Length", "new_length", "Length in minutes");
 			if (!sub) return;
-			let val = validateNumber(sub.fields.getTextInputValue("new_length"));
-			eventData.lengthMinutes = val;
-			await updateDraftByMsgId(message.id, { lengthMinutes: val });
+			eventData.lengthMinutes = validateNumber(sub.fields.getTextInputValue("new_length"));
+			await updateDraftByMsgId(message.id, { lengthMinutes: eventData.lengthMinutes });
 			await sub.editReply({ content: "✅ Length updated!" });
 			await rerender();
 			break;
@@ -278,7 +266,7 @@ export async function handleDraftButton(
 			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
-				time: 120_000,
+				time: TIMEOUT_TIME_LONG,
 				filter: (x) => x.user.id === i.user.id && x.customId === "select_type",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
@@ -308,7 +296,7 @@ export async function handleDraftButton(
 			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
-				time: 120_000,
+				time: TIMEOUT_TIME_LONG,
 				filter: (x) => x.user.id === i.user.id && x.customId === "select_subtype",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
@@ -337,7 +325,7 @@ export async function handleDraftButton(
 			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
-				time: 120_000,
+				time: TIMEOUT_TIME_LONG,
 				filter: (x) => x.user.id === i.user.id && x.customId === "select_scope",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
@@ -368,11 +356,11 @@ export async function handleDraftButton(
 				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
-			
+
 			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
-				time: 120_000,
+				time: TIMEOUT_TIME_LONG,
 				filter: (x) => x.user.id === i.user.id && x.customId === "select_platforms",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
@@ -403,7 +391,7 @@ export async function handleDraftButton(
 			if (!msg) return;
 			const col = (msg as Message).createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
-				time: 120_000,
+				time: TIMEOUT_TIME_LONG,
 				filter: (x) => x.user.id === i.user.id && x.customId === "select_requirements",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
@@ -414,39 +402,39 @@ export async function handleDraftButton(
 			});
 			break;
 		}
-			case "edit_poster": {
+		case "edit_poster": {
 			await i.reply({
-				content: "Please upload a new poster image in this thread within 15 seconds.",
+				content: "Please upload a new poster image in this thread within 30 seconds.",
 				flags: MessageFlags.Ephemeral,
 			});
 			const channelLink = i.channel as TextChannel | ThreadChannel;
 			const collected = await channelLink.awaitMessages({
 				filter: (m) => m.author.id === i.user.id && m.attachments.size > 0,
 				max: 1,
-				time: 15_000,
+				time: TIMEOUT_TIME_SHORT,
 			});
 
 			if (collected.size > 0) {
 				const msg = collected.first()!
 				const attachment = msg.attachments.first();
 				if (attachment && attachment.contentType?.startsWith("image/")) {
-				const posterUrl = attachment.url;
+					const posterUrl = attachment.url;
 
-				// Update DB
-				await prisma.event.update({
-					where: { id: eventData.id },
-					data: { imageUrl: posterUrl },
-				});
+					// Update DB
+					await prisma.event.update({
+						where: { id: eventData.id },
+						data: { imageUrl: posterUrl },
+					});
 
-				// Update hydrated object
-				eventData.posterUrl = posterUrl;
+					// Update hydrated object
+					eventData.posterUrl = posterUrl;
 
-				// Update embed
-				await message.edit({
-					embeds: [buildDraftEmbed(eventData)],
-					components: editButtons(),
-				});
-				// Clean up the uploaded message
+					// Update embed
+					await message.edit({
+						embeds: [buildDraftEmbed(eventData)],
+						components: editButtons(),
+					});
+					// Clean up the uploaded message
 					try {
 						await msg.delete();
 					} catch {
@@ -454,13 +442,13 @@ export async function handleDraftButton(
 						writeLog("Could not delete poster upload message.");
 					}
 
-				await i.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
+					await i.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
 				}
 			} else {
 				await i.followUp({ content: "❌ No image uploaded.", flags: MessageFlags.Ephemeral });
 			}
 			break;
-			}
+		}
 
 		case "get_event_id":
 			await i.reply({ content: `This event's ID is \`${eventData.id}\``, flags: MessageFlags.Ephemeral });
@@ -509,7 +497,7 @@ export async function registerEventDraftCollectors(client: Client) {
 			draftThreadMessageId: true,
 		},
 	});
-		writeLog(`Restoring ${drafts.length} event draft collectors`)
+	writeLog(`Restoring ${drafts.length} event draft collectors`)
 	for (const draft of drafts) {
 		try {
 			const guild = await client.guilds.fetch(draft.guildId);
@@ -588,7 +576,7 @@ export async function registerEventDraftCollectors(client: Client) {
 			writeLog(`Restored draft buttons for event ${ev.id}`);
 		} catch (err) {
 			console.error(`❌ Failed to restore draft ${draft.id}:`, err);
-			writeLog(`Failed to restore draft ${draft.id}: ${err}`);	
+			writeLog(`Failed to restore draft ${draft.id}: ${err}`);
 		}
 	}
 }
