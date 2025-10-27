@@ -111,15 +111,17 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: 1440,
 	});
-	
+
+	const sentThread = await thread.send({ embeds: [embed], components });
+
 	await prisma.event.update({
 		where: { id: eventId },
 		data: {
 			published: true,
-			publishedChannelId: sentChannel.id,
+			publishedChannelId: channel.id,
 			publishedThreadId: thread.id,
 			publishedChannelMessageId: sentChannel.id,
-			publishedThreadMessageId: null,
+			publishedThreadMessageId: sentThread.id,
 		},
 	});
 }
