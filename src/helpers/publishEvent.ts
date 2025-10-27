@@ -121,7 +121,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 			publishedChannelId: channel.id,
 			publishedThreadId: thread.id,
 			publishedChannelMessageId: sentChannel.id,
-			publishedThreadMessageId: sentThread.id,
+			publishedThreadMessageId: null,
 		},
 	});
 }

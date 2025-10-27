@@ -32,15 +32,4 @@ export async function refreshEventMessages(client: Client, eventId: number) {
 			console.error("Failed to edit published channel message:", e);
 		}
 	}
-
-	// Edit the published thread message
-	if (ev.publishedThreadId && ev.publishedThreadMessageId) {
-		try {
-			const th = (await client.channels.fetch(ev.publishedThreadId)) as ThreadChannel;
-			const tmsg = await th.messages.fetch(ev.publishedThreadMessageId);
-			await tmsg.edit({ embeds: [embed], components });
-		} catch (e) {
-			console.error("Failed to edit published thread message:", e);
-		}
-	}
 }
