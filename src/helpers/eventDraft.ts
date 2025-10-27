@@ -407,8 +407,8 @@ export async function handleDraftButton(
 				content: "Please upload a new poster image in this thread within 30 seconds.",
 				flags: MessageFlags.Ephemeral,
 			});
-			const channelLink = i.channel as TextChannel | ThreadChannel;
-			const collected = await channelLink.awaitMessages({
+			const channel = i.channel as TextChannel | ThreadChannel;
+			const collected = await channel.awaitMessages({
 				filter: (m) => m.author.id === i.user.id && m.attachments.size > 0,
 				max: 1,
 				time: TIMEOUT_TIME_SHORT,
@@ -434,13 +434,6 @@ export async function handleDraftButton(
 						embeds: [buildDraftEmbed(eventData)],
 						components: editButtons(),
 					});
-					// Clean up the uploaded message
-					try {
-						await msg.delete();
-					} catch {
-						// ignore if already deleted or missing perms
-						writeLog("Could not delete poster upload message.");
-					}
 
 					await i.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
 				}

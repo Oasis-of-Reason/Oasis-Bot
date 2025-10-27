@@ -85,7 +85,8 @@ export function embedsAreEqual(a: APIEmbed, b: APIEmbed): boolean {
 function deepEmbedEqual(a: any, b: any): boolean {
 	if (a === b) return true;
 	if (typeof a !== typeof b) return false;
-	if (a === null || b === null) return false;
+	if (!a || !b) return false;
+	if (!(a.fields) || !(b.fields)) return false;
 
 	// Handle objects
 	if (typeof a === "object" && typeof b === "object") {
