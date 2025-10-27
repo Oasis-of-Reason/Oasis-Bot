@@ -21,8 +21,7 @@ module.exports = {
         .setName("amount")
         .setDescription("The number of cookies to transfer.")
         .setMinValue(1)
-        .setRequired(true))
-    .setDMPermission(false),
+        .setRequired(true)),
 
   async execute(interaction: any) {
     if (!interaction.guild) {
