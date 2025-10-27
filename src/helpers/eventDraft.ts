@@ -219,7 +219,7 @@ export async function handleDraftButton(
 		case "edit_capacity": {
 			const sub = await modalInput("modal_edit_capacity", "Edit Capacity", "new_capacity_cap", "Max Capacity");
 			if (!sub) return;
-			eventData.capacityCap = validateNumber(sub.fields.getTextInputValue("new_activity"));
+			eventData.capacityCap = validateNumber(sub.fields.getTextInputValue("new_capacity_cap"));
 			await updateDraftByMsgId(message.id, { capacityCap: eventData.capacityCap });
 			await sub.editReply({ content: "✅ Capacity updated!" });
 			await rerender();
