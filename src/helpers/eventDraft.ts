@@ -32,7 +32,8 @@ import {
 import {
 	getStandardRolesHost,
 	getStandardRolesOrganizer,
-	userHasAllowedRole
+	userHasAllowedRole,
+	userHasAllowedRoleOrId
 } from "../helpers/securityHelpers";
 
 import * as chrono from "chrono-node";
@@ -449,7 +450,7 @@ export async function handleDraftButton(
 
 		case "publish_event": {
 			const guild = i.guild as Guild;
-			if (!userHasAllowedRole(i.member as GuildMember, getStandardRolesOrganizer())) {
+			if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
 				await i.reply({ content: "❌ Only organizers can publish.", flags: MessageFlags.Ephemeral });
 				return;
 			}
