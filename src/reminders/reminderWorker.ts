@@ -6,6 +6,7 @@ import {
 	PrismaClient,
 	NotificationType
 } from '@prisma/client';
+import { giveCookies } from '../helpers/cookieHelpers';
 
 const prisma = new PrismaClient();
 
@@ -71,8 +72,14 @@ async function runOnce(client: Client) {
 		const deltaMinutes = (startMs - nowMs) / 60000.0;
 		const unix = Math.floor(startMs / 1000);
 
-		for (const s of ev.signups) {
-			const uid = s.userId;
+
+		const event = await prisma.event.findUnique({
+			where: { id: ev.id },
+			include: { signups: { select: { userId: true } } },
+		});
+		const userIds = (event?.signups.map(s => s.userId) ?? []).concat([ev.hostId]);
+
+		for (const uid of userIds) {
 			const prefs = userPrefs.get(uid) ?? {
 				reminderMinutesBefore: 30,
 				reminderNotifications: true,
@@ -114,7 +121,7 @@ async function runOnce(client: Client) {
 async function sendReminderDM(
 	client: Client,
 	userId: string,
-	ev: { id: number; title: string; startTime: Date; guildId: string; publishedThreadId: string | null; publishedChannelId: string | null; publishedChannelMessageId: string | null; },
+	ev: { id: number; hostId: string, signups: any[], title: string; startTime: Date; guildId: string; publishedThreadId: string | null; publishedChannelId: string | null; publishedChannelMessageId: string | null; },
 	unix: number,
 	type: 'REMINDER' | 'START',
 ): Promise<boolean> {
@@ -130,6 +137,13 @@ async function sendReminderDM(
 					? `https://discord.com/channels/${ev.guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`
 					: '';
 
+		const isHost = (userId === ev.hostId);
+		let cookieAmount = 1;
+		if (!isReminder) {
+			cookieAmount = isHost ? 2 + ev.signups.length : cookieAmount
+			await giveCookies(ev.guildId, userId, cookieAmount);
+		}
+
 		const embed = new EmbedBuilder()
 			.setTitle(isReminder ? '⏰ Event Reminder' : `🚀 Event Starting!`)
 			.setColor(isReminder ? 0xFF9D00 : 0x00FF13);
@@ -140,8 +154,9 @@ async function sendReminderDM(
 
 		const content =
 			`${header}\n\n` +
-			`Start time: ${whenFull} (${whenRel})\n\n` +
-			(joinLink ? `${joinLink}\n` : '');
+				`Start time: ${whenFull} (${whenRel})\n\n` +
+				(joinLink ? `${joinLink}\n` : '') +
+				(isReminder ? '' : (isHost ? `\n You have been awarded ${cookieAmount} Cookies for hosting! 🍪` : `\n You have been awarded 1 Cookie for attending! 🍪`));
 
 		embed.addFields({
 			name: "",
