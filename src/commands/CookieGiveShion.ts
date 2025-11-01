@@ -25,9 +25,6 @@ module.exports = {
 		const receiverId = "289822517944778752"; // Shion
 		const giverId = interaction.user.id;
 
-		// ✅ Acknowledge immediately
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
 		try {
 			// Ensure guild Cookies row exists
 			await prisma.cookies.upsert({
@@ -86,30 +83,34 @@ module.exports = {
 			}
 			else {
 				if (rand > 0.95) {
-					cookieSuccessMessage = `> 🍪 Shion has received an entire **PACK** of cookies from <@${giverId}>! How generous! They now have **${receiverUpdated.cookies}** cookies.`
+					// Transaction: increment receiver; set giver's last attempt
+					const [giverUpdated] = await prisma.$transaction([
+						prisma.cookiesUser.update({
+							where: { guildId_userId: { guildId, userId: giverId } },
+							data: { cookies: { increment: 2 } }
+						}),
+					]);
+					cookieSuccessMessage = `> 🍪 Shion has received an entire **PACK** of cookies from <@${giverId}>! How generous! They now have **${receiverUpdated.cookies}** cookies.\n`
+						+ `> 🍪 In a **rare** moment of kindness, Shion shared two cookies from the pack with <@${giverId}>! They now have **${giverUpdated.cookies}** cookies.`
 				}
 			}
 
 			// Make sure channel supports send()
 			const ch = interaction.channel;
 			if (!ch || !(ch instanceof TextChannel || ch instanceof ThreadChannel)) {
-				await interaction.editReply({ content: "✅ Cookie recorded, but I couldn't post to this channel." });
+				await interaction.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 
 			// Public announcement
-			await ch.send({
+			await interaction.reply({
 				content: cookieSuccessMessage,
 				allowedMentions: { users: [giverId] },
 			});
 
-			// Finalize ephemeral confirmation (or delete it if you prefer no ephemeral)
-			await interaction.editReply({ content: "✅ Cookie sent!" });
-			// If you want no ephemeral at all:
-			// await interaction.deleteReply().catch(() => {});
 		} catch (err) {
 			console.error("cookie-give failed:", err);
-			await interaction.editReply({ content: "❌ Something went wrong while giving the cookie." });
+			await interaction.reply({ content: "❌ Something went wrong while giving the cookie.", flags: MessageFlags.Ephemeral });
 		}
 	},
 };
