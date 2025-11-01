@@ -44,8 +44,8 @@ module.exports = {
 				const since = now.getTime() - new Date(giverRow.lastCookieAttempt).getTime();
 				if (since < COOLDOWN_MS) {
 					const remaining = COOLDOWN_MS - since;
-					await interaction.editReply({
-						content: `⏳ You can give a cookie in **${formatRemaining(remaining)}**.`,
+					await interaction.reply({
+						content: `⏳ You can give a cookie in **${formatRemaining(remaining)}**.`, flags: MessageFlags.Ephemeral
 					});
 					return;
 				}
