@@ -38,7 +38,7 @@ import {
 
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
-import { publishEvent } from "../helpers/publishEvent";
+import { publishEvent, addHostToEventThread } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { writeLog } from "./logger";
 
@@ -451,12 +451,14 @@ export async function handleDraftButton(
 		case "publish_event": {
 			const guild = i.guild as Guild;
 			if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
-				await i.reply({ content: "❌ Only organizers can publish.", flags: MessageFlags.Ephemeral });
+				await i.reply({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 			try {
 				await publishEvent(i.client, guild, eventData.id);
 				await i.reply({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
+				await addHostToEventThread(guild, eventData.id);
+				await i.followUp({ content: "Host Added to Event Thread", flags: MessageFlags.Ephemeral });
 				await refreshPublishedCalender(i.client, guild.id, true);
 			} catch (err) {
 				console.error("Publish error:", err);

@@ -16,6 +16,7 @@ import { prisma } from "../utils/prisma";
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
 import { allowedPingRoles } from "./generalConstants";
+import { writeLog } from "./logger";
 
 export async function publishEvent(client: Client, guild: Guild, eventId: number) {
 	const guildConfig = await prisma.guildConfig.findUnique({ where: { id: guild.id } });
@@ -122,6 +123,32 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 			publishedThreadMessageId: null,
 		},
 	});
+}
+
+export async function addHostToEventThread(guild: Guild, eventId: number) {
+	writeLog(`Adding host to event thread for event ${eventId}`);
+	const event = await getEventById(eventId);
+	if (event) { try {
+		if (!event?.published || !event.publishedThreadId) return;
+		const thread = await fetchThread(guild, event.publishedThreadId);
+		if (!thread) return;
+
+	const hostUserId = (await prisma.event.findUnique({
+		where: { id: eventId },
+		select: { hostId: true },}))?.hostId
+
+	// Add host to thread
+	if (hostUserId) {
+		try { 
+			await thread.members.add(hostUserId);
+		} catch (err) {
+			console.warn(`Failed to add host to thread: ${err}`);
+		}
+	}
+	} catch (error) {
+		writeLog(`Error adding host to event thread: ${error}: ` + "error");
+					}
+	}	
 }
 
 async function loadSignupUserIds(eventId: number) {
