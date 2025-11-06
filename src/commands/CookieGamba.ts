@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits } from "discord.js";
+import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 import { randomInt } from "crypto";
 
@@ -10,7 +10,7 @@ export const data = new SlashCommandBuilder()
 
 export async function execute(interaction: ChatInputCommandInteraction) {
   if (!interaction.inGuild() || !interaction.guildId) {
-    return interaction.reply({ content: "This command can only be used in a server.", ephemeral: true });
+    return interaction.reply({ content: "This command can only be used in a server.", flags: MessageFlags.Ephemeral });
   }
 
   const guildId = interaction.guildId;
@@ -52,7 +52,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   if (!result.canGamble) {
     return interaction.reply({
       content: "You have **0 cookies** — nothing to gamble. Earn some first! 🍪",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   }
 
