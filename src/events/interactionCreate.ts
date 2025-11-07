@@ -355,7 +355,7 @@ export async function handleEventButtons(interaction: Interaction) {
         await thread.members.add(userId);
 		await ensureUserReminderDefaults(userId);
         await refreshPublishedCalender(interaction.client, guildId, false);
-      } else {
+      } else if (op === "off") { // Technically else alone works but in future we may want more options
         await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
 
         // ✅ Remove user from thread
