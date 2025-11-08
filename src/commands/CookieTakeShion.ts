@@ -108,7 +108,9 @@ module.exports = {
 };
 
 async function stealCookie(guildId: string, targetId: string, thiefId: string): Promise<any> {
+	
 	const now = new Date();
+
 	return await prisma.$transaction(async (tx) => {
 		// Fetch target and thief inside transaction
 		const targetRow = await tx.cookiesUser.findUnique({
@@ -174,6 +176,8 @@ async function stealCookie(guildId: string, targetId: string, thiefId: string): 
 
 async function stealCookieReverse(guildId: string, targetId: string, thiefId: string): Promise<any> {
 
+	const now = new Date();
+
 	return await prisma.$transaction(async (tx) => {
 		// Fetch target and thief inside transaction
 		const targetRow = await tx.cookiesUser.findUnique({
@@ -197,7 +201,7 @@ async function stealCookieReverse(guildId: string, targetId: string, thiefId: st
 			// Update target
 			await tx.cookiesUser.upsert({
 				where: { guildId_userId: { guildId, userId: targetId } },
-				update: { cookies: { decrement: 1 } },
+				update: { cookies: { decrement: 1 }, lastCookieAttempt: now },
 				create: { guildId, userId: targetId, cookies: 0, lastCookieAttempt: new Date(0) }, // if created now -> 0 (can't go negative)
 			});
 

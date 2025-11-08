@@ -87,11 +87,11 @@ module.exports = {
 					const [giverUpdated] = await prisma.$transaction([
 						prisma.cookiesUser.update({
 							where: { guildId_userId: { guildId, userId: giverId } },
-							data: { cookies: { increment: 2 } }
+							data: { cookies: { increment: 6 } }
 						}),
 					]);
 					cookieSuccessMessage = `> 🍪 Shion has received an entire **PACK** of cookies from <@${giverId}>! How generous! They now have **${receiverUpdated.cookies}** cookies.\n`
-						+ `> 🍪 In a **rare** moment of kindness, Shion shared two cookies from the pack with <@${giverId}>! They now have **${giverUpdated.cookies}** cookies.`
+						+ `> 🍪 In a **rare** moment of kindness, Shion shared **SIX** cookies from the pack with <@${giverId}>! They now have **${giverUpdated.cookies}** cookies.`
 				}
 			}
 
