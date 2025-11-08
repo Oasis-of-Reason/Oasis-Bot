@@ -325,46 +325,57 @@ export async function handleEventButtons(interaction: Interaction) {
 
 	try {
 		switch (action as ActionKind) {
-    case "attend": {
-      const guildId = interaction.guildId as string;
-      const userId = interaction.user.id;
+			case "attend": {
+				const guildId = interaction.guildId as string;
+				const userId = interaction.user.id;
 
-      // Fetch the event from your database
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-      });
+				// Fetch the event from your database
+				const event = await prisma.event.findUnique({
+					where: { id: eventId },
+				});
 
-      if (!event || !event.publishedThreadId) {
-        console.warn("Event or publishedThreadId not found");
-        break;
-      }
+				if (!event || !event.publishedThreadId) {
+					console.warn("Event or publishedThreadId not found");
+					break;
+				}
 
-      // Fetch the thread from Discord
-      const thread = await interaction.client.channels.fetch(event.publishedThreadId);
+				// Fetch the thread from Discord
+				const thread = await interaction.client.channels.fetch(event.publishedThreadId);
 
-      if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
-        console.warn("Channel is not a thread");
-        break;
-      }
+				if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
+					console.warn("Channel is not a thread");
+					break;
+				}
 
-      if (op === "on") {
-        const existing = await prisma.eventSignUps.findFirst({ where: { eventId: event.id, userId } });
-        if (!existing) await prisma.eventSignUps.create({ data: { eventId: event.id, userId } });
+				if (op === "on") {
+					const existing = await prisma.eventSignUps.findFirst({ where: { eventId: event.id, userId } });
+					if (!existing) await prisma.eventSignUps.create({ data: { eventId: event.id, userId } });
 
-        // ✅ Add user to thread
-        await thread.members.add(userId);
-		await ensureUserReminderDefaults(userId);
-        await refreshPublishedCalender(interaction.client, guildId, false);
-      } else if (op === "off") { // Technically else alone works but in future we may want more options
-        await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
+					// ✅ Add user to thread
+					await ensureUserReminderDefaults(userId);
+					await refreshPublishedCalender(interaction.client, guildId, false);
+					
+					const member = await thread.guild.members.fetch(userId).catch(() => null);
+					if (!member) {
+						// user not in guild or no access
+						throw new Error("User not found in this guild");
+					}
+					await thread.members.add(member.id); 
+				} else if (op === "off") { // Technically else alone works but in future we may want more options
+					await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
 
-        // ✅ Remove user from thread
-        await thread.members.remove(userId);
+					// ✅ Remove user from thread
+					await refreshPublishedCalender(interaction.client, guildId, false);
 
-        await refreshPublishedCalender(interaction.client, guildId, false);
-      		}
+					const member = await thread.guild.members.fetch(userId).catch(() => null);
+					if (!member) {
+						// user not in guild or no access
+						throw new Error("User not found in this guild");
+					}
+					await thread.members.remove(member.id);
+				}
+			}
 		}
-	}
 		await interaction.deferUpdate();
 		// Refresh both published messages with updated lists
 		await refreshEventMessages(interaction.client, eventId);
