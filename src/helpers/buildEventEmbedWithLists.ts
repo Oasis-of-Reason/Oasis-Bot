@@ -91,10 +91,11 @@ export async function buildEventEmbedWithLists(
 			inline: false,
 		});
 
+		const calendarUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(publishingEvent.title)}&dates=${dt.toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(dt.getTime() + publishingEvent.lengthMinutes * 60000).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(publishingEvent.description || '')}&sf=true&output=xml`;
 	embed.addFields(
 		{
 			name: "Start Time",
-			value: `> <t:${unix}:F> (<t:${unix}:R>)`,
+			value: `> <t:${unix}:F> (<t:${unix}:R>) [+ 📅](${calendarUrl})`,
 			inline: false,
 		});
 	
