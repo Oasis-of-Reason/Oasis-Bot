@@ -325,7 +325,7 @@ export async function handleEventButtons(interaction: Interaction) {
 	const userId = interaction.user.id;
 
 	try {
-		//await interaction.deferUpdate();
+		await interaction.deferUpdate();
 
 		switch (action as ActionKind) {
 			case "attend": {
