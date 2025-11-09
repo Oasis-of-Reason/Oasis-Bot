@@ -18,11 +18,11 @@ export async function buildEventEmbedWithLists(
 
 	const guild = await client.guilds.fetch(publishingEvent.guildId);
 	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember || await guild.members.fetch(publishingEvent.hostId) as GuildMember;
-	
+
 	const attendeeNames = await Promise.all(
 		attendees.map(async id => {
 			const snowflake = toSnowflake(id);
-			const member = await guild.members.cache.get(snowflake);
+			const member = await guild.members.cache.get(snowflake) || await guild.members.fetch(snowflake);
 			const rawName = member?.nickname || member?.user.displayName || "(No Name)";
 			return rawName;
 		})
