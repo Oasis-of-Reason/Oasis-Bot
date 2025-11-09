@@ -6,7 +6,7 @@ import {
 	TextChannel,
 	ThreadChannel,
 } from "discord.js";
-import { prisma } from "../utils/prisma";
+import { prisma } from "../../utils/prisma";
 
 module.exports = {
 	data: new SlashCommandBuilder()

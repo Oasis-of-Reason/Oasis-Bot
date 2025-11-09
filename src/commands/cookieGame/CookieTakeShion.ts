@@ -6,8 +6,8 @@ import {
 	TextChannel,
 	ThreadChannel,
 } from "discord.js";
-import { prisma } from "../utils/prisma";
-import { formatRemaining } from "../helpers/generalHelpers";
+import { prisma } from "../../utils/prisma";
+import { formatRemaining } from "../../helpers/generalHelpers";
 
 const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 

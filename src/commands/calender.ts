@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName('calender')
+		.setName('calendar')
 		.setDescription('Show all upcoming events grouped by day (host + time + linked title + relative time + capacity)'),
 
 	async execute(interaction: ChatInputCommandInteraction<CacheType>) {

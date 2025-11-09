@@ -3,7 +3,7 @@ import {
 	PermissionFlagsBits,
 	MessageFlags,
 } from "discord.js";
-import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { refreshPublishedCalender } from "../../helpers/refreshPublishedCalender";
 
 module.exports = {
 	data: new SlashCommandBuilder()

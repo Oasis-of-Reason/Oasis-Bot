@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, Client, ButtonInteraction, MessageFlags } from "discord.js";
-import { prisma } from "../utils/prisma";
+import { prisma } from "../../utils/prisma";
 import { SlashCommandBuilder } from 'discord.js';
-import { writeLog } from "../helpers/logger";
+import { writeLog } from "../../helpers/logger";
 
 module.exports = {
 	data: new SlashCommandBuilder()

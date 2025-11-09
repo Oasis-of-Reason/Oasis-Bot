@@ -8,12 +8,12 @@ import {
 	GuildMember,
 	ComponentType,
 } from "discord.js";
-import { prisma } from "../utils/prisma";
+import { prisma } from "../../utils/prisma";
 import {
 	userHasAllowedRoleOrId,
 	getStandardRolesOrganizer,
-} from "../helpers/securityHelpers";
-import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
+} from "../../helpers/securityHelpers";
+import { buildDraftEmbed, editButtons, handleDraftButton } from "../../helpers/eventDraft";
 
 module.exports = {
 	data: new SlashCommandBuilder()

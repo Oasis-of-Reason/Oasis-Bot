@@ -11,9 +11,9 @@ import {
 	userHasAllowedRoleOrId,
 	getStandardRolesMod,
 	getStandardRolesOrganizer,
-} from "../helpers/securityHelpers";
+} from "../../helpers/securityHelpers";
 import { PrismaClient } from "@prisma/client";
-import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { refreshPublishedCalender } from "../../helpers/refreshPublishedCalender";
 
 const prisma = new PrismaClient();
 
