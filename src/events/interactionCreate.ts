@@ -325,7 +325,6 @@ export async function handleEventButtons(interaction: Interaction) {
 	const userId = interaction.user.id;
 
 	try {
-		await interaction.deferUpdate();
 
 		switch (action as ActionKind) {
 			case "attend": {
@@ -370,6 +369,7 @@ export async function handleEventButtons(interaction: Interaction) {
 			}
 		}
 		// Refresh both published messages with updated lists
+		await interaction.deferUpdate();
 		await refreshEventMessages(interaction.client, eventId);
 	} catch (err) {
 		console.error("Button handler error:", err);
