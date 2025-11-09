@@ -17,7 +17,8 @@ export async function buildEventEmbedWithLists(
 	const unix = Math.floor(dt.getTime() / 1000);
 
 	const guild = await client.guilds.fetch(publishingEvent.guildId);
-
+	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember || await guild.members.fetch(publishingEvent.hostId) as GuildMember;
+	
 	const attendeeNames = await Promise.all(
 		attendees.map(async id => {
 			const snowflake = toSnowflake(id);
@@ -29,7 +30,6 @@ export async function buildEventEmbedWithLists(
 
 	const attendeeNamesSplit = publishingEvent.capacityCap === 0 ? [attendeeNames,[]] : splitArray(attendeeNames, publishingEvent.capacityCap);
 
-	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember;
 	const hostName = hostUser.nickname || hostUser?.displayName || "-";
 	/*
 	// Resolve cohosts to nicknames
