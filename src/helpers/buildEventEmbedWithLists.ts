@@ -16,12 +16,12 @@ export async function buildEventEmbedWithLists(
 	const dt = new Date(publishingEvent.startTime);
 	const unix = Math.floor(dt.getTime() / 1000);
 
-	const guild = await client.guilds.cache.get(publishingEvent.guildId);
+	const guild = await client.guilds.fetch(publishingEvent.guildId);
 
 	const attendeeNames = await Promise.all(
 		attendees.map(async id => {
 			const snowflake = toSnowflake(id);
-			const member = await guild?.members.cache.get(snowflake);
+			const member = await guild.members.cache.get(snowflake);
 			const rawName = member?.nickname || member?.user.displayName || "(No Name)";
 			return rawName;
 		})
@@ -29,7 +29,7 @@ export async function buildEventEmbedWithLists(
 
 	const attendeeNamesSplit = publishingEvent.capacityCap === 0 ? [attendeeNames,[]] : splitArray(attendeeNames, publishingEvent.capacityCap);
 
-	const hostUser = await guild?.members.cache.get(publishingEvent.hostId) as GuildMember;
+	const hostUser = await guild.members.cache.get(publishingEvent.hostId) as GuildMember;
 	const hostName = hostUser.nickname || hostUser?.displayName || "-";
 	/*
 	// Resolve cohosts to nicknames
