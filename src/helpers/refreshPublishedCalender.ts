@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Client, Message, TextChannel } from 'discord.js';
 import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
-import { messageEmbedEquals } from './discordHelpers';
+import { fetchMsgInChannel, messageEmbedEquals } from './discordHelpers';
 const prisma = new PrismaClient();
 
 export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean) {
@@ -10,9 +10,9 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		where: { id: guildId }
 	});
 
-	const discordChannel = await client.channels.cache.get(guildConfig?.publishingDiscordChannelId as string) as TextChannel;
-	const vrcChannel = await client.channels.cache.get(guildConfig?.publishingVRCChannelId as string) as TextChannel;
-	const upcomingEventsChannel = await client.channels.cache.get(guildConfig?.upcomingEventsChannelId as string) as TextChannel;
+	const discordChannel = await client.channels.cache.get(guildConfig?.publishingDiscordChannelId as string) as TextChannel ?? await client.channels.fetch(guildConfig?.publishingDiscordChannelId as string) as TextChannel;
+	const vrcChannel = await client.channels.cache.get(guildConfig?.publishingVRCChannelId as string) as TextChannel ?? await client.channels.fetch(guildConfig?.publishingVRCChannelId as string) as TextChannel;
+	const upcomingEventsChannel = await client.channels.cache.get(guildConfig?.upcomingEventsChannelId as string) as TextChannel ?? await client.channels.fetch(guildConfig?.upcomingEventsChannelId as string) as TextChannel;
 
 	const discordEvents = await prisma.event.findMany({
 		where: {
@@ -57,7 +57,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 	let discordMessage;
 	if (guildConfig?.discordEventCalenderMessageId) {
 		try {
-			discordMessage = await discordChannel.messages.fetch(guildConfig?.discordEventCalenderMessageId);
+			discordMessage = await fetchMsgInChannel(discordChannel, guildConfig?.discordEventCalenderMessageId);
 		} catch {
 			console.error("Couldnt find calender message.");
 		}
@@ -66,7 +66,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 	let vrcMessage;
 	if (guildConfig?.vrcEventCalenderMessageId) {
 		try {
-			vrcMessage = await vrcChannel.messages.fetch(guildConfig?.vrcEventCalenderMessageId);
+			vrcMessage = await fetchMsgInChannel(vrcChannel, guildConfig?.vrcEventCalenderMessageId);
 		} catch {
 			console.error("Couldnt find calender message.");
 		}
@@ -75,7 +75,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 	let allMessage;
 	if (guildConfig?.upcomingEventsCalenderMessageId) {
 		try {
-			allMessage = await upcomingEventsChannel.messages.fetch(guildConfig?.upcomingEventsCalenderMessageId);
+			allMessage = await fetchMsgInChannel(upcomingEventsChannel, guildConfig?.upcomingEventsCalenderMessageId);
 		} catch {
 			console.error("Couldnt find calender message.");
 		}

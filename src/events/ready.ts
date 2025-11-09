@@ -37,6 +37,8 @@ module.exports = {
 
 		// Uncomment the line below to deploy commands to all guilds
 		// await deployCommands();
+		const now = new Date();
+		console.log("Bot finished Restarted at: " + now);
 	},
 };
 

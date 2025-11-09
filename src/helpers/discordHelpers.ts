@@ -21,7 +21,7 @@ export async function fetchTextChannel(client: Client, id?: string | null): Prom
 
 export async function fetchThread(guild: Guild, id?: string | null): Promise<AnyThreadChannel | null> {
 	if (!id) return null;
-	const ch = await guild.channels.fetch(id).catch(() => null);
+	const ch = await guild.channels.cache.get(id) ?? await guild.channels.fetch(id).catch(() => null);
 	if (!ch || (ch.type !== ChannelType.PublicThread && ch.type !== ChannelType.PrivateThread)) return null;
 	const thread = ch as AnyThreadChannel;
 	if (thread.archived) {
@@ -32,12 +32,12 @@ export async function fetchThread(guild: Guild, id?: string | null): Promise<Any
 
 export async function fetchMsgInChannel(channel: TextChannel, messageId?: string | null): Promise<Message | null> {
 	if (!messageId) return null;
-	return await channel.messages.fetch(messageId).catch(() => null);
+	return await channel.messages.cache.get(messageId) ?? await channel.messages.fetch(messageId).catch(() => null);
 }
 
 export async function fetchMsgInThread(thread: AnyThreadChannel, messageId?: string | null): Promise<Message | null> {
 	if (!messageId) return null;
-	return await thread.messages.fetch(messageId).catch(() => null);
+	return await thread.messages.cache.get(messageId) ?? await thread.messages.fetch(messageId).catch(() => null);
 }
 
 /** Accepts a User, GuildMember, or string (ID/mention) and returns a clean snowflake string. */

@@ -126,7 +126,7 @@ async function sendReminderDM(
 	type: 'REMINDER' | 'START',
 ): Promise<boolean> {
 	try {
-		const user = await client.users.fetch(userId);
+		const user = await client.users.cache.get(userId) ?? await client.users.fetch(userId);
 		const isReminder = type === 'REMINDER';
 		const whenFull = `<t:${unix}:F>`;
 		const whenRel = `<t:${unix}:R>`;

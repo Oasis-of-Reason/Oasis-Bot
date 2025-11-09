@@ -2,6 +2,7 @@ import { Client, TextChannel, ThreadChannel } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { getEventButtons } from "./getEventButtons"; // or inline from above
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
+import { fetchMsgInChannel } from "./discordHelpers";
 
 export async function refreshEventMessages(client: Client, eventId: number) {
 	// Pull everything we need in one go
@@ -25,9 +26,9 @@ export async function refreshEventMessages(client: Client, eventId: number) {
 	// Edit the published channel message
 	if (ev.publishedChannelId && ev.publishedChannelMessageId) {
 		try {
-			const ch = (await client.channels.cache.get(ev.publishedChannelId)) as TextChannel;
-			const msg = await ch.messages.fetch(ev.publishedChannelMessageId);
-			await msg.edit({ embeds: [embed], components });
+			const ch = await client.channels.cache.get(ev.publishedChannelId) as TextChannel;
+			const msg = await fetchMsgInChannel(ch, ev.publishedChannelMessageId);
+			await msg?.edit({ embeds: [embed], components });
 		} catch (e) {
 			console.error("Failed to edit published channel message:", e);
 		}

@@ -14,6 +14,7 @@ import {
 } from "../../helpers/securityHelpers";
 import { PrismaClient } from "@prisma/client";
 import { refreshPublishedCalender } from "../../helpers/refreshPublishedCalender";
+import { fetchMsgInChannel, fetchTextChannel } from "../../helpers/discordHelpers";
 
 const prisma = new PrismaClient();
 
@@ -79,13 +80,13 @@ module.exports = {
 			// --- DELETE PUBLISHED MESSAGE & THREAD ---
 			if (event.published && event.publishedChannelId) {
 				try {
-					const channel = (await client.channels.fetch(event.publishedChannelId)) as TextChannel;
+					const channel = (await fetchTextChannel(client, event.publishedChannelId)) as TextChannel;
 
 					if (event.publishedChannelMessageId) { deleteRepliesToMessage(channel, event.publishedChannelMessageId) };
 
 					// Delete published message
 					if (channel && event.publishedChannelMessageId) {
-						const msg = await channel.messages.fetch(event.publishedChannelMessageId).catch(() => null);
+						const msg = await fetchMsgInChannel(channel, event.publishedChannelMessageId);
 						if (msg) {
 							await msg.delete().catch(() => { });
 							deletedPublishedMsg = true;
@@ -94,7 +95,7 @@ module.exports = {
 
 					// Delete published thread
 					if (event.publishedThreadId) {
-						const thread = await client.channels.fetch(event.publishedThreadId).catch(() => null);
+						const thread = await client.channels.cache.get(event.publishedThreadId) ?? await client.channels.fetch(event.publishedThreadId).catch(() => null);
 						if (thread && thread.isThread()) {
 							await (thread as ThreadChannel).delete().catch(() => { });
 							deletedPublishedThread = true;
@@ -108,11 +109,11 @@ module.exports = {
 			// --- DELETE DRAFT MESSAGE & THREAD ---
 			if (event.draftChannelId) {
 				try {
-					const draftChannel = (await client.channels.fetch(event.draftChannelId)) as TextChannel;
+					const draftChannel = await fetchTextChannel(client, event.draftChannelId) as TextChannel;
 
 					// Delete draft message
 					if (draftChannel && event.draftThreadMessageId) {
-						const msg = await draftChannel.messages.fetch(event.draftThreadMessageId).catch(() => null);
+						const msg = await fetchMsgInChannel(draftChannel, event.draftThreadMessageId);
 						if (msg) {
 							await msg.delete().catch(() => { });
 							deletedDraftMsg = true;
@@ -121,7 +122,7 @@ module.exports = {
 
 					// Delete draft thread
 					if (event.draftThreadId) {
-						const thread = await client.channels.fetch(event.draftThreadId).catch(() => null);
+						const thread = await client.channels.cache.get(event.draftThreadId) ?? await client.channels.fetch(event.draftThreadId).catch(() => null);
 						if (thread && thread.isThread()) {
 							await (thread as ThreadChannel).delete().catch(() => { });
 							deletedDraftThread = true;

@@ -41,6 +41,7 @@ import { prisma } from "../utils/prisma";
 import { publishEvent, addHostToEventThread } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { writeLog } from "./logger";
+import { fetchMsgInThread } from "./discordHelpers";
 
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
@@ -496,8 +497,8 @@ export async function registerEventDraftCollectors(client: Client) {
 	writeLog(`Restoring ${drafts.length} event draft collectors`)
 	for (const draft of drafts) {
 		try {
-			const guild = await client.guilds.fetch(draft.guildId);
-			const ch = await guild.channels.fetch(draft.draftThreadId).catch(() => null);
+			const guild = await client.guilds.cache.get(draft.guildId) ?? await client.guilds.fetch(draft.guildId);
+			const ch = await guild.channels.cache.get(draft.draftThreadId) ?? await guild.channels.fetch(draft.draftThreadId).catch(() => null);
 			if (!ch || !isAnyThread(ch)) {
 				console.warn(`⚠️ Draft ${draft.id}: channel ${draft.draftThreadId} not a thread or not found`);
 				continue;
@@ -513,9 +514,7 @@ export async function registerEventDraftCollectors(client: Client) {
 			}
 
 			// fetch the draft message in the thread
-			const msg: Message | null = await thread.messages
-				.fetch(draft.draftThreadMessageId)
-				.catch(() => null);
+			const msg = await fetchMsgInThread(thread, draft.draftThreadMessageId);
 
 			if (!msg) {
 				console.warn(`⚠️ Draft ${draft.id}: draft message ${draft.draftThreadMessageId} not found`);
