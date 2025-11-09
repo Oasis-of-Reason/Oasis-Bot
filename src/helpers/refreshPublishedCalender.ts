@@ -10,9 +10,9 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		where: { id: guildId }
 	});
 
-	const discordChannel = await client.channels.fetch(guildConfig?.publishingDiscordChannelId as string) as TextChannel;
-	const vrcChannel = await client.channels.fetch(guildConfig?.publishingVRCChannelId as string) as TextChannel;
-	const upcomingEventsChannel = await client.channels.fetch(guildConfig?.upcomingEventsChannelId as string) as TextChannel;
+	const discordChannel = await client.channels.cache.get(guildConfig?.publishingDiscordChannelId as string) as TextChannel;
+	const vrcChannel = await client.channels.cache.get(guildConfig?.publishingVRCChannelId as string) as TextChannel;
+	const upcomingEventsChannel = await client.channels.cache.get(guildConfig?.upcomingEventsChannelId as string) as TextChannel;
 
 	const discordEvents = await prisma.event.findMany({
 		where: {

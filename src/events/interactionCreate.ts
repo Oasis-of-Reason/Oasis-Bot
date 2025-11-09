@@ -325,6 +325,8 @@ export async function handleEventButtons(interaction: Interaction) {
 	const userId = interaction.user.id;
 
 	try {
+		await interaction.deferUpdate();
+
 		switch (action as ActionKind) {
 			case "attend": {
 				const guildId = interaction.guildId as string;
@@ -356,50 +358,17 @@ export async function handleEventButtons(interaction: Interaction) {
 					await ensureUserReminderDefaults(userId);
 					await refreshPublishedCalender(interaction.client, guildId, false);
 
-					const member = await thread.guild.members.fetch(userId).catch(() => null);
-					if (!member) {
-						// user not in guild or no access
-						throw new Error("User not found in this guild");
-					}
-					try {
-						await thread.members.add(userId);
-					} catch (err: any) {
-						if (err?.name === "GuildMembersTimeout") {
-							// Fallback to raw REST: PUT /channels/{thread.id}/thread-members/{user.id}
-							await thread.client.rest.put(Routes.threadMembers(thread.id, userId)).catch(e => {
-								throw e; // surface any real permission/eligibility errors
-							});
-						} else {
-							throw err;
-						}
-					}
+					await thread.members.add(userId);
 				} else if (op === "off") { // Technically else alone works but in future we may want more options
 					await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
 
 					// ✅ Remove user from thread
 					await refreshPublishedCalender(interaction.client, guildId, false);
 
-					const member = await thread.guild.members.fetch(userId).catch(() => null);
-					if (!member) {
-						// user not in guild or no access
-						throw new Error("User not found in this guild");
-					}
-					try {
-						await thread.members.remove(member.id);
-					} catch (err: any) {
-						if (err?.name === "GuildMembersTimeout") {
-							// Fallback to raw REST: PUT /channels/{thread.id}/thread-members/{user.id}
-							await thread.client.rest.put(Routes.threadMembers(thread.id, userId)).catch(e => {
-								throw e; // surface any real permission/eligibility errors
-							});
-						} else {
-							throw err;
-						}
-					}
+					await thread.members.remove(userId);
 				}
 			}
 		}
-		await interaction.deferUpdate();
 		// Refresh both published messages with updated lists
 		await refreshEventMessages(interaction.client, eventId);
 	} catch (err) {

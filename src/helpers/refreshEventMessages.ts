@@ -25,7 +25,7 @@ export async function refreshEventMessages(client: Client, eventId: number) {
 	// Edit the published channel message
 	if (ev.publishedChannelId && ev.publishedChannelMessageId) {
 		try {
-			const ch = (await client.channels.fetch(ev.publishedChannelId)) as TextChannel;
+			const ch = (await client.channels.cache.get(ev.publishedChannelId)) as TextChannel;
 			const msg = await ch.messages.fetch(ev.publishedChannelMessageId);
 			await msg.edit({ embeds: [embed], components });
 		} catch (e) {
