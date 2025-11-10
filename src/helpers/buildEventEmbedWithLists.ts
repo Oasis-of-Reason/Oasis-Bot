@@ -97,7 +97,7 @@ export async function buildEventEmbedWithLists(
 	embed.addFields(
 		{
 			name: "Start Time",
-			value: `> <t:${unix}:F> (<t:${unix}:R>) [ + Add to calendar ](${calendarUrl})`,
+			value: `> <t:${unix}:F> (<t:${unix}:R>) \n> [ + Add to calendar ](${calendarUrl})`,
 			inline: false,
 		});
 	
