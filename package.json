@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@prisma/client": "^6.16.3",
+    "axios": "^1.13.2",
     "chrono-node": "^2.9.0",
     "discord.js": "^14.19.3",
     "dotenv": "^16.5.0",
@@ -10,11 +11,11 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsup src/index.ts --minify",
-	"pm2:start": "pm2 start dist/index.js --name oasis-bot --watch",
-	"pm2:stop": "pm2 stop oasis-bot",
-	"pm2:restart": "pm2 restart oasis-bot",
-	"pm2:logs": "pm2 logs oasis-bot",
-	"pm2:deploy": "npm run pm2:stop && npm run build && npx prisma generate && pm2 start dist/index.js --name oasis-bot --watch && pm2 logs oasis-bot"
+    "pm2:start": "pm2 start dist/index.js --name oasis-bot --watch",
+    "pm2:stop": "pm2 stop oasis-bot",
+    "pm2:restart": "pm2 restart oasis-bot",
+    "pm2:logs": "pm2 logs oasis-bot",
+    "pm2:deploy": "npm run pm2:stop && npm run build && npx prisma generate && pm2 start dist/index.js --name oasis-bot --watch && pm2 logs oasis-bot"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.6.12",
@@ -22,8 +23,8 @@
     "tsup": "^8.4.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
-  }, 
+  },
   "prisma": {
-  "seed": "npx ts-node prisma/seed.ts"
-}
+    "seed": "npx ts-node prisma/seed.ts"
+  }
 }

@@ -2,6 +2,7 @@ import {
 	EmbedBuilder,
 } from "discord.js";
 import { getEventCapacity } from "./generalHelpers";
+import { emojiMapTypes } from "./generalConstants";
 
 export function buildCalenderEmbed(events: any[], guildId: string): EmbedBuilder {
 	const groups = new Map<string, { date: Date; lines: string[] }>();
@@ -90,7 +91,7 @@ function formatEventLine(
 	const capBadge = ev.capacityCap + ev.capacityBase > 0 ? `${signupCount}/${capTotal}` : `${signupCount}`;
 
 	// host mention brings in avatar+username hover card
-	return `> <t:${unix}:t> ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
+	return `> <t:${unix}:t> ${ev.type.toLowerCase() === "vrc" ? emojiMapTypes["vrchat"].emoji : emojiMapTypes["discord"].emoji } ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
 function chunkString(str: string, size = 1024): string[] {
