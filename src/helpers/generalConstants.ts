@@ -63,14 +63,26 @@ export const emojiMapRequirements: Record<string, { emoji: string; label: string
 	},
 };
 
-// Map for avatar performance requirement emojis
+// Map for platforms emojis
 export const emojiMapPlatforms: Record<string, { emoji: string; label: string }> = {
 	pcvr: {
-		emoji: "<:pcvr:1427326857216528428>",
+		emoji: "<:PCVRC:1437583595383296010>",
 		label: "PCVR",
 	},
 	android: {
-		emoji: "<:android:1427326899201245397>",
+		emoji: "<:AndroidVRC:1437583606632550410>",
 		label: "Android",
+	},
+};
+
+// Map for event type emojis
+export const emojiMapTypes: Record<string, { emoji: string; label: string }> = {
+	discord: {
+		emoji: "<:DiscordLogo:1437580033312034846>",
+		label: "Discord",
+	},
+	vrchat: {
+		emoji: "<:VRCLogo:1437580004090445924>",
+		label: "VRChat",
 	},
 };
