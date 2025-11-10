@@ -92,7 +92,7 @@ export async function buildEventEmbedWithLists(
 		});
 
 		const shortDescription = publishingEvent.description ? (publishingEvent.description.length > 100 ? publishingEvent.description.substring(0, 100) + "..." : publishingEvent.description) : "No description provided.";
-		const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(publishingEvent.title)}&dates=${dt.toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(dt.getTime() + publishingEvent.lengthMinutes * 60000).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(shortDescription || '')}`;
+		const calendarUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(publishingEvent.title)}&location=${encodeURIComponent(guild.name)}&dates=${dt.toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(dt.getTime() + publishingEvent.lengthMinutes * 60000).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(shortDescription || '')}`;
 		//const calendarUrl = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(publishingEvent.title)}&dates=${dt.toISOString().replace(/-|:|\.\d+/g, '')}/${new Date(dt.getTime() + publishingEvent.lengthMinutes * 60000).toISOString().replace(/-|:|\.\d+/g, '')}&details=${encodeURIComponent(publishingEvent.description || '')}&sf=true&output=xml`;
 	embed.addFields(
 		{
