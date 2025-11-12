@@ -1,67 +1,82 @@
+// buildCalendarContainer.ts
 import {
-	EmbedBuilder,
+	ContainerBuilder,
+	TextDisplayBuilder,
+	SeparatorBuilder,
+	MessageFlags,
+	MessageFlagsBitField,
 } from "discord.js";
-import { getEventCapacity } from "./generalHelpers";
 import { emojiMapTypes } from "./generalConstants";
 
-export function buildCalenderEmbed(events: any[], guildId: string): EmbedBuilder {
+export function buildCalenderContainer(events: any[], guildId: string, ephemeral = false) {
+	// Group events by YYYY-MM-DD
 	const groups = new Map<string, { date: Date; lines: string[] }>();
+
 	for (const ev of events) {
 		const dt = new Date(ev.startTime);
 		const key = ymd(dt);
 		const signupCount: number = ev._count?.signups ?? 0;
 		const line = formatEventLine(ev, guildId, signupCount);
 
-		if (!groups.has(key)) {
-			groups.set(key, { date: dt, lines: [line] });
-		} else {
-			groups.get(key)!.lines.push(line);
-		}
+		const g = groups.get(key);
+		if (g) g.lines.push(line);
+		else groups.set(key, { date: dt, lines: [line] });
 	}
 
-	const embed = new EmbedBuilder()
-		.setTitle('📅 Upcoming Events')
-		.setColor(0x5865F2);
-
+	// Sort by day
 	const sorted = [...groups.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
 
-	let fieldsUsed = 0;
-	const MAX_FIELDS = 25;
+	// Build a Container with TextDisplays
+	const container = new ContainerBuilder().setAccentColor(0x5865f2);
 
+	container.addTextDisplayComponents(new TextDisplayBuilder().setContent('### 📅  Upcoming Events'));
+	container.addSeparatorComponents(new SeparatorBuilder());
 	for (const group of sorted) {
-		const header = formatDayHeader(group.date);
-		const value = group.lines.join('\n');
+		const header = `**${formatDayHeader(group.date)}**`;
+		const body = group.lines.join("\n");
 
-		const chunks = value.length <= 1024 ? [value] : chunkString(value, 1024);
+		// TextDisplay has a content length limit; chunk if needed
+		const chunks = chunkString(body, 1800); // stay under 2k w/ header & margin
 
-		for (let i = 0; i < chunks.length; i++) {
-			if (fieldsUsed >= MAX_FIELDS) break;
-			embed.addFields({
-				name: i === 0 ? header : `${header} (cont. ${i + 1})`,
-				value: chunks[i],
-			});
-			fieldsUsed++;
+		// header as its own TextDisplay for readability
+		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(header));
+
+		for (const chunk of chunks) {
+			container.addTextDisplayComponents(
+				new TextDisplayBuilder().setContent(chunk || "\u200B"),
+			);
 		}
-
-		if (fieldsUsed >= MAX_FIELDS) break;
 	}
 
-	return embed;
+	// Return a message payload that you can send/edit
+	if (ephemeral) {
+		return {
+			components: [container.toJSON()],
+			flags: MessageFlagsBitField.resolve(MessageFlagsBitField.Flags.IsComponentsV2) |
+				MessageFlagsBitField.Flags.Ephemeral,
+		};
+	}
+	return {
+		components: [container.toJSON()],
+		flags: MessageFlagsBitField.resolve(MessageFlagsBitField.Flags.IsComponentsV2),
+	};
 }
+
+// ----------------- helpers -----------------
 
 function ymd(date: Date) {
 	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, '0');
-	const d = String(date.getDate()).padStart(2, '0');
+	const m = String(date.getMonth() + 1).padStart(2, "0");
+	const d = String(date.getDate()).padStart(2, "0");
 	return `${y}-${m}-${d}`;
 }
 
 function formatDayHeader(date: Date) {
 	return date.toLocaleDateString(undefined, {
-		weekday: 'short',
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric'
+		weekday: "short",
+		year: "numeric",
+		month: "short",
+		day: "numeric",
 	});
 }
 
@@ -75,11 +90,7 @@ function eventLink(ev: any, guildId: string) {
 	return null;
 }
 
-function formatEventLine(
-	ev: any,
-	guildId: string,
-	signupCount: number
-) {
+function formatEventLine(ev: any, guildId: string, signupCount: number) {
 	const dt = new Date(ev.startTime);
 	const unix = Math.floor(dt.getTime() / 1000);
 	const draftText = ev.published ? "" : " • (Draft)";
@@ -88,18 +99,20 @@ function formatEventLine(
 	const title = link ? `[**${ev.title}**](${link})` : `**${ev.title}**`;
 
 	const capTotal = ev.capacityCap ?? 0;
-	const capBadge = ev.capacityCap + ev.capacityBase > 0 ? `${signupCount}/${capTotal}` : `${signupCount}`;
+	const hasCap = (ev.capacityCap ?? 0) + (ev.capacityBase ?? 0) > 0;
+	const capBadge = hasCap ? `${signupCount}/${capTotal}` : `${signupCount}`;
 
-	// host mention brings in avatar+username hover card
-	return `> <t:${unix}:t> ${ev.type.toLowerCase() === "vrc" ? emojiMapTypes["vrchat"].emoji : emojiMapTypes["discord"].emoji } ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
+	const typeEmoji =
+		ev.type?.toLowerCase() === "vrc"
+			? emojiMapTypes["vrchat"].emoji
+			: emojiMapTypes["discord"].emoji;
+
+	// markdown inside TextDisplay
+	return `> <t:${unix}:t> ${typeEmoji} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
-function chunkString(str: string, size = 1024): string[] {
+function chunkString(str: string, size = 1800): string[] {
 	const chunks: string[] = [];
-	let i = 0;
-	while (i < str.length) {
-		chunks.push(str.slice(i, i + size));
-		i += size;
-	}
+	for (let i = 0; i < str.length; i += size) chunks.push(str.slice(i, i + size));
 	return chunks;
 }

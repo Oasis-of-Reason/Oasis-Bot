@@ -9,7 +9,186 @@ import {
 	GuildMember,
 	APIEmbed,
 	EmbedBuilder,
+	APIContainerComponent,
 } from "discord.js";
+import { emojiMapTypes } from "./generalConstants";
+
+/**
+ * Compare a message's Components v2 container content to an expected container.
+ * Returns true if the visible text content (and separator positions) are the same.
+ */
+export function messageContainerEquals(
+	message: Message,
+	expected:
+		| { components: APIContainerComponent[] }             // full payload you send
+		| APIContainerComponent[]                             // components array
+		| APIContainerComponent                               // single container root
+		| { toJSON(): APIContainerComponent }                 // ContainerBuilder-like
+): boolean {
+	if (!message) return false;
+
+	// Actual components from the fetched message (discord.js may expose it under different props).
+	const actualComponents =
+		// some builds: message.componentsV2 -> APIContainerComponent[]
+		(asAny(message).componentsV2 as APIContainerComponent[] | undefined) ??
+		// others: message.components is already the array of root components
+		(asAny(message).components as APIContainerComponent[] | undefined) ??
+		// last resort: try the raw JSON
+		(tryGetJsonComponents(message) ?? []);
+
+	const expectedComponents = normalizeExpected(expected);
+
+	const actualText = extractRenderableText(actualComponents);
+	const expectedText = extractRenderableText(expectedComponents);
+
+	if (actualText.length !== expectedText.length) return false;
+	for (let i = 0; i < actualText.length; i++) {
+		if (replaceEmojiText(actualText[i]) !== expectedText[i]) return false;
+	}
+	return true;
+}
+
+/**
+ * Deep-ish equality for two container payloads, based on renderable text.
+ * You can use this directly if you already hold both containers.
+ */
+export function containersAreEqual(
+	a: APIContainerComponent[] | APIContainerComponent,
+	b: APIContainerComponent[] | APIContainerComponent
+): boolean {
+	const aText = extractRenderableText(Array.isArray(a) ? a : [a]);
+	const bText = extractRenderableText(Array.isArray(b) ? b : [b]);
+	if (aText.length !== bText.length) return false;
+	for (let i = 0; i < aText.length; i++) {
+		if (aText[i] !== bText[i]) return false;
+	}
+	return true;
+}
+
+// ----------------- internals -----------------
+
+function asAny<T = any>(v: unknown): T {
+	return v as T;
+}
+
+function tryGetJsonComponents(message: Message): APIContainerComponent[] | null {
+	try {
+		const json = asAny(message).toJSON?.();
+		if (json?.components && Array.isArray(json.components)) {
+			return json.components as APIContainerComponent[];
+		}
+	} catch { }
+	return null;
+}
+
+function normalizeExpected(
+	expected:
+		| { components: APIContainerComponent[] }
+		| APIContainerComponent[]
+		| APIContainerComponent
+		| { toJSON(): APIContainerComponent }
+): APIContainerComponent[] {
+	if (Array.isArray(expected)) return expected;
+	if (isContainerRoot(expected)) return [expected];
+	if (hasComponentsArray(expected)) return expected.components;
+	if (hasToJSON(expected)) return [expected.toJSON()];
+	throw new Error("Unsupported expected container shape.");
+}
+
+function hasComponentsArray(
+	v: unknown
+): v is { components: APIContainerComponent[] } {
+	return !!v && typeof v === "object" && Array.isArray((v as any).components);
+}
+
+function isContainerRoot(v: unknown): v is APIContainerComponent {
+	// A root container typically has a "components" (children) array or a "type/kind" identifying it
+	return !!v && typeof v === "object" && (Array.isArray((v as any).components) || "type" in (v as any) || "kind" in (v as any));
+}
+
+function hasToJSON(v: unknown): v is { toJSON(): APIContainerComponent } {
+	return !!v && typeof (v as any).toJSON === "function";
+}
+
+/**
+ * Extract a flat list of "renderable slices" from a container:
+ * - Text blocks: their content string
+ * - Separators: a special sentinel "———SEP———"
+ * Other component types are ignored for text equivalence.
+ */
+function extractRenderableText(roots: APIContainerComponent[]): string[] {
+	const out: string[] = [];
+	const stack = [...roots];
+
+	while (stack.length) {
+		const node: any = stack.shift();
+
+		// Dive into children if present (common shape: { components: [...] })
+		if (node && Array.isArray(node.components)) {
+			// Keep order
+			for (const child of node.components) stack.push(child);
+			continue;
+		}
+
+		// TextDisplay variants:
+		// Accept a few shapes defensively: { text: { content } } or { content } or { data: { content } }
+		const content =
+			node?.text?.content ??
+			node?.content ??
+			node?.data?.content ??
+			null;
+
+		if (typeof content === "string") {
+			out.push(content.trim());
+			continue;
+		}
+
+		// Separator variants: { type: "separator" } or { kind: "separator" }
+		const t = (node?.type ?? node?.kind ?? "").toString().toLowerCase();
+		if (t.includes("separator")) {
+			out.push("———SEP———");
+			continue;
+		}
+
+		// Non-text, non-separator components are ignored for "content equality"
+	}
+
+	// Collapse duplicate neighboring separators (optional tidy)
+	for (let i = out.length - 2; i >= 0; i--) {
+		if (out[i] === "———SEP———" && out[i + 1] === "———SEP———") {
+			out.splice(i + 1, 1);
+		}
+	}
+
+	return out;
+}
+
+function escapeRegex(s: string) {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Replace any exact emojiText (e.g. ":DiscordLogo:") with its emoji markup.
+ */
+export function replaceEmojiText(input: string): string {
+	// Build lookup: emojiText -> emoji
+	const map: Record<string, string> = {};
+	for (const { emojiText, emoji } of Object.values(emojiMapTypes)) {
+		map[emojiText] = emoji;
+	}
+
+	// Single regex that matches any emojiText exactly
+	const pattern = Object.keys(map)
+		.map(escapeRegex)
+		.sort((a, b) => b.length - a.length) // longest first (safety if any overlap)
+		.join("|");
+
+	if (!pattern) return input;
+
+	const re = new RegExp(`(${pattern})`, "g");
+	return input.replace(re, (match) => map[match]);
+}
+
 
 export async function fetchTextChannel(client: Client, id?: string | null): Promise<TextChannel | null> {
 	if (!id) return null;
@@ -90,14 +269,14 @@ function deepEmbedEqual(a: any, b: any): boolean {
 
 	// Handle objects
 	if (typeof a === "object" && typeof b === "object") {
-        if (a.fields.length !== b.fields.length)
-            return false;
-        for (let i = 0; i < a.fields.length; i++) {
-            if(a.fields[i].value !== b.fields[i].value)
+		if (a.fields.length !== b.fields.length)
+			return false;
+		for (let i = 0; i < a.fields.length; i++) {
+			if (a.fields[i].value !== b.fields[i].value)
 				return false;
-        }
-        return true;
-    }
+		}
+		return true;
+	}
 
 	// fallback for primitives
 	return a === b;

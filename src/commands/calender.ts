@@ -10,7 +10,7 @@ import {
 	getStandardRolesHost
 } from "../helpers/securityHelpers";
 import { PrismaClient } from '@prisma/client';
-import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
+import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
 const prisma = new PrismaClient();
 
 module.exports = {
@@ -60,8 +60,8 @@ module.exports = {
 		}
 
 		try {
-			const embed = buildCalenderEmbed(events, guildId);
-			await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+			const container = buildCalenderContainer(events, guildId, true);
+			await interaction.reply(container);
 		} catch (error) {
 			console.error('Error fetching events:', error);
 			if (interaction.deferred || interaction.replied) {

@@ -11,10 +11,10 @@ import {
 	userHasAllowedRoleOrId,
 	getStandardRolesMod,
 	getStandardRolesOrganizer,
-} from "../../helpers/securityHelpers";
+} from "../helpers/securityHelpers";
 import { PrismaClient } from "@prisma/client";
-import { refreshPublishedCalender } from "../../helpers/refreshPublishedCalender";
-import { fetchMsgInChannel, fetchTextChannel } from "../../helpers/discordHelpers";
+import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { fetchMsgInChannel, fetchTextChannel } from "../helpers/discordHelpers";
 
 const prisma = new PrismaClient();
 

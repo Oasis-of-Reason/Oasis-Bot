@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Client, Message, TextChannel } from 'discord.js';
-import { buildCalenderEmbed } from '../helpers/buildCalenderEmbed';
-import { fetchMsgInChannel, messageEmbedEquals } from './discordHelpers';
+import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
+import { fetchMsgInChannel, messageContainerEquals, messageEmbedEquals } from './discordHelpers';
 const prisma = new PrismaClient();
 
 export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean) {
@@ -50,9 +50,9 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		},
 	});
 
-	const discordEmbed = buildCalenderEmbed(discordEvents, guildId);
-	const vrcEmbed = buildCalenderEmbed(vrcEvents, guildId);
-	const allEmbed = buildCalenderEmbed(allEvents, guildId);
+	const discordEmbed = buildCalenderContainer(discordEvents, guildId);
+	const vrcEmbed = buildCalenderContainer(vrcEvents, guildId);
+	const allEmbed = buildCalenderContainer(allEvents, guildId);
 
 	let discordMessage;
 	if (guildConfig?.discordEventCalenderMessageId) {
@@ -81,16 +81,16 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		}
 	}
 
-	if (!messageEmbedEquals(discordMessage as Message, discordEmbed) || (deleteAndResend && !(discordMessage?.channel.lastMessageId === discordMessage?.id))) {
+	if (!messageContainerEquals(discordMessage as Message<boolean>, discordEmbed) || (deleteAndResend && !(discordMessage?.channel.lastMessageId === discordMessage?.id))) {
 		if (!deleteAndResend && discordMessage) {
-			await discordMessage.edit({ embeds: [discordEmbed] });
+			await discordMessage.edit(discordEmbed);
 		}
 		else {
 			if (discordMessage) {
 				await discordMessage?.delete();
 			}
 
-			const calenderMessage = await discordChannel.send({ embeds: [discordEmbed] });
+			const calenderMessage = await discordChannel.send(discordEmbed);
 
 			if (calenderMessage) {
 				await prisma.guildConfig.upsert({
@@ -107,16 +107,16 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		}
 	}
 
-	if (!messageEmbedEquals(vrcMessage as Message, vrcEmbed) || (deleteAndResend && !(vrcMessage?.channel.lastMessageId === vrcMessage?.id))) {
+	if (!messageContainerEquals(vrcMessage as Message<boolean>, vrcEmbed) || (deleteAndResend && !(vrcMessage?.channel.lastMessageId === vrcMessage?.id))) {
 		if (!deleteAndResend && vrcMessage) {
-			await vrcMessage.edit({ embeds: [vrcEmbed] });
+			await vrcMessage.edit(vrcEmbed);
 		}
 		else {
 			if (vrcMessage) {
 				await vrcMessage?.delete();
 			}
 
-			const calenderMessage = await vrcChannel.send({ embeds: [vrcEmbed] });
+			const calenderMessage = await vrcChannel.send(vrcEmbed);
 
 			if (calenderMessage) {
 				await prisma.guildConfig.upsert({
@@ -133,16 +133,16 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		}
 	}
 
-	if (!messageEmbedEquals(allMessage as Message, allEmbed) || (deleteAndResend && !(allMessage?.channel.lastMessageId === allMessage?.id))) {
+	if (!messageContainerEquals(allMessage as Message<boolean>, allEmbed) || (deleteAndResend && !(allMessage?.channel.lastMessageId === allMessage?.id))) {
 		if (!deleteAndResend && allMessage) {
-			await allMessage.edit({ embeds: [allEmbed] });
+			await allMessage.edit(allEmbed);
 		}
 		else {
 			if (allMessage) {
 				await allMessage?.delete();
 			}
 
-			const calenderMessage = await upcomingEventsChannel.send({ embeds: [allEmbed] });
+			const calenderMessage = await upcomingEventsChannel.send(allEmbed);
 
 			if (calenderMessage) {
 				await prisma.guildConfig.upsert({

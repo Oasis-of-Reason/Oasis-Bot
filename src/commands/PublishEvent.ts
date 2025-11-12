@@ -10,10 +10,10 @@ import {
 	userHasAllowedRole,
 	getStandardRolesOrganizer,
 	getStandardRolesHost
-} from "../../helpers/securityHelpers";
-import { publishEvent } from "../../helpers/publishEvent";
-import { refreshPublishedCalender } from "../../helpers/refreshPublishedCalender";
-import { writeLog } from "../../helpers/logger";
+} from "../helpers/securityHelpers";
+import { publishEvent } from "../helpers/publishEvent";
+import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
+import { writeLog } from "../helpers/logger";
 
 module.exports = {
 	data: new SlashCommandBuilder()
