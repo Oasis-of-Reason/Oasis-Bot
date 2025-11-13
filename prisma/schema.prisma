@@ -71,6 +71,7 @@ model UserEventReminder {
 model Cookies {
   id          String        @id // Guild ID
   cookieUsers CookiesUser[]
+  CookieRageCounter Int @default(0)
 }
 
 model CookiesUser {
