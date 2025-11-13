@@ -5,10 +5,12 @@ import {
 	SeparatorBuilder,
 	MessageFlags,
 	MessageFlagsBitField,
+	ButtonBuilder,
+	ButtonStyle,
 } from "discord.js";
 import { emojiMapTypes } from "./generalConstants";
 
-export function buildCalenderContainer(events: any[], guildId: string, ephemeral = false) {
+export function buildCalenderContainer(events: any[], guildId: string, ephemeral = false, myEventsOnly = false) {
 	// Group events by YYYY-MM-DD
 	const groups = new Map<string, { date: Date; lines: string[] }>();
 
@@ -27,9 +29,24 @@ export function buildCalenderContainer(events: any[], guildId: string, ephemeral
 	const sorted = [...groups.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
 
 	// Build a Container with TextDisplays
-	const container = new ContainerBuilder().setAccentColor(0x5865f2);
+	const container = new ContainerBuilder().setAccentColor(myEventsOnly ? 0xb865f2 : 0x5865f2);
 
-	container.addTextDisplayComponents(new TextDisplayBuilder().setContent('### 📅  Upcoming Events'));
+	if (ephemeral) { 
+		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(myEventsOnly ? '### 📅 My Events' : '### 📅 Upcoming Events'));
+	} else {
+		container.addSectionComponents((section) =>
+			section
+				.addTextDisplayComponents((textDisplay) =>
+					textDisplay.setContent('### 📅  Upcoming Events')
+				)
+				.setButtonAccessory((button) =>
+					button
+						.setCustomId(`calendar:listmyEvents:${guildId}`) // handle this in interactionCreate
+						.setLabel("My Events")
+						.setStyle(ButtonStyle.Primary)
+				)
+		);
+	}
 	container.addSeparatorComponents(new SeparatorBuilder());
 	for (const group of sorted) {
 		const header = `**${formatDayHeader(group.date)}**`;

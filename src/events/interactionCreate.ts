@@ -18,6 +18,7 @@ import { PrismaClient } from '@prisma/client';
 import { refreshEventMessages } from "../helpers/refreshEventMessages";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 import { ensureUserReminderDefaults } from '../helpers/generalHelpers';
+import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
 
 const prisma = new PrismaClient();
 
@@ -28,6 +29,11 @@ module.exports = {
 			// Handle an event signup button
 			if (interaction.customId.startsWith('ev:')) {
 				await handleEventButtons(interaction); // <- your handler
+				return;
+			}
+
+			if (interaction.customId.startsWith('calendar:')) {
+				await handleCalenderButtons(interaction); // <- your handler
 				return;
 			}
 
@@ -310,6 +316,46 @@ module.exports = {
 		}
 	},
 };
+
+export async function handleCalenderButtons(interaction: Interaction) {
+	const bi = interaction as ButtonInteraction;
+	try {
+		const now = new Date(Date.now() - 2 * 60 * 60 * 1000); // -2 hours
+		const guildId = interaction.guildId as string;
+		const userId = interaction.user.id as string;
+		let events;
+		events = await prisma.event.findMany({
+			where: {
+				guildId: guildId,
+				startTime: { gte: now },
+				published: true,
+				signups: {
+					some: {
+						userId: userId,
+					},
+				},
+			},
+			orderBy: { startTime: 'asc' },
+			include: {
+				_count: { select: { signups: true } },
+			},
+		});
+		if (events.length === 0) {
+			await bi.reply('ℹ️ No upcoming events.');
+			return;
+		}
+
+		const container = buildCalenderContainer(events, guildId, true, true);
+		await bi.reply(container);
+	} catch (err) {
+		console.error("Button handler error:", err);
+		if (bi.deferred || bi.replied) {
+			await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
+		} else {
+			await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
+		}
+	}
+}
 
 // map action -> prisma client + shape
 type ActionKind = "attend" | "interest" | "cohost";

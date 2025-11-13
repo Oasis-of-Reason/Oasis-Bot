@@ -27,7 +27,7 @@ module.exports = {
 
 		let canSeeDrafts = userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost());
 
-		const now = new Date();
+		const now = new Date(Date.now() - 2 * 60 * 60 * 1000); // -2 hours
 		const guildId = interaction.guildId;
 		let events;
 		if (canSeeDrafts) {

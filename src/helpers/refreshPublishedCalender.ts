@@ -5,7 +5,7 @@ import { fetchMsgInChannel, messageContainerEquals, messageEmbedEquals } from '.
 const prisma = new PrismaClient();
 
 export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean) {
-	const now = new Date();
+	const now = new Date(Date.now() - 2 * 60 * 60 * 1000); // -2 hours
 	const guildConfig = await prisma.guildConfig.findUnique({
 		where: { id: guildId }
 	});
@@ -50,7 +50,9 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		},
 	});
 
+	
 	const discordEmbed = buildCalenderContainer(discordEvents, guildId);
+	
 	const vrcEmbed = buildCalenderContainer(vrcEvents, guildId);
 	const allEmbed = buildCalenderContainer(allEvents, guildId);
 
