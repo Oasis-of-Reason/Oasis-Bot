@@ -341,7 +341,7 @@ export async function handleCalenderButtons(interaction: Interaction) {
 			},
 		});
 		if (events.length === 0) {
-			await bi.reply('ℹ️ No upcoming events.');
+			await bi.reply({ content: 'ℹ️ No upcoming events.', flags: MessageFlags.Ephemeral});
 			return;
 		}
 
