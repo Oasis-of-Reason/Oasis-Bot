@@ -192,7 +192,7 @@ export async function shionRampage(guildId: string): Promise<RampageResult> {
 
 		// Decide how much to steal from each victim
 		for (const victim of selected) {
-			const maxSteal = Math.min(victim.cookies, 8);
+			const maxSteal = Math.min(victim.cookies, 10);
 			if (maxSteal <= 0) continue;
 
 			const amount = randomInt(1, maxSteal);
