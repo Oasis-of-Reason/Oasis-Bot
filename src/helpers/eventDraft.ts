@@ -190,6 +190,9 @@ export async function handleDraftButton(
 		} catch (e) { writeLog("Modal submit timed out or errored."); return null; }
 	};
 
+	const memberUsername = i.member?.user.username ?? "";
+	console.log("Run: " + i.customId + " By: " + memberUsername + " at: " + new Date().toISOString());
+	
 	switch (i.customId) {
 		case "edit_title": {
 			const sub = await modalInput("modal_edit_title", "Edit Title", "new_title", "New Title");
@@ -450,20 +453,23 @@ export async function handleDraftButton(
 			break;
 
 		case "publish_event": {
-			const guild = i.guild as Guild;
-			if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
-				await i.reply({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
-				return;
-			}
+			console.log("Start Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
 			try {
+				await i.deferUpdate();
+				const guild = i.guild as Guild;
+				if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
+					await i.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
+					return;
+				}
 				await publishEvent(i.client, guild, eventData.id);
-				await i.reply({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
 				await addHostToEventThread(guild, eventData.id);
-				await i.followUp({ content: "Host Added to Event Thread", flags: MessageFlags.Ephemeral });
+				await i.followUp({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
 				await refreshPublishedCalender(i.client, guild.id, true);
 			} catch (err) {
 				console.error("Publish error:", err);
-				await i.reply({ content: "⚠️ Something went wrong while publishing.", flags: MessageFlags.Ephemeral });
+				await i.followUp({ content: "⚠️ Something went wrong while publishing.", flags: MessageFlags.Ephemeral });
+			} finally {
+				console.log("Ended Publishing Event from: "  + memberUsername + " at: " +  new Date().toISOString());
 			}
 			break;
 		}
