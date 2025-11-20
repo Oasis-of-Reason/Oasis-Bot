@@ -1,17 +1,25 @@
 const vrcGamingRoleId = `1416811955074891776`;
 const vrcSocialRoleId = `1425104014084673556`;
 const vrcCinemaRoleId = `1422352173622366358`;
+const vrcArtRoleId = `1438102765141491814`;
+const vrcMindfulnessId = `1438102558743859211`;
 const discordGamingRoleId = `1416812117423816867`;
 const discordSocialRoleId = `1419732188202533036`;
 const discordCinemaRoleId = `1425104189444460636`;
+const discordArtRoleId = `1438102730546876457`;
+const discordMindfulnessId = `1438102680412360764`;
 
 export const allowedPingRoles = [
 	vrcGamingRoleId,
 	vrcSocialRoleId,
 	vrcCinemaRoleId,
+	vrcArtRoleId,
+	vrcMindfulnessId,
 	discordGamingRoleId,
 	discordSocialRoleId,
-	discordCinemaRoleId
+	discordCinemaRoleId,
+	discordArtRoleId,
+	discordMindfulnessId
 ];
 
 export const pingMap: Record<string, Record<string, { value: string }>> = {
@@ -25,6 +33,12 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 		cinema: {
 			value: `<@&${vrcCinemaRoleId}>`,
 		},
+		art: {
+			value: `<@&${vrcArtRoleId}>`,
+		},
+		mindfullness: {
+			value: `<@&${vrcMindfulnessId}>`,
+		},
 	},
 	discord: {
 		gaming: {
@@ -35,6 +49,12 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 		},
 		cinema: {
 			value: `<@&${discordCinemaRoleId}>`,
+		},
+		art: {
+			value: `<@&${discordArtRoleId}>`,
+		},
+		mindfullness: {
+			value: `<@&${discordMindfulnessId}>`,
 		},
 	}
 };

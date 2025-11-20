@@ -53,6 +53,8 @@ function buildAllRows(
 		new ButtonBuilder().setCustomId("sub:Gaming").setLabel("Gaming").setStyle(styleSingleChoice(subtype, "Gaming")),
 		new ButtonBuilder().setCustomId("sub:Social").setLabel("Social").setStyle(styleSingleChoice(subtype, "Social")),
 		new ButtonBuilder().setCustomId("sub:Cinema").setLabel("Cinema").setStyle(styleSingleChoice(subtype, "Cinema")),
+		new ButtonBuilder().setCustomId("sub:Art").setLabel("Art").setStyle(styleSingleChoice(subtype, "Art")),
+		new ButtonBuilder().setCustomId("sub:Mindfulness").setLabel("Mindfulness").setStyle(styleSingleChoice(subtype, "Mindfullness")),
 	);
 
 	const platRow = new ActionRowBuilder<ButtonBuilder>().addComponents(

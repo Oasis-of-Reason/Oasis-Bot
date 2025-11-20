@@ -291,6 +291,8 @@ export async function handleDraftButton(
 							{ label: "Gaming", value: "Gaming" },
 							{ label: "Social", value: "Social" },
 							{ label: "Cinema", value: "Cinema" },
+							{ label: "Art", value: "Art" },
+							{ label: "Mindfulness", value: "Mindfulness" },
 						])
 					),
 				],
