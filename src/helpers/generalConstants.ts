@@ -36,7 +36,7 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 		art: {
 			value: `<@&${vrcArtRoleId}>`,
 		},
-		mindfullness: {
+		mindfulness: {
 			value: `<@&${vrcMindfulnessId}>`,
 		},
 	},
@@ -53,7 +53,7 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 		art: {
 			value: `<@&${discordArtRoleId}>`,
 		},
-		mindfullness: {
+		mindfulness: {
 			value: `<@&${discordMindfulnessId}>`,
 		},
 	}
