@@ -59,7 +59,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
 	let winMessage = userId === juni ? `> 🎉 **WIN!** <@${userId}> is at it again? Keep going, we all know you can't help yourself... **${result.before} → ${result.after}**.🍪` :
 		`> 🎉 **WIN!** <@${userId}> doubled their cookies from **${result.before} → ${result.after}**. Enjoy the crumbs of victory! 🍪`;
-	let loseMessage = userId === juni ? `> 💀 **LOSS!** <@${userId}> gambled **${result.before}** cookies and lost it all. it's finally over.` :
+	let loseMessage = userId === juni ? `> 💀 **LOSS!** <@${userId}> gambled **${result.before}** cookies and lost it all. It's finally over.` :
 		`> 💀 **LOSS!** <@${userId}> gambled **${result.before}** cookies and lost it all. Better luck next time…`;
 
 	if (result.win) {
