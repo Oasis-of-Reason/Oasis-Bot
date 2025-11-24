@@ -504,6 +504,7 @@ export async function handleDraftButton(
 				}
 				await publishEvent(i.client, guild, eventData.id);
 				await addHostToEventThread(guild, eventData.id);
+				await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons(message.id, pubCheck),});
 				await i.followUp({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
 				await refreshPublishedCalender(i.client, guild.id, true);
 			} catch (err) {
