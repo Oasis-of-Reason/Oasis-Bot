@@ -1,4 +1,4 @@
-import { Client, TextChannel, ThreadChannel } from "discord.js";
+import { ChannelType, Client, TextChannel, ThreadChannel } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { getEventButtons } from "./getEventButtons"; // or inline from above
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
@@ -33,4 +33,25 @@ export async function refreshEventMessages(client: Client, eventId: number) {
 			console.error("Failed to edit published channel message:", e);
 		}
 	}
+}
+
+export async function updateThreadTitle(client: any, threadId: string, newTitle: string, eventId: number): Promise<ThreadChannel | null>{
+try {
+        const thread = await client.channels.fetch(threadId);
+
+        // Ensure we actually got a thread channel
+        if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
+            console.log("Not a thread channel:", threadId);
+            return null;
+        }
+		const updatedTitle = ("Draft " + eventId + ": " + newTitle);
+        const updated = await thread.setName(updatedTitle);
+        console.log("Thread title updated:", updated.name);
+
+        return updated;
+
+    } catch (err) {
+        console.error("Failed to update thread title:", err);
+        return null;
+    }
 }

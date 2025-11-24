@@ -43,6 +43,7 @@ import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { writeLog } from "./logger";
 import { fetchMsgInThread } from "./discordHelpers";
 import { checkEventPublishedOrDraftOnly } from "./getEventButtons";
+import { updateThreadTitle } from "./refreshEventMessages";
 
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
@@ -235,6 +236,7 @@ export async function handleDraftButton(
 			if (!sub) return;
 			eventData.title = sub.fields.getTextInputValue("new_title") || eventData.title;
 			await updateDraftByMsgId(message.id, { title: eventData.title });
+			await updateThreadTitle(i.client, i.channelId, eventData.title, eventData.id)
 			await sub.editReply({ content: "✅ Title updated!" });
 			await rerender();
 			break;
