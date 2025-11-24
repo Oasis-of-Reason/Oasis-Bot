@@ -1,6 +1,7 @@
 import {
 	Client,
 	Guild,
+	ThreadAutoArchiveDuration,
 } from "discord.js";
 import {
 	getEventById,
@@ -60,16 +61,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 
 		// Thread message
 		if (publishedThread) {
-			const existing = await fetchMsgInThread(publishedThread, threadMsgId);
-			if (existing) {
-				await existing.edit({ embeds: [embed], components });
-			} else {
-				const sent = await publishedThread.send({ embeds: [embed], components });
-				threadMsgId = sent.id;
-			}
-			threadId = publishedThread.id;
-
-			// Re-archive if we had unarchived earlier
+			// Re-archive if we had unarchived earlie
 			if (publishedThread.archived) {
 				try { await publishedThread.setArchived(true, "Restore archived state after edit"); } catch { }
 			}
@@ -110,7 +102,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 
 	const thread = await sentChannel.startThread({
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
-		autoArchiveDuration: 1440,
+		autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,
 	});
 
 	await prisma.event.update({
