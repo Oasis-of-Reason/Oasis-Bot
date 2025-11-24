@@ -409,7 +409,7 @@ module.exports = {
 
 		const sent = await thread.send({
 			embeds: [buildDraftEmbed(eventData)],
-			components: editButtons(),
+			components: editButtons(thread.id),
 		});
 
 		await prisma.event.update({

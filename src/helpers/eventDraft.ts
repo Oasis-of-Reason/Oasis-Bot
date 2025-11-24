@@ -42,6 +42,7 @@ import { publishEvent, addHostToEventThread } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { writeLog } from "./logger";
 import { fetchMsgInThread } from "./discordHelpers";
+import { checkEventPublishedOrDraftOnly } from "./getEventButtons";
 
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
@@ -92,34 +93,68 @@ export function buildDraftEmbed(eventData: {
 	return embed;
 }
 
-export function editButtons() {
-	return [
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("edit_title").setLabel("Edit Title").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_description").setLabel("Edit Description").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_activity").setLabel("Edit Activity").setStyle(ButtonStyle.Secondary),
-		),
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("edit_type").setLabel("Edit Type").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_subtype").setLabel("Edit Subtype").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_scope").setLabel("Edit Scope").setStyle(ButtonStyle.Secondary),
-		),
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("edit_platforms").setLabel("Edit Platforms").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_requirements").setLabel("Edit Requirements").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_capacity").setLabel("Edit Capacity").setStyle(ButtonStyle.Secondary),
-		),
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("edit_start").setLabel("Edit Start Time").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_length").setLabel("Edit Length").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_poster").setLabel("Edit Poster").setStyle(ButtonStyle.Secondary),
-		),
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("get_event_id").setLabel("🔑 Get ID").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("publish_event").setLabel("🚀 Publish").setStyle(ButtonStyle.Success),
-		),
-	];
+export function editButtons(id?: string, published?: boolean) {
+	console.log("running editButtons in eventDraft.ts\nIf id set: ", id)
+	console.log("Publish Check: ", published)
+
+	if (published) {
+		return [
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_title").setLabel("Edit Title").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_description").setLabel("Edit Description").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_activity").setLabel("Edit Activity").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_type").setLabel("Edit Type").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_subtype").setLabel("Edit Subtype").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_scope").setLabel("Edit Scope").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_platforms").setLabel("Edit Platforms").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_requirements").setLabel("Edit Requirements").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_capacity").setLabel("Edit Capacity").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_start").setLabel("Edit Start Time").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_length").setLabel("Edit Length").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_poster").setLabel("Edit Poster").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("get_event_id").setLabel("🔑 Get ID").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("publish_event").setLabel("🔧Update Published Event").setStyle(ButtonStyle.Success),
+			),
+		];
+	} else {
+return [
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_title").setLabel("Edit Title").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_description").setLabel("Edit Description").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_activity").setLabel("Edit Activity").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_type").setLabel("Edit Type").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_subtype").setLabel("Edit Subtype").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_scope").setLabel("Edit Scope").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_platforms").setLabel("Edit Platforms").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_requirements").setLabel("Edit Requirements").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_capacity").setLabel("Edit Capacity").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("edit_start").setLabel("Edit Start Time").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_length").setLabel("Edit Length").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_poster").setLabel("Edit Poster").setStyle(ButtonStyle.Secondary),
+			),
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("get_event_id").setLabel("🔑 Get ID").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("publish_event").setLabel("🚀 Publish").setStyle(ButtonStyle.Success),
+			),
+		];
+	}
+return
 }
+
 
 export const mkSelect = (
 	id: string,
@@ -160,8 +195,9 @@ export async function handleDraftButton(
 	},
 	message: Message
 ) {
+	const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
 	const rerender = async () => {
-		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons() });
+		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons(message.id, pubCheck) });
 	};
 
 	const modalInput = async (id: string, title: string, field: string, label: string, paragraph = false): Promise<ModalSubmitInteraction | null> => {
@@ -435,11 +471,14 @@ export async function handleDraftButton(
 
 					// Update hydrated object
 					eventData.posterUrl = posterUrl;
-
+					
+					// Quick Check to see if we're editing on a now published event
+					const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
+	
 					// Update embed
 					await message.edit({
 						embeds: [buildDraftEmbed(eventData)],
-						components: editButtons(),
+						components: editButtons(message.id, pubCheck),
 					});
 
 					await i.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });

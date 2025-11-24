@@ -3,6 +3,8 @@ import {
 	ButtonBuilder,
 	ButtonStyle,
 } from "discord.js";
+import { prisma } from "../utils/prisma";
+
 
 export function getEventButtons(eventId: number) {
 	const rowAttend = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -12,4 +14,14 @@ export function getEventButtons(eventId: number) {
 
 	// Return an array of rows (<= 5 rows allowed)
 	return [rowAttend];
+}
+
+export async function checkEventPublishedOrDraftOnly(id: string): Promise<boolean> {
+	const event = await prisma.event.findUnique({
+		where: { draftThreadMessageId: id},
+		select: { publishedThreadMessageId: true},
+	});
+	console.log("Event is: ", event)
+		return !!(event?.publishedThreadMessageId);
+
 }
