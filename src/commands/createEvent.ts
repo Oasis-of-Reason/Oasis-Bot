@@ -18,6 +18,7 @@ import { prisma } from "../utils/prisma";
 import { userHasAllowedRole, getStandardRolesHost } from "../helpers/securityHelpers";
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { validateNumber } from "../helpers/generalHelpers";
+import { updateThreadTitle } from "../helpers/refreshEventMessages"
 
 // ---------- helpers for button UIs ----------
 function row(...btns: ButtonBuilder[]) {
@@ -406,6 +407,8 @@ module.exports = {
 		});
 
 		eventData.id = createdEvent.id
+		// we have the correct id now so lets update the title
+		await updateThreadTitle(interaction.client, thread.id, eventData.title, eventData.id)
 
 		const sent = await thread.send({
 			embeds: [buildDraftEmbed(eventData)],

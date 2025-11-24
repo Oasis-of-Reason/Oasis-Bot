@@ -14,6 +14,7 @@ import {
 	getStandardRolesOrganizer,
 } from "../helpers/securityHelpers";
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
+import { updateThreadTitle } from "../helpers/refreshEventMessages";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -145,6 +146,9 @@ module.exports = {
 			embeds: [buildDraftEmbed(hydrated)],
 			components: editButtons(),
 		});
+		// Update to fit new Thread name Style for drafts
+		// Needs to update the new draft channel, not the location the interaction took place. 
+		await updateThreadTitle(interaction.client, duplicated.draftThreadId, duplicated.title, hydrated.id)
 
 		await prisma.event.update({
 			where: { id: duplicated.id },
