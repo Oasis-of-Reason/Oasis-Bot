@@ -62,29 +62,29 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 // Map for avatar performance requirement emojis
 export const emojiMapRequirements: Record<string, { emoji: string; label: string, emojiText: string }> = {
 	verypoor: {
-		emoji: "<:VeryPoor:1423045477242503319>",
+		emoji: "<:VRChat_VeryPoor:1425560164798304307>",
 		label: "No Restriction",
-		emojiText: ":VeryPoor:"
+		emojiText: ":VRChat_VeryPoor:"
 	},
 	poor: {
-		emoji: "<:Poor:1423045444354965527>",
+		emoji: "<:VRChat_Poor:1425560228149334016>",
 		label: "Poor or better",
-		emojiText: ":Poor:"
+		emojiText: ":VRChat_Poor:"
 	},
 	medium: {
-		emoji: "<:Medium:1423045576567689226>",
+		emoji: "<:VRChat_Medium:1425560237900828813>",
 		label: "Medium or better",
-		emojiText: ":Medium:"
+		emojiText: ":VRChat_Medium:"
 	},
 	good: {
-		emoji: "<:Good:1423045376423760092>",
+		emoji: "<:VRChat_Good:1425560249523507210>",
 		label: "Good or better",
-		emojiText: ":Good:"
+		emojiText: ":VRChat_Good:"
 	},
 	excellent: {
-		emoji: "<:VeryGood:1423045342760275989>",
+		emoji: "<:VRChat_Excellent:1425560260432892095>",
 		label: "Excellent or better",
-		emojiText: ":VeryGood:"
+		emojiText: ":VRChat_Excellent:"
 	},
 };
 
