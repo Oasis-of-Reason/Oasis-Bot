@@ -26,6 +26,7 @@ model GuildConfig {
   publishingVRCChannelId    	String?
   upcomingEventsChannelId    	String?
   cookieChannelId		    	String?
+  vrcLoginToken			    	String?
 }
 
 model TemporaryVoiceChannel {
