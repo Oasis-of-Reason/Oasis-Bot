@@ -29,7 +29,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 				cookies: 0,
 			},
 			update: {}, // no-op, just fetch existing
-			select: { id: true, cookies: true },
+			select: { id: true, cookies: true, mostCookiesLost: true },
 		});
 
 		if (userRow.cookies <= 0) {
@@ -40,12 +40,30 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		const before = userRow.cookies;
 		const after = win ? before * 2 : 0;
 
-		await tx.cookiesUser.update({
-			where: { id: userRow.id },
-			data: {
+		if (win) {
+			await tx.cookiesUser.update({
+				where: { id: userRow.id },
+				data: {
+					cookies: after,
+				},
+			});
+		}
+		else {
+			// Only update mostCookiesLost if this loss is bigger than previous record
+			const prevMost = userRow.mostCookiesLost ?? 0;
+			const data: any = {
 				cookies: after,
-			},
-		});
+			};
+
+			if (before > prevMost) {
+				data.mostCookiesLost = before;
+			}
+
+			await tx.cookiesUser.update({
+				where: { id: userRow.id },
+				data,
+			});
+		}
 
 		return { canGamble: true, win, before, after } as const;
 	});
