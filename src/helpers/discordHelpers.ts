@@ -281,3 +281,69 @@ function deepEmbedEqual(a: any, b: any): boolean {
 	// fallback for primitives
 	return a === b;
 }
+
+export async function giveRoleToUser(
+	guild: Guild,
+	userId: string,
+	roleId: string
+): Promise<"ok" | "no-member" | "no-role" | "no-permission" | "error"> {
+	try {
+		// Fetch member (ensures latest data)
+		const member = await guild.members.fetch(userId).catch(() => null);
+		if (!member) return "no-member";
+
+		// Ensure the role exists
+		const role = guild.roles.cache.get(roleId);
+		if (!role) return "no-role";
+
+		// Check bot permissions
+		const botMember = guild.members.me;
+		if (!botMember) return "no-permission";
+
+		// Bot must be ABOVE the role it is trying to give
+		if (role.position >= botMember.roles.highest.position) {
+			return "no-permission";
+		}
+
+		// Give the role
+		await member.roles.add(roleId);
+		return "ok";
+
+	} catch (err) {
+		console.error("Failed to assign role:", err);
+		return "error";
+	}
+}
+
+export async function removeRoleFromUser(
+	guild: Guild,
+	userId: string,
+	roleId: string
+): Promise<"ok" | "no-member" | "no-role" | "no-permission" | "error"> {
+	try {
+		// Fetch the guild member
+		const member = await guild.members.fetch(userId).catch(() => null);
+		if (!member) return "no-member";
+
+		// Validate role exists
+		const role = guild.roles.cache.get(roleId);
+		if (!role) return "no-role";
+
+		// Permission & hierarchy check
+		const botMember = guild.members.me;
+		if (!botMember) return "no-permission";
+
+		// Bot must be above the role to remove it
+		if (role.position >= botMember.roles.highest.position) {
+			return "no-permission";
+		}
+
+		// Remove the role
+		await member.roles.remove(roleId);
+		return "ok";
+
+	} catch (err) {
+		console.error("Failed to remove role:", err);
+		return "error";
+	}
+}

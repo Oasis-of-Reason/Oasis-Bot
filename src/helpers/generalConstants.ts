@@ -9,6 +9,8 @@ const discordCinemaRoleId = `1425104189444460636`;
 const discordArtRoleId = `1438102730546876457`;
 const discordMindfulnessId = `1438102680412360764`;
 
+export const oasisPremiumId = `1445880182274785380`;
+
 export const allowedPingRoles = [
 	vrcGamingRoleId,
 	vrcSocialRoleId,

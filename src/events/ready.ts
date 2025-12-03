@@ -5,6 +5,7 @@ import { startReminderWorker } from '../reminders/reminderWorker';
 import { PrismaClient } from '@prisma/client';
 import { registerEventDraftCollectors } from '../helpers/eventDraft';
 import { startCookieWorker } from '../helpers/cookieWorker';
+import { startHourlyWorker } from '../reminders/hourlyWorker';
 const prisma = new PrismaClient();
 
 module.exports = {
@@ -29,6 +30,7 @@ module.exports = {
 
 		await registerEventDraftCollectors(client);
 		startReminderWorker(client);
+		startHourlyWorker(client);
 		console.log('Reminder worker started.');
 
 		// Uncomment the line below to fetch and log global commands

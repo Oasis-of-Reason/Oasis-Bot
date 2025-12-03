@@ -82,6 +82,7 @@ model CookiesUser {
   lastCookieAttempt DateTime
   cookies           Int      @default(0)
   mostCookiesLost   Int      @default(0)
+  oasisPremiumExpiration   DateTime  @default(now())
 
   cookiesParent     Cookies  @relation(fields: [guildId], references: [id])
 
