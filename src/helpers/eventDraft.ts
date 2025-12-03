@@ -170,7 +170,7 @@ export async function handleDraftButton(
 		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons(message.id) });
 	};
 
-	const modalInput = async (id: string, title: string, field: string, label: string, paragraph = false): Promise<ModalSubmitInteraction | null> => {
+	const modalInput = async (id: string, title: string, field: string, label: string, defaultValue: string = "", paragraph = false): Promise<ModalSubmitInteraction | null> => {
 		const modal = new ModalBuilder()
 			.setCustomId(id)
 			.setTitle(title)
@@ -182,6 +182,7 @@ export async function handleDraftButton(
 						.setStyle(paragraph ? TextInputStyle.Paragraph : TextInputStyle.Short)
 						.setRequired(false)
 						.setMaxLength(paragraph ? 4000 : 100)
+						.setValue(defaultValue)
 				)
 			);
 		await i.showModal(modal);
@@ -201,7 +202,7 @@ export async function handleDraftButton(
 
 	switch (i.customId) {
 		case "edit_title": {
-			const sub = await modalInput("modal_edit_title", "Edit Title", "new_title", "New Title");
+			const sub = await modalInput("modal_edit_title", "Edit Title", "new_title", "New Title", eventData.title ?? "");
 			if (!sub) return;
 			eventData.title = sub.fields.getTextInputValue("new_title") || eventData.title;
 			await updateDraftByMsgId(message.id, { title: eventData.title });
@@ -211,7 +212,7 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_description": {
-			const sub = await modalInput("modal_edit_description", "Edit Description", "new_description", "New Description", true);
+			const sub = await modalInput("modal_edit_description", "Edit Description", "new_description", "New Description", eventData.description ?? "", true);
 			if (!sub) return;
 			eventData.description = sub.fields.getTextInputValue("new_description") || null;
 			await updateDraftByMsgId(message.id, { description: eventData.description });
@@ -220,7 +221,7 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_activity": {
-			const sub = await modalInput("modal_edit_activity", "Edit Activity", "new_activity", "Activity");
+			const sub = await modalInput("modal_edit_activity", "Edit Activity", "new_activity", "Activity", eventData.activity ?? "");
 			if (!sub) return;
 			eventData.activity = sub.fields.getTextInputValue("new_activity") || null;
 			await updateDraftByMsgId(message.id, { activity: eventData.activity });
