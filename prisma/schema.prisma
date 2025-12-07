@@ -26,6 +26,7 @@ model GuildConfig {
   publishingVRCChannelId    	String?
   upcomingEventsChannelId    	String?
   cookieChannelId		    	String?
+  vrcLoginToken			    	String?
 }
 
 model TemporaryVoiceChannel {
@@ -80,6 +81,8 @@ model CookiesUser {
   userId            String   // Discord user ID
   lastCookieAttempt DateTime
   cookies           Int      @default(0)
+  mostCookiesLost   Int      @default(0)
+  oasisPremiumExpiration   DateTime  @default(now())
 
   cookiesParent     Cookies  @relation(fields: [guildId], references: [id])
 

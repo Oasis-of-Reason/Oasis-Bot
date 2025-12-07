@@ -1,116 +1,15 @@
+// src/commands/vrcCreateEvent.ts
+import { AutoModerationRuleEventType, ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import axios from "axios";
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { prisma } from "../utils/prisma";
+import { createGroupEvent, parseAndMapArray, platformMap, subtypeMap, VrcEventDescription } from "../helpers/vrcHelpers";
 
 const API_BASE = "https://api.vrchat.cloud/api/1";
 const API_KEY = process.env.VRC_API_KEY || "JlE5Jldo5Jibnk5O5hTx6XVqsJu4WJ26";
 
-function extractCookie(setCookie: string[] | undefined): string[] {
-  if (!setCookie?.length) return [];
-  // keep only name=value
-  return setCookie.map(c => c.split(";")[0]).filter(Boolean);
-}
-function mergeCookies(...lists: (string | null | undefined | string[])[]): string {
-  const parts = new Map<string, string>(); // name -> value
-  for (const list of lists) {
-    const arr = Array.isArray(list) ? list : (list ? [list as string] : []);
-    for (const cookie of arr) {
-      const [name, value] = cookie.split("=");
-      if (name && value) parts.set(name.trim(), value.trim());
-    }
-  }
-  return Array.from(parts.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
-}
-
-export async function loginToVRChat(username: string, password: string, otpCode?: string) {
-  const base = axios.create({
-    baseURL: API_BASE,
-    withCredentials: true,
-    headers: { "User-Agent": "OasisBot/1.0" },
-    params: { apiKey: API_KEY },
-    validateStatus: () => true,
-  });
-
-  // 1) Seed session using Basic Auth
-  const res1 = await base.get("/auth/user", { auth: { username, password } });
-  const cookies1 = extractCookie(res1.headers["set-cookie"]);
-  const requires = (res1.data?.requiresTwoFactorAuth ?? []) as string[];
-
-  // No 2FA required
-  if (res1.status === 200 && cookies1.length && requires.length === 0) {
-    // Double-check session works
-    const cookie = mergeCookies(cookies1);
-    const check = await base.get("/auth/user", { headers: { Cookie: cookie } });
-    if (check.status === 200) return { cookie };
-    throw new Error(`Unexpected auth check failure (${check.status})`);
-  }
-
-  // 2FA required
-  if (res1.status === 200 && requires.length) {
-    if (!otpCode) {
-      throw new Error(`2FA required (${requires.join(", ")}). Provide otp_code.`);
-    }
-    if (!cookies1.length) throw new Error("No initial auth cookie from /auth/user.");
-
-    const hasTotp = requires.includes("totp");
-    const hasEmail = requires.includes("emailOtp") || requires.includes("otp");
-    const verifyPath = hasTotp
-      ? "/auth/twofactorauth/totp/verify"
-      : hasEmail
-      ? "/auth/twofactorauth/emailotp/verify"
-      : null;
-
-    if (!verifyPath) throw new Error(`Unsupported 2FA methods: ${requires.join(", ")}`);
-
-    // submit 2FA with the initial cookie
-    const res2 = await base.post(
-      verifyPath,
-      { code: otpCode },
-      { headers: { Cookie: mergeCookies(cookies1) } }
-    );
-    const cookies2 = extractCookie(res2.headers["set-cookie"]);
-    if (!(res2.status >= 200 && res2.status < 300)) {
-      throw new Error(`2FA submit failed (${res2.status}): ${JSON.stringify(res2.data)}`);
-    }
-
-    // 3) Finalize session: call /auth/user with combined cookies, no Basic
-    const cookieMerged = mergeCookies(cookies1, cookies2);
-    const res3 = await base.get("/auth/user", { headers: { Cookie: cookieMerged } });
-    const cookies3 = extractCookie(res3.headers["set-cookie"]);
-    if (res3.status !== 200) {
-      throw new Error(`Post-2FA auth check failed (${res3.status}): ${JSON.stringify(res3.data)}`);
-    }
-
-    // return merged cookie from all steps
-    return { cookie: mergeCookies(cookieMerged, cookies3) };
-  }
-
-  // Anything else is a failure
-  throw new Error(`Login failed (${res1.status}): ${JSON.stringify(res1.data)}`);
-}
-
-
-// ====== Create Group Calendar Event (unchanged) ======
-async function createGroupEvent(cookie: string, {
-	groupId,
-	name,
-	description,
-	startAtISO,
-	durationMinutes,
-	worldId,
-	instanceId,
-	imageUrl,
-}: {
-	groupId: string;
-	name: string;
-	description?: string;
-	startAtISO: string;
-	durationMinutes: number;
-	worldId?: string | null;
-	instanceId?: string | null;
-	imageUrl?: string | null;
-}) {
-	const start = new Date(startAtISO);
-	//const end = new Date(start.getTime() + durationMinutes * 60_000).toISOString();
+// Simple helper: check if a stored cookie still represents a logged-in session
+async function isVrcCookieValid(cookie: string): Promise<boolean> {
+	if (!cookie) return false;
 
 	const http = axios.create({
 		baseURL: API_BASE,
@@ -123,39 +22,50 @@ async function createGroupEvent(cookie: string, {
 		validateStatus: () => true,
 	});
 
-	// POST /calendar/{groupId}/event
-	const res = await http.post(`/calendar/${"grp_99651034-24b5-495d-a21e-e11d00e813c6"}/event`, {
-		title:"TEST NAME",
-		description: "TEST DESC",
-		startsAt: "2025-11-11T17:02:37Z",
-		endsAt: "2025-11-11T18:03:37Z",
-		category: "performance",
-		accessType: "group",
-		worldId: worldId ?? null,
-		instanceId: instanceId ?? null,
-		imageUrl: imageUrl ?? null,
-	});
-
-	if (res.status >= 200 && res.status < 300) return res.data;
-	throw new Error(`VRC_CREATE_EVENT_FAILED (${res.status}): ${JSON.stringify(res.data)}`);
+	const res = await http.get("/auth/user");
+	return res.status === 200; // 200 => logged in
 }
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("vrc-create-event")
-		.setDescription("Create a VRChat group calendar event (via VRChat API)")
-		// REQUIRED FIRST
-		.addStringOption(o => o.setName("group_id").setDescription("VRChat Group ID (grp_...)").setRequired(true))
-		.addStringOption(o => o.setName("name").setDescription("Event title").setRequired(true))
-		.addStringOption(o => o.setName("start_at").setDescription("Start time (ISO8601)").setRequired(true))
-		.addIntegerOption(o => o.setName("duration_minutes").setDescription("Duration in minutes").setRequired(true))
-		// OPTIONAL AFTER
-		.addStringOption(o => o.setName("description").setDescription("Description"))
-		.addStringOption(o => o.setName("world_id").setDescription("World ID"))
-		.addStringOption(o => o.setName("instance_id").setDescription("Instance ID"))
-		.addStringOption(o => o.setName("image_url").setDescription("Image URL"))
-		.addStringOption(o => o.setName("otp_code").setDescription("2FA code (if needed)"))
-		.setDMPermission(false),
+		.setDescription("Create a VRChat group calendar event from a stored Event.")
+		.addIntegerOption(o =>
+			o
+				.setName("event_id")
+				.setDescription("Internal event ID")
+				.setRequired(true)
+		)
+		.addStringOption(o =>
+			o
+				.setName("short_desc")
+				.setDescription("Short desc max 1000 char")
+				.setRequired(false)
+		)
+		.addBooleanOption(o =>
+			o
+				.setName("send_creation_notification")
+				.setDescription("Whether to notify group")
+				.setRequired(false)
+		)
+		.addStringOption(o =>
+			o
+				.setName("image_id")
+				.setDescription("vrc image id for banner")
+				.setRequired(false)
+		)
+		.addIntegerOption(o =>
+			o
+				.setName("host_join_before_time")
+				.setDescription("Time in minutes before event host can join instance")
+				.setRequired(false)
+		)
+		.addIntegerOption(o =>
+			o
+				.setName("guest_join_before_time")
+				.setDescription("Time in minutes before event guests can join instance")
+				.setRequired(false)
+		),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		if (!interaction.guild) {
@@ -163,48 +73,103 @@ module.exports = {
 			return;
 		}
 
-		const username = process.env.VRC_USERNAME;
-		const password = process.env.VRC_PASSWORD;
-		if (!username || !password) {
-			await interaction.reply("❌ Missing VRChat credentials in environment variables.");
-			return;
-		}
+		const guildId = interaction.guildId!;
+		const eventId = interaction.options.getInteger("event_id", true);
+		const shortDesc = interaction.options.getString("short_desc", false);
+		const sendCreationNotification = interaction.options.getBoolean("send_creation_notification", false);
+		const imageId = interaction.options.getString("image_id", false);
+		const hostJoinBeforeTime = interaction.options.getInteger("host_join_before_time", false);
+		const guestJoinBeforeTime = interaction.options.getInteger("guest_join_before_time", false);
 
-		const groupId = interaction.options.getString("group_id", true);
-		const name = interaction.options.getString("name", true);
-		const startAtISO = interaction.options.getString("start_at", true);
-		const durationMinutes = interaction.options.getInteger("duration_minutes", true);
-		const description = interaction.options.getString("description") ?? "";
-		const worldId = interaction.options.getString("world_id") ?? null;
-		const instanceId = interaction.options.getString("instance_id") ?? null;
-		const imageUrl = interaction.options.getString("image_url") ?? null;
-		const otpCode = interaction.options.getString("otp_code") ?? undefined;
-
-		await interaction.reply("⏳ Logging into VRChat…");
+		await interaction.reply("⏳ Checking VRChat login and loading event…");
 
 		try {
-			const { cookie } = await loginToVRChat(username, password, otpCode);
-			const created = await createGroupEvent(cookie, {
-				groupId,
-				name,
-				description,
-				startAtISO,
-				durationMinutes,
-				worldId,
-				instanceId,
-				imageUrl,
+			// 1) Grab the VRChat cookie for this guild from GuildConfig
+			const guildConfig = await prisma.guildConfig.findUnique({
+				where: { id: guildId },
+				select: { vrcLoginToken: true },
 			});
+
+			const cookie = guildConfig?.vrcLoginToken ?? null;
+
+			if (!cookie) {
+				await interaction.editReply(
+					"❌ The bot is not logged into VRChat. Please run `/vrc-login` first."
+				);
+				return;
+			}
+
+			// 2) Check if cookie is still valid
+			const valid = await isVrcCookieValid(cookie);
+			if (!valid) {
+				await interaction.editReply(
+					"❌ VRChat session is no longer valid. Please run `/vrc-login` again."
+				);
+				return;
+			}
+
+			// 3) Load the Event record from Prisma
+			const ev = await prisma.event.findUnique({
+				where: { id: eventId },
+				select: {
+					id: true,
+					published: true,
+					scope: true,
+					guildId: true,
+					title: true,
+					description: true,
+					imageUrl: true,
+					startTime: true,
+					lengthMinutes: true,
+					type: true,
+					subtype: true,
+					platforms: true,
+				},
+			});
+
+			if (!ev || ev.guildId !== guildId) {
+				await interaction.editReply(
+					"❌ Could not find that event for this server."
+				);
+				return;
+			}
+
+			// Optional: ensure it's a VRC-type event
+			if (ev.type.toLowerCase() !== "vrc") {
+				await interaction.editReply(
+					"❌ That event is not marked as a VRChat event."
+				);
+				return;
+			}
+
+			// 4) Build payload for createGroupEvent from Event fields
+			const eventDesc = new VrcEventDescription(
+				ev.title,
+				shortDesc ?? ev.description ?? "",
+				subtypeMap[ev.subtype.toLowerCase()],
+				ev.startTime.toISOString(),
+				ev.lengthMinutes ?? 60,
+				imageId ?? "file_969fc1a3-be17-450b-9c7d-e3609358779e", // Temporary generic image
+				parseAndMapArray(ev.platforms as string, platformMap),
+				sendCreationNotification ?? false,
+				hostJoinBeforeTime ?? 15, // host join before minutes
+				guestJoinBeforeTime ?? 10 // guest join before minutes
+			);
+
+			const created = await createGroupEvent(cookie, eventDesc);
 
 			const idText = created?.id ? ` (id: \`${created.id}\`)` : "";
 			await interaction.editReply(
-				`✅ Created VRChat event${idText}:\n` +
-				`• **${name}**\n` +
-				`• Starts: \`${startAtISO}\`\n` +
-				`• Duration: **${durationMinutes}m**`
+				`✅ Created VRChat event${idText} from Event #${ev.id}:\n` +
+				`• **${ev.title}**\n` +
+				`• Starts: \`${eventDesc.startAtISO}\`\n` +
+				`• Duration: **${eventDesc.durationMinutes}m**`
 			);
 		} catch (err: any) {
 			console.error("vrc-create-event error:", err?.response?.data ?? err);
-			await interaction.editReply(`❌ Failed to create VRChat event: ${err?.message ?? "Unknown error"}`);
+			await interaction.editReply(
+				`❌ Failed to create VRChat event: ${err?.message ?? "Unknown error"}`
+			);
 		}
 	},
 };
