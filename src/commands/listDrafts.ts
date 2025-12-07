@@ -7,6 +7,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	User,
+	MessageFlags
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 import { getStandardRolesOrganizer } from "../helpers/securityHelpers";
@@ -33,7 +34,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	if (!guild) {
 		return interaction.reply({
 			content: "This command must be used inside a server.",
-			ephemeral: true,
+			flags: MessageFlags.Ephemeral,
 		});
 	}
 
@@ -52,7 +53,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		if (!interaction.member || !("roles" in interaction.member)) {
 			return interaction.reply({
 				content: "Could not determine your permissions.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
@@ -65,7 +66,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		if (!hasPermission) {
 			return interaction.reply({
 				content: "Sorry, you do not have permission to run this command.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 	}
@@ -154,7 +155,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		embeds: [buildPageEmbed(currentPage)],
 		components: [buildButtons(currentPage)],
 		fetchReply: true,
-		ephemeral: false,
+		flags: MessageFlags.Ephemeral,
 	});
 
 	// Collector
@@ -167,7 +168,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		if (btnInt.user.id !== interaction.user.id) {
 			return btnInt.reply({
 				content: "You cannot control another user's pagination.",
-				ephemeral: true,
+				flags: MessageFlags.Ephemeral,
 			});
 		}
 
