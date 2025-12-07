@@ -23,7 +23,7 @@ module.exports = {
 			if (newState.channelId === guildConfig.voiceCreatorRoomId) {
 				try {
 					// Create a new temporary voice channel with "VC |" prefix
-					const channelName = `VC | ${member.user.username}'s Room`;
+					const channelName = `VC | ${member.user.username.slice(0, 30)}'s Room`;
 					const newChannel = await guild.channels.create({
 						name: channelName,
 						type: ChannelType.GuildVoice,

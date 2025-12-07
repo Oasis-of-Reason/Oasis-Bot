@@ -74,7 +74,7 @@ module.exports = {
 					.setPlaceholder('Enter channel name')
 					.setValue(currentName)
 					.setRequired(true)
-					.setMaxLength(100);
+					.setMaxLength(50);
 
 				const userLimitInput = new TextInputBuilder()
 					.setCustomId('voice_user_limit')
