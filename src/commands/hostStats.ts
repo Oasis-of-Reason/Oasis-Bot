@@ -31,6 +31,9 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     });
   }
 
+  // --- Defer reply immediately (ephemeral) ---
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
   const guildId = interaction.guildId!;
   const guild = interaction.guild!;
 
@@ -41,90 +44,66 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   });
 
   if (events.length === 0) {
-    return interaction.reply({
+    return interaction.editReply({
       content: "No events found for this guild.",
-      flags: MessageFlags.Ephemeral,
     });
   }
 
   // --- Group events by host ---
-  const hostMap: Record<
-    string,
-    { count: number; lastEvent: Date }
-  > = {};
+  const hostMap: Record<string, { count: number; lastEvent: Date }> = {};
 
   for (const ev of events) {
     const hostId = ev.hostId;
-
     if (!hostMap[hostId]) {
-      hostMap[hostId] = {
-        count: 0,
-        lastEvent: ev.startTime,
-      };
+      hostMap[hostId] = { count: 0, lastEvent: ev.startTime };
     }
-
     hostMap[hostId].count++;
-
     if (ev.startTime > hostMap[hostId].lastEvent) {
       hostMap[hostId].lastEvent = ev.startTime;
     }
   }
 
-  // --- Resolve usernames and guild membership ---
-  const rows = [];
-
+  // --- Resolve usernames in parallel ---
   const today = new Date();
+  const rows = await Promise.all(
+    Object.keys(hostMap).map(async (hostId) => {
+      let username = "Unknown User";
+      let leftGuild = false;
 
-  for (const hostId of Object.keys(hostMap)) {
-    let username = "Unknown User";
-    let leftGuild = false;
-
-    // Try guild member first
-    const member = await guild.members.fetch(hostId).catch(() => null);
-
-    if (member) {
-      username = member.user.username;
-    } else {
-      // Fallback to global fetch
-      const user = await interaction.client.users.fetch(hostId).catch(() => null);
-      if (user) {
-        username = user.username;
+      const member = await guild.members.fetch(hostId).catch(() => null);
+      if (member) {
+        username = member.user.username;
+      } else {
+        const user = await interaction.client.users.fetch(hostId).catch(() => null);
+        if (user) username = user.username;
+        leftGuild = true;
       }
-      leftGuild = true;
-    }
 
-    const { count, lastEvent } = hostMap[hostId];
+      const { count, lastEvent } = hostMap[hostId];
 
-    // Format date as dd/mm/yyyy hh:mm
-    const dd = String(lastEvent.getUTCDate()).padStart(2, "0");
-    const mm = String(lastEvent.getUTCMonth() + 1).padStart(2, "0");
-    const yyyy = lastEvent.getUTCFullYear();
-    const hh = String(lastEvent.getUTCHours()).padStart(2, "0");
-    const min = String(lastEvent.getUTCMinutes()).padStart(2, "0");
-    const formattedDate = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
+      const dd = String(lastEvent.getUTCDate()).padStart(2, "0");
+      const mm = String(lastEvent.getUTCMonth() + 1).padStart(2, "0");
+      const yyyy = lastEvent.getUTCFullYear();
+      const hh = String(lastEvent.getUTCHours()).padStart(2, "0");
+      const min = String(lastEvent.getUTCMinutes()).padStart(2, "0");
+      const formattedDate = `${dd}/${mm}/${yyyy} ${hh}:${min}`;
 
-    // Calculate days ago
-    const diffTime = today.getTime() - lastEvent.getTime();
-    const daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffTime = today.getTime() - lastEvent.getTime();
+      const daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    rows.push({
-      username,
-      count,
-      formattedDate,
-      daysAgo,
-      leftGuild,
-    });
-  }
+      return { username, count, formattedDate, daysAgo, leftGuild };
+    })
+  );
 
-  // Sort by most recent last event
-  rows.sort((a, b) => new Date(b.formattedDate).getTime() - new Date(a.formattedDate).getTime());
+  // --- Sort by most recent last event ---
+  rows.sort(
+    (a, b) =>
+      new Date(b.formattedDate).getTime() - new Date(a.formattedDate).getTime()
+  );
 
   // --- Build table output ---
-  const header =
-    "Host               | Events | Last Event        | Days Ago | Notes";
-  const separator =
-    "-------------------+--------+-------------------+---------+------";
-
+  const header = "Host               | Events | Last Event        | Days Ago | Notes";
+  const separator = "-------------------+--------+-------------------+---------+------";
   const lines = [header, separator];
 
   for (const r of rows) {
@@ -138,8 +117,8 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 
   const output = "```\n" + lines.join("\n") + "\n```";
 
-  return interaction.reply({
+  // --- Send the table as the final ephemeral response ---
+  return interaction.editReply({
     content: output,
-    flags: MessageFlags.Ephemeral,
   });
 }
