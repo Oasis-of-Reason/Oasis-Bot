@@ -11,6 +11,7 @@ import {
 } from "../helpers/securityHelpers";
 import { PrismaClient } from '@prisma/client';
 import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
+import { writeLog } from '../helpers/logger';
 const prisma = new PrismaClient();
 
 module.exports = {
@@ -40,7 +41,7 @@ module.exports = {
 				include: {
 					_count: { select: { signups: true } },
 				},
-				take: 12,
+				take: 15,
 			});
 		} else {
 			events = await prisma.event.findMany({
@@ -62,6 +63,8 @@ module.exports = {
 
 		try {
 			const container = buildCalenderContainer(events, guildId, true);
+			writeLog(`events data for guild ${guildId}: ${JSON.stringify(events)}`);
+			writeLog(`calendar container: ${JSON.stringify(container)}`);
 			await interaction.reply(container);
 		} catch (error) {
 			console.error('Error fetching events:', error);
