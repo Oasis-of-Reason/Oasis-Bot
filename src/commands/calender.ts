@@ -40,6 +40,7 @@ module.exports = {
 				include: {
 					_count: { select: { signups: true } },
 				},
+				take: 12,
 			});
 		} else {
 			events = await prisma.event.findMany({
