@@ -3,7 +3,7 @@ import { deployCommands } from '../utils/deploy-commands';
 import { config } from '../config';
 import { startReminderWorker } from '../reminders/reminderWorker';
 import { PrismaClient } from '@prisma/client';
-import { registerEventDraftCollectors } from '../helpers/eventDraft';
+import { registerAllEventDraftCollectors } from '../helpers/eventDraft';
 import { startCookieWorker } from '../helpers/cookieWorker';
 import { startHourlyWorker } from '../reminders/hourlyWorker';
 const prisma = new PrismaClient();
@@ -28,7 +28,7 @@ module.exports = {
 			//startCookieWorker(client, client.guilds.cache.get(config.isDev));
 		}
 
-		await registerEventDraftCollectors(client);
+		await registerAllEventDraftCollectors(client);
 		startReminderWorker(client);
 		startHourlyWorker(client);
 		console.log('Reminder worker started.');

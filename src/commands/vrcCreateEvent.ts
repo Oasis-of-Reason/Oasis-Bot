@@ -1,8 +1,14 @@
-// src/commands/vrcCreateEvent.ts
-import { AutoModerationRuleEventType, ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
 import axios from "axios";
 import { prisma } from "../utils/prisma";
-import { createGroupEvent, parseAndMapArray, platformMap, subtypeMap, VrcEventDescription } from "../helpers/vrcHelpers";
+import {
+	createOrUpdateGroupEvent,
+	parseAndMapArray,
+	platformMap,
+	subtypeMap,
+	VrcEventDescription,
+} from "../helpers/vrcHelpers";
+import { getVrcGroupId } from "../helpers/discordHelpers";
 
 const API_BASE = "https://api.vrchat.cloud/api/1";
 const API_KEY = process.env.VRC_API_KEY || "JlE5Jldo5Jibnk5O5hTx6XVqsJu4WJ26";
@@ -29,7 +35,7 @@ async function isVrcCookieValid(cookie: string): Promise<boolean> {
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("vrc-create-event")
-		.setDescription("Create a VRChat group calendar event from a stored Event.")
+		.setDescription("Create or update a VRChat group calendar event from a stored Event.")
 		.addIntegerOption(o =>
 			o
 				.setName("event_id")
@@ -53,18 +59,6 @@ module.exports = {
 				.setName("image_id")
 				.setDescription("vrc image id for banner")
 				.setRequired(false)
-		)
-		.addIntegerOption(o =>
-			o
-				.setName("host_join_before_time")
-				.setDescription("Time in minutes before event host can join instance")
-				.setRequired(false)
-		)
-		.addIntegerOption(o =>
-			o
-				.setName("guest_join_before_time")
-				.setDescription("Time in minutes before event guests can join instance")
-				.setRequired(false)
 		),
 
 	async execute(interaction: ChatInputCommandInteraction) {
@@ -76,10 +70,11 @@ module.exports = {
 		const guildId = interaction.guildId!;
 		const eventId = interaction.options.getInteger("event_id", true);
 		const shortDesc = interaction.options.getString("short_desc", false);
-		const sendCreationNotification = interaction.options.getBoolean("send_creation_notification", false);
+		const sendCreationNotification = interaction.options.getBoolean(
+			"send_creation_notification",
+			false
+		);
 		const imageId = interaction.options.getString("image_id", false);
-		const hostJoinBeforeTime = interaction.options.getInteger("host_join_before_time", false);
-		const guestJoinBeforeTime = interaction.options.getInteger("guest_join_before_time", false);
 
 		await interaction.reply("⏳ Checking VRChat login and loading event…");
 
@@ -89,6 +84,12 @@ module.exports = {
 				where: { id: guildId },
 				select: { vrcLoginToken: true },
 			});
+
+			const groupId = await getVrcGroupId(interaction.guildId!);
+
+			if (!groupId) {
+				return interaction.reply("❌ No VRChat Group ID is set for this server.");
+			}
 
 			const cookie = guildConfig?.vrcLoginToken ?? null;
 
@@ -124,6 +125,11 @@ module.exports = {
 					type: true,
 					subtype: true,
 					platforms: true,
+					vrcCalenderEventId: true,
+					vrcSendNotification: true,
+					vrcDescription: true,
+					vrcImageId: true,
+					vrcGroupId: true,
 				},
 			});
 
@@ -142,33 +148,62 @@ module.exports = {
 				return;
 			}
 
-			// 4) Build payload for createGroupEvent from Event fields
+			// 4) Compute the final VRChat-specific values we will both send and store
+			const finalVrcDescription =
+				shortDesc ?? ev.vrcDescription ?? ev.description ?? "";
+			const finalVrcSendNotification =
+				sendCreationNotification ?? ev.vrcSendNotification ?? false;
+			const finalVrcImageId =
+				imageId ??
+				ev.vrcImageId ??
+				"file_969fc1a3-be17-450b-9c7d-e3609358779e"; // Temporary generic image
+
+			// 5) Build payload for createOrUpdateGroupEvent from Event fields
 			const eventDesc = new VrcEventDescription(
 				ev.title,
-				shortDesc ?? ev.description ?? "",
+				finalVrcDescription,
 				subtypeMap[ev.subtype.toLowerCase()],
 				ev.startTime.toISOString(),
 				ev.lengthMinutes ?? 60,
-				imageId ?? "file_969fc1a3-be17-450b-9c7d-e3609358779e", // Temporary generic image
+				finalVrcImageId,
 				parseAndMapArray(ev.platforms as string, platformMap),
-				sendCreationNotification ?? false,
-				hostJoinBeforeTime ?? 15, // host join before minutes
-				guestJoinBeforeTime ?? 10 // guest join before minutes
+				finalVrcSendNotification,
+				15, // host join before minutes
+				10 // guest join before minutes
 			);
 
-			const created = await createGroupEvent(cookie, eventDesc);
+			// 6) Create or update the VRChat calendar event
+			const createdOrUpdated = await createOrUpdateGroupEvent(
+				cookie,
+				groupId,
+				eventDesc,
+				ev.vrcCalenderEventId ?? undefined
+			);
 
-			const idText = created?.id ? ` (id: \`${created.id}\`)` : "";
+			// 7) Persist VRChat-related values back to the Event row
+			await prisma.event.update({
+				where: { id: ev.id },
+				data: {
+					vrcCalenderEventId: createdOrUpdated?.id,
+					vrcGroupId: groupId
+				},
+			});
+
+			const idText = createdOrUpdated?.id
+				? ` (id: \`${createdOrUpdated.id}\`)`
+				: "";
 			await interaction.editReply(
-				`✅ Created VRChat event${idText} from Event #${ev.id}:\n` +
-				`• **${ev.title}**\n` +
-				`• Starts: \`${eventDesc.startAtISO}\`\n` +
-				`• Duration: **${eventDesc.durationMinutes}m**`
+				`✅ Created/updated VRChat event${idText} from Event #${ev.id}:\n` +
+					`• **${ev.title}**\n` +
+					`• Starts: \`${eventDesc.startAtISO}\`\n` +
+					`• Duration: **${eventDesc.durationMinutes}m**`
 			);
 		} catch (err: any) {
 			console.error("vrc-create-event error:", err?.response?.data ?? err);
 			await interaction.editReply(
-				`❌ Failed to create VRChat event: ${err?.message ?? "Unknown error"}`
+				`❌ Failed to create/update VRChat event: ${
+					err?.message ?? "Unknown error"
+				}`
 			);
 		}
 	},

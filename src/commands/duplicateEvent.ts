@@ -98,7 +98,7 @@ module.exports = {
 				guildId: interaction.guildId!,
 				draftChannelId: draftChannel.id,
 				draftThreadId: thread.id,
-				draftThreadMessageId: "",
+				draftThreadMessageId: null,
 				hostId: interaction.user.id, // or src.hostId to keep original host
 				title: eventData.title,
 				type: eventData.type,
@@ -108,8 +108,9 @@ module.exports = {
 				startTime: eventData.startTime,
 				lengthMinutes: eventData.lengthMinutes,
 				published: false,
-
+				
 				// Optional fields copied
+				lastTitleChangeTime: new Date(),
 				...(eventData.activity ? { activity: eventData.activity } as any : {}),
 				...(eventData.type === "VRC" && eventData.platforms?.length
 					? { platforms: JSON.stringify(eventData.platforms) }
@@ -129,17 +130,22 @@ module.exports = {
 			id: duplicated.id,
 			hostId: duplicated.hostId,
 			title: duplicated.title,
-			description: duplicated.description,
+			description: duplicated.description ?? "",
 			activity: (duplicated as any).activity ?? null,
 			type: duplicated.type,
 			subtype: duplicated.subtype,
-			scope: duplicated.scope,
-			platforms: duplicated.platforms ? JSON.parse(duplicated.platforms as any) : null,
-			requirements: duplicated.requirements,
+			scope: duplicated.scope ?? "",
+			platforms: duplicated.platforms ?? "",
+			requirements: duplicated.requirements ?? "",
 			capacityCap: duplicated.capacityCap,
 			startTime: duplicated.startTime,
-			lengthMinutes: duplicated.lengthMinutes,
-			posterUrl: duplicated.imageUrl ?? null,
+			lengthMinutes: duplicated.lengthMinutes ?? 0,
+			imageUrl: duplicated.imageUrl ?? "",
+			vrcCalenderEventId: "",
+			vrcSendNotification: duplicated.vrcSendNotification ?? false,
+			vrcDescription: duplicated.vrcDescription ?? "",
+			vrcImageId: duplicated.vrcImageId ?? "",
+			vrcGroupId: duplicated.vrcGroupId ?? "",
 		};
 
 		const sent = await thread.send({
@@ -160,8 +166,7 @@ module.exports = {
 
 		const btnCollector = sent.createMessageComponentCollector({
 			componentType: ComponentType.Button,
-			time: 10 * 60_000,
-			filter: (i) => i.user.id === interaction.user.id,
+			time: 0,
 		});
 		btnCollector.on("collect", async (i) => handleDraftButton(i, hydrated, sent));
 
