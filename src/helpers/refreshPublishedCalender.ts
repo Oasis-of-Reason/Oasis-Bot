@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { Client, Message, TextChannel } from 'discord.js';
 import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
 import { fetchMsgInChannel, messageContainerEquals, messageEmbedEquals } from './discordHelpers';
+import { writeLog } from './logger';
 const prisma = new PrismaClient();
 
 export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean) {
@@ -48,6 +49,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		include: {
 			_count: { select: { signups: true } },
 		},
+		take: 15
 	});
 
 	
