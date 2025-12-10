@@ -153,7 +153,7 @@ export async function hasVrcUpdateCooldownPassed(
 		// No timestamp stored → treat as "cooldown passed"
 		return true;
 	}
-	minutes = 0;
+	
 	const elapsedMs = Date.now() - event.lastVrcUpdateTime.getTime();
 	const requiredMs = minutes * 60 * 1000;
 
