@@ -27,6 +27,7 @@ model GuildConfig {
   upcomingEventsChannelId    	String?
   cookieChannelId		    	String?
   vrcLoginToken			    	String?
+  vrcGroupId			    	String?
 }
 
 model TemporaryVoiceChannel {
@@ -94,7 +95,7 @@ model Event {
   guildId                   String // Guild Discord Server ID
   draftChannelId            String // ChannelID 
   draftThreadId             String
-  draftThreadMessageId      String              @unique
+  draftThreadMessageId      String?            @unique
   publishedChannelId        String? // ChannelID 
   publishedThreadId         String?
   publishedChannelMessageId String?             @unique
@@ -125,6 +126,13 @@ model Event {
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt
   UserEventReminder         UserEventReminder[]
+  vrcCalenderEventId        String?
+  vrcSendNotification       Boolean?
+  vrcDescription            String?             @db.Text
+  vrcImageId                String?
+  vrcGroupId                String?
+  lastTitleChangeTime       DateTime?
+  lastVrcUpdateTime         DateTime?
 }
 
 model CohostsOnEvent {

@@ -12,9 +12,17 @@ export const platformMap: Record<string, string> = {
 export const subtypeMap: Record<string, string> = {
 	gaming: "gaming",
 	social: "hangout",
-	cinema: "film & media",
+	cinema: "film_media",
 	art: "arts",
 	mindfulness: "wellness",
+};
+
+export const subtypeImageMap: Record<string, string> = {
+	gaming: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
+	social: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
+	cinema: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
+	art: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
+	mindfulness: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
 };
 
 export class VrcEventDescription {
@@ -70,6 +78,15 @@ export function parseAndMapArray(
 		// Invalid JSON
 		return [];
 	}
+
+	return mapArray(arr, dict);
+}
+
+export function mapArray(
+	arr: string[],
+	dict: Record<string, string>
+): string[] {
+	if (!arr) return [];
 
 	// Map through dictionary, ignore unknown values
 	const result: string[] = [];
@@ -184,6 +201,77 @@ export async function createGroupEvent(cookie: string, eventDesc: VrcEventDescri
 	if (res.status >= 200 && res.status < 300) return res.data;
 	throw new Error(`VRC_CREATE_EVENT_FAILED (${res.status}): ${JSON.stringify(res.data)}`);
 }
+
+export async function createOrUpdateGroupEvent(
+	cookie: string,
+	groupId: string,
+	eventDesc: VrcEventDescription,
+	existingCalendarEventId?: string
+) {
+	const http = axios.create({
+		baseURL: API_BASE,
+		withCredentials: true,
+		headers: {
+			"User-Agent": "OasisBot/1.0",
+			Cookie: cookie,
+		},
+		params: { apiKey: API_KEY },
+		validateStatus: () => true,
+	});
+
+	const body = {
+		title: eventDesc.title,
+		description: truncateLongString(eventDesc.description),
+		startsAt: eventDesc.startAtISO,
+		endsAt: addMinutesToISO(eventDesc.startAtISO, eventDesc.durationMinutes),
+		category: eventDesc.category,
+		imageId: eventDesc.imageId ?? null,
+		languages: ["eng"],
+		sendCreationNotification: eventDesc.sendCreationNotification,
+		usesInstanceOverflow: true,
+		platforms: eventDesc.platforms,
+		accessType: "group",
+		hostEarlyJoinMinutes: eventDesc.hostEarlyJoinMinutes ?? 15,
+		guestEarlyJoinMinutes: eventDesc.guestEarlyJoinMinutes ?? 10,
+	};
+
+	let res;
+
+	if (existingCalendarEventId) {
+		// PUT /calendar/{groupId}/{calendarId}/event  (update existing)
+		res = await http.put(
+			`/calendar/${groupId}/${existingCalendarEventId}/event`,
+			body
+		);
+
+		if (res.status >= 200 && res.status < 300) return res.data;
+
+		if (res.status === 429) {
+			throw new Error(
+				`VRC_UPDATE_EVENT_FAILED (${res.status}): Rate Limited, try again later.`
+			);
+		} else {
+			throw new Error(
+				`VRC_UPDATE_EVENT_FAILED (${res.status})`
+			);
+		}
+	} else {
+		// POST /calendar/{groupId}/event  (create new)
+		res = await http.post(`/calendar/${groupId}/event`, body);
+
+		if (res.status >= 200 && res.status < 300) return res.data;
+		if (res.status === 429) {
+			throw new Error(
+				`VRC_CREATE_EVENT_FAILED (${res.status}): Rate Limited, try again later.`
+			);
+		} else {
+			throw new Error(
+				`VRC_CREATE_EVENT_FAILED (${res.status}): ${res.data.error.message}`
+			);
+		}
+	}
+}
+
 
 function extractCookie(setCookie: string[] | undefined): string[] {
 	if (!setCookie?.length) return [];
