@@ -419,7 +419,7 @@ export async function handleDraftButton(
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.platforms = JSON.stringify(s.values);
-				await updateDraftByMsgId(message.id, { platforms: JSON.stringify(eventData.platforms) });
+				await updateDraftByMsgId(message.id, { platforms: eventData.platforms });
 				await s.update({ content: "✅ Updated!", components: [] });
 				await rerender();
 			});
