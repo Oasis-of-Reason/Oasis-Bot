@@ -684,7 +684,12 @@ export async function registerAllEventDraftCollectors(client: Client) {
 	const now = new Date();
 	const nowMinusDay = new Date(now.getTime() - 168 * 60 * 60 * 1000); // added 7 days buffer for old drafts
 	const drafts = await prisma.event.findMany({
-		where: { startTime: { gte: nowMinusDay }, },
+		where: {
+			OR: [
+				{ startTime: { gte: nowMinusDay } },
+				{ createdAt: { gte: nowMinusDay } },
+			],
+		},
 		select: {
 			id: true,
 			guildId: true,
