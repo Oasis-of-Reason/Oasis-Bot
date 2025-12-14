@@ -4,7 +4,6 @@ import { config } from '../config';
 import { startReminderWorker } from '../reminders/reminderWorker';
 import { PrismaClient } from '@prisma/client';
 import { registerAllEventDraftCollectors } from '../helpers/eventDraft';
-import { startCookieWorker } from '../helpers/cookieWorker';
 import { startHourlyWorker } from '../reminders/hourlyWorker';
 const prisma = new PrismaClient();
 
@@ -19,13 +18,11 @@ module.exports = {
 				await deployCommands({ guildId: guildId });
 				console.log(`Deployed commands to guild: ${guildId}`);
 				initializeEventChannelIds(guildId);
-				//startCookieWorker(client, client.guilds.cache.get(guildId));
 			}
 		} else {
 			await deployCommands({ guildId: config.isDev });
 			console.log(`Deployed commands to test guild: ${config.isDev}`);
 			initializeEventChannelIds(config.isDev);
-			//startCookieWorker(client, client.guilds.cache.get(config.isDev));
 		}
 
 		await registerAllEventDraftCollectors(client);

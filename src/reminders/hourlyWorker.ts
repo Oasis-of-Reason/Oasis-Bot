@@ -6,6 +6,7 @@ import {
 	PrismaClient,
 } from '@prisma/client';
 import { oasisPremiumId } from '../helpers/generalConstants';
+import { runCookieHourlyEvent } from '../helpers/cookieWorker';
 
 const prisma = new PrismaClient();
 
@@ -26,12 +27,10 @@ export function startHourlyWorker(client: Client) {
 	// First run at the next whole hour
 	setTimeout(() => {
 		void runOnce(client).catch(console.error);
-
 		// Then every hour afterward
 		setInterval(() => {
 			void runOnce(client).catch(console.error);
 		}, 60 * 60 * 1000); // 1 hour interval
-
 	}, msUntilNextHour);
 }
 
@@ -46,6 +45,8 @@ async function runOnce(client: Client) {
 					`[${guild.name}] Premium cleanup: ${result.rolesRemoved}/${result.totalExpired} roles removed`
 				);
 			}
+
+			await runCookieHourlyEvent(client, guild);
 		}
 	} catch { } // thou shalt not crash
 }
