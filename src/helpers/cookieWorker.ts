@@ -1,37 +1,33 @@
 import {
 	Client,
+	EmbedBuilder,
 	Guild,
+	TextChannel,
 } from 'discord.js';
 import {
 	PrismaClient,
 } from '@prisma/client';
+import { allowedPingRolesCookies, cookieUpdatesMentionString } from './generalConstants';
 
-const NUMBER_OF_OPTIONS = 2;
+const TOTAL_WEIGHT = 1;
 const SHION = "289822517944778752"; // Shion's Id
 
 const prisma = new PrismaClient();
 
-export function startCookieWorker(client: Client, guild: Guild) {
-	void runOnce(client, guild).catch(console.error);
-	setInterval(() => void runOnce(client, guild).catch(console.error), 60000 * 60);
-}
-
-async function runOnce(client: Client, guild: Guild) {
+export async function runCookieHourlyEvent(client: Client, guild: Guild) {
 
 	const now = new Date();
 	const hours = now.getHours();
 	let rand = Math.random();
-	if (rand < 0.9 || (hours >= 0 && hours < 8)) {
-		// We don't wanna do random events at night, and only 10% chance per hour should average ~1.6 a day.
+	if (rand < 0.8 || (hours >= 0 && hours < 8)) {
+		// We don't wanna do random events at night, and only 20% chance per hour should average ~3 a day.
 		return;
 	}
 	const guildId = guild.id;
-	rand = Math.random() * NUMBER_OF_OPTIONS;
+	rand = Math.random() * TOTAL_WEIGHT;
 	try {
 		if (rand < 1) {
-			await giveCookiesToEveryoneExcept(guildId, SHION);
-		} else if (rand < 2) {
-			await giveCookiesToUsers(guildId, await getUsersInAnyVoice(guild));
+			await giveCookiesToVC(guild);
 		}
 	}
 	catch (e) { console.error(e); }
@@ -57,6 +53,32 @@ async function giveCookiesToEveryoneExcept(
 	});
 
 	return result.count; // number of users who received cookies
+}
+
+async function giveCookiesToVC(guild: Guild) {
+	const users = await getUsersInAnyVoice(guild);
+	if (!users || users.length === 0) {
+		return;
+	}
+	await giveCookiesToUsers(guild.id, await getUsersInAnyVoice(guild));
+	const cookieChannelId = await getCookieChannelId(guild.id);
+	if (!cookieChannelId) {
+		return;
+	}
+	const cookieChannel = guild.channels.cache.get(cookieChannelId);
+	if (!cookieChannel) {
+		return;
+	}
+	const newMsg = await (cookieChannel as TextChannel).send(buildVoiceCookieRewardEmbed());
+}
+
+export async function getCookieChannelId(guildId: string): Promise<string | null> {
+	const config = await prisma.guildConfig.findUnique({
+		where: { id: guildId },
+		select: { cookieChannelId: true },
+	});
+
+	return config?.cookieChannelId ?? null;
 }
 
 async function giveCookiesToUsers(
@@ -90,4 +112,27 @@ async function getUsersInAnyVoice(guild: Guild): Promise<string[]> {
 		if (vs.channelId) ids.add(vs.id); // vs.id === userId
 	}
 	return [...ids];
+}
+
+export function buildVoiceCookieRewardEmbed(): {
+	content: string;
+	embeds: EmbedBuilder[];
+	allowedMentions: { roles: string[] };
+} {
+	const embed = new EmbedBuilder()
+		.setColor(0xffb703) // warm cookie color 🍪
+		.setTitle("🦈 Cookie Time!")
+		.setDescription(
+			"Shion splashes happily and hands out **cookies to everyone in voice chat**!\n\n" +
+			"🍪 **+1 cookie** for each brave swimmer!"
+		)
+		.setFooter({ text: "Be nice to Shion. He remembers everything." });
+
+	return {
+		content: cookieUpdatesMentionString,
+		embeds: [embed],
+		allowedMentions: {
+			roles: allowedPingRolesCookies,
+		},
+	};
 }

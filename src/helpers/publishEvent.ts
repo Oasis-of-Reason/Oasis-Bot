@@ -16,7 +16,7 @@ import {
 import { prisma } from "../utils/prisma";
 import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
-import { allowedPingRoles } from "./generalConstants";
+import { allowedPingRolesEvents } from "./generalConstants";
 import { writeLog } from "./logger";
 
 export async function publishEvent(client: Client, guild: Guild, eventId: number) {
@@ -97,7 +97,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	// Send pings message
 	await sentChannel.reply({
 		content: "Pings: " + getPingString(publishingEvent.type, publishingEvent.subtype),
-		allowedMentions: { roles: allowedPingRoles },
+		allowedMentions: { roles: allowedPingRolesEvents },
 	});
 
 	const thread = await sentChannel.startThread({

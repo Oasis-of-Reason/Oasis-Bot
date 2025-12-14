@@ -8,10 +8,11 @@ const discordSocialRoleId = `1419732188202533036`;
 const discordCinemaRoleId = `1425104189444460636`;
 const discordArtRoleId = `1438102730546876457`;
 const discordMindfulnessId = `1438102680412360764`;
+const cookieUpdatesRole = `1439614599514292316`;
 
 export const oasisPremiumId = `1445880182274785380`;
 
-export const allowedPingRoles = [
+export const allowedPingRolesEvents = [
 	vrcGamingRoleId,
 	vrcSocialRoleId,
 	vrcCinemaRoleId,
@@ -23,6 +24,12 @@ export const allowedPingRoles = [
 	discordArtRoleId,
 	discordMindfulnessId
 ];
+
+export const allowedPingRolesCookies = [
+	cookieUpdatesRole,
+];
+
+export const cookieUpdatesMentionString = `<@&${cookieUpdatesRole}>`;
 
 export const pingMap: Record<string, Record<string, { value: string }>> = {
 	vrc: {
