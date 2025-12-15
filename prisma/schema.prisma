@@ -133,6 +133,7 @@ model Event {
   vrcGroupId                String?
   lastTitleChangeTime       DateTime?
   lastVrcUpdateTime         DateTime?
+  publishedAt               DateTime?
 }
 
 model CohostsOnEvent {

@@ -113,6 +113,7 @@ function formatEventLine(ev: any, guildId: string, signupCount: number) {
 	const dt = new Date(ev.startTime);
 	const unix = Math.floor(dt.getTime() / 1000);
 	const draftText = ev.published ? "" : " • (Draft)";
+	const newText = ev.publishedAt ? isWithinLastDay(ev.publishedAt) ? "**NEW** •" : "" : "";
 
 	const link = eventLink(ev, guildId);
 	const title = link ? `[**${ev.title}**](${link})` : `**${ev.title}**`;
@@ -127,11 +128,16 @@ function formatEventLine(ev: any, guildId: string, signupCount: number) {
 			: emojiMapTypes["discord"].emoji;
 
 	// markdown inside TextDisplay
-	return `> <t:${unix}:t> ${typeEmoji} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
+	return `> <t:${unix}:t> ${typeEmoji} ${newText} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
 function chunkString(str: string, size = 1800): string[] {
 	const chunks: string[] = [];
 	for (let i = 0; i < str.length; i += size) chunks.push(str.slice(i, i + size));
 	return chunks;
+}
+
+function isWithinLastDay(date: Date): boolean {
+	const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+	return Date.now() - date.getTime() <= ONE_DAY_MS;
 }

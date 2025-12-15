@@ -109,6 +109,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		where: { id: eventId },
 		data: {
 			published: true,
+			publishedAt: new Date(),
 			publishedChannelId: channel.id,
 			publishedThreadId: thread.id,
 			publishedChannelMessageId: sentChannel.id,

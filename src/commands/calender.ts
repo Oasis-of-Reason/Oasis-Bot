@@ -52,7 +52,7 @@ module.exports = {
 				},
 				orderBy: { startTime: 'asc' },
 				include: {
-					_count: { select: { signups: true } },
+					_count: { select: { signups: true, } },
 				},
 			});
 		}
