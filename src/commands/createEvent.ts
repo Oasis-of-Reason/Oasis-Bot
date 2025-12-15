@@ -347,7 +347,7 @@ module.exports = {
 			time: 60_000,
 		});
 
-		let imageUrl: string = "";
+		let imageUrl: string = "https://cdn.discordapp.com/attachments/1414942384273227806/1442982567853949133/VRChat_2025-11-22_21-19-54.942_2160x3840.png?";
 		if (collected.size > 0) {
 			const collectedMsg = collected.first();
 			const attachment = collectedMsg!.attachments.first();
