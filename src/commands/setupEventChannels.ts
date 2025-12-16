@@ -26,7 +26,7 @@ module.exports = {
 				.setName('publishing_vrc_channel')
 				.setDescription('The text channel Id where VRC events are posted after publishing.')
 				.setRequired(true))
-				.addStringOption(option =>
+		.addStringOption(option =>
 			option
 				.setName('publishing_media_channel')
 				.setDescription('The text channel Id where Media events are posted after publishing.')
