@@ -125,6 +125,20 @@ model Event {
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt
   UserEventReminder         UserEventReminder[]
+  googleEventId				String? @unique
+}
+
+enum eventType {
+  DISCORD
+  VRCHAT
+}
+
+enum eventSubType {
+  CINEMA
+  GAMING
+  MINDFULNESS
+  ART
+  SOCIAL	
 }
 
 model CohostsOnEvent {
