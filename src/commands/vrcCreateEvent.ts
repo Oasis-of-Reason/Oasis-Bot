@@ -135,7 +135,7 @@ module.exports = {
 			}
 
 			// Optional: ensure it's a VRC-type event
-			if (ev.type.toLowerCase() !== "vrc") {
+			if (ev.type.toLowerCase() !== "VRCHAT") {
 				await interaction.editReply(
 					"❌ That event is not marked as a VRChat event."
 				);
@@ -146,7 +146,7 @@ module.exports = {
 			const eventDesc = new VrcEventDescription(
 				ev.title,
 				shortDesc ?? ev.description ?? "",
-				subtypeMap[ev.subtype.toLowerCase()],
+				subtypeMap[ev.subtype],
 				ev.startTime.toISOString(),
 				ev.lengthMinutes ?? 60,
 				imageId ?? "file_969fc1a3-be17-450b-9c7d-e3609358779e", // Temporary generic image

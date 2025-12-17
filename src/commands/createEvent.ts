@@ -19,6 +19,7 @@ import { userHasAllowedRole, getStandardRolesHost } from "../helpers/securityHel
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { validateNumber } from "../helpers/generalHelpers";
 import { updateThreadTitle } from "../helpers/refreshEventMessages"
+import { EVENT_SUBTYPE_META } from "../helpers/eventSubTypes";
 
 // ---------- helpers for button UIs ----------
 function row(...btns: ButtonBuilder[]) {
@@ -32,7 +33,7 @@ function styleMultiChoice(current: Set<string>, value: string) {
 }
 function canContinue(type: string | null, subtype: string | null, platforms: Set<string>, req: string | null, scope: string | null) {
 	if (!type || !subtype) return false;
-	if (type !== "VRC") return true; // Discord-only flow
+	if (type !== "VRCHAT") return true; // Discord-only flow
 	return platforms.size > 0 && !!req && !!scope;
 }
 
@@ -43,19 +44,20 @@ function buildAllRows(
 	requirements: string | null,
 	scope: string | null
 ) {
-	const isVRC = type === "VRC";
+	const isVRC = type === "VRCHAT";
 
 	const typeRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		new ButtonBuilder().setCustomId("type:VRC").setLabel("VRC").setStyle(styleSingleChoice(type, "VRC")),
-		new ButtonBuilder().setCustomId("type:Discord").setLabel("Discord").setStyle(styleSingleChoice(type, "Discord")),
+		new ButtonBuilder().setCustomId("type:VRCHAT").setLabel("VRC").setStyle(styleSingleChoice(type, "VRCHAT")),
+		new ButtonBuilder().setCustomId("type:DISCORD").setLabel("Discord").setStyle(styleSingleChoice(type, "DISCORD")),
 	);
 
 	const subRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		new ButtonBuilder().setCustomId("sub:Gaming").setLabel("Gaming").setStyle(styleSingleChoice(subtype, "Gaming")),
-		new ButtonBuilder().setCustomId("sub:Social").setLabel("Social").setStyle(styleSingleChoice(subtype, "Social")),
-		new ButtonBuilder().setCustomId("sub:Cinema").setLabel("Cinema").setStyle(styleSingleChoice(subtype, "Cinema")),
-		new ButtonBuilder().setCustomId("sub:Art").setLabel("Art").setStyle(styleSingleChoice(subtype, "Art")),
-		new ButtonBuilder().setCustomId("sub:Mindfulness").setLabel("Mindfulness").setStyle(styleSingleChoice(subtype, "Mindfullness")),
+		(Object.keys(EVENT_SUBTYPE_META) as (keyof typeof EVENT_SUBTYPE_META)[]).map((subtypeKey) =>
+			new ButtonBuilder()
+				.setCustomId(`sub:${subtypeKey}`) // e.g., "sub:GAMING"
+				.setLabel(EVENT_SUBTYPE_META[subtypeKey].label) // e.g., "Gaming"
+				.setStyle(styleSingleChoice(subtype, subtypeKey)) // current selection check
+		)
 	);
 
 	const platRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -115,8 +117,6 @@ function buildAllRows(
 	// Exactly 5 rows
 	return [typeRow, subRow, platRow, reqRow, scopeRow];
 }
-
-
 
 module.exports = {
 	data: new SlashCommandBuilder().setName("create-event").setDescription("Start the event creation wizard"),
@@ -216,27 +216,27 @@ module.exports = {
 			const isReady = () =>
 				!!type &&
 				!!subtype &&
-				(type !== "VRC" || (platformsSet.size > 0 && !!requirements && !!scope));
+				(type !== "VRCHAT" || (platformsSet.size > 0 && !!requirements && !!scope));
 
 			coll.on("collect", async (i) => {
 				const [kind, value] = i.customId.split(":");
 
 				if (kind === "type") {
 					type = value;
-					if (type !== "VRC") {
-						// clear VRC-only values
+					if (type !== "VRCHAT") {
+						// clear VRCHAT-only values
 						platformsSet.clear();
 						requirements = null;
 						scope = null;
 					}
 				} else if (kind === "sub") {
 					subtype = value;
-				} else if (kind === "plat" && type === "VRC") {
+				} else if (kind === "plat" && type === "VRCHAT") {
 					if (platformsSet.has(value)) platformsSet.delete(value);
 					else platformsSet.add(value);
-				} else if (kind === "req" && type === "VRC") {
+				} else if (kind === "req" && type === "VRCHAT") {
 					requirements = value;
-				} else if (kind === "scope" && type === "VRC") {
+				} else if (kind === "scope" && type === "VRCHAT") {
 					scope = value;
 				}
 
@@ -388,18 +388,18 @@ module.exports = {
 				draftThreadMessageId: "",
 				hostId: interaction.user.id,
 				title: eventData.title,
-				type: eventData.type ?? "Discord",
-				subtype: eventData.subtype ?? "Social",
+				type: eventData.type ?? "DISCORD",
+				subtype: eventData.subtype ?? "SOCIAL",
 				capacityBase: 0,
 				capacityCap: eventData.capacityCap,
 				startTime: eventData.startTime,
 				lengthMinutes: eventData.lengthMinutes ?? 0,
 				published: false,
 				...(eventData.activity ? { activity: eventData.activity } : {}),
-				...(eventData.type === "VRC" && eventData.platforms?.length
+				...(eventData.type === "VRCHAT" && eventData.platforms?.length
 					? { platforms: JSON.stringify(eventData.platforms) }
 					: {}),
-				...(eventData.type === "VRC" && eventData.requirements ? { requirements: eventData.requirements } : {}),
+				...(eventData.type === "VRCHAT" && eventData.requirements ? { requirements: eventData.requirements } : {}),
 				...(eventData.description ? { description: eventData.description } : {}),
 				...(eventData.scope ? { scope: eventData.scope } : {}),
 				...(eventData.posterUrl ? { imageUrl: eventData.posterUrl } : {}),
@@ -421,7 +421,7 @@ module.exports = {
 		});
 
 		await thread.members.add(interaction.user.id);
-		
+
 		// Clean up ephemeral replies (only final success remains)
 		try {
 			await timingSubmit.deleteReply();

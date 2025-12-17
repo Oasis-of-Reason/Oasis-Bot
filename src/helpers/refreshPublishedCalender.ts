@@ -19,7 +19,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 			guildId: guildId,
 			startTime: { gte: now },
 			published: true,
-			type: "Discord"
+			type: "DISCORD"
 		},
 		orderBy: { startTime: 'asc' },
 		include: {
@@ -31,7 +31,7 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 			guildId: guildId,
 			startTime: { gte: now },
 			published: true,
-			type: "VRC"
+			type: "VRCHAT"
 		},
 		orderBy: { startTime: 'asc' },
 		include: {

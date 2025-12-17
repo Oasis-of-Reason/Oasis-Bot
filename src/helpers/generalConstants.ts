@@ -25,37 +25,37 @@ export const allowedPingRoles = [
 ];
 
 export const pingMap: Record<string, Record<string, { value: string }>> = {
-	vrc: {
-		gaming: {
+	VRCHAT: {
+		GAMING: {
 			value: `<@&${vrcGamingRoleId}>`,
 		},
-		social: {
+		SOCIAL: {
 			value: `<@&${vrcSocialRoleId}>`,
 		},
-		cinema: {
+		CINEMA: {
 			value: `<@&${vrcCinemaRoleId}>`,
 		},
-		art: {
+		ART: {
 			value: `<@&${vrcArtRoleId}>`,
 		},
-		mindfulness: {
+		MINDFULNESS: {
 			value: `<@&${vrcMindfulnessId}>`,
 		},
 	},
-	discord: {
-		gaming: {
+	DISCORD: {
+		GAMING: {
 			value: `<@&${discordGamingRoleId}>`,
 		},
-		social: {
+		SOCIAL: {
 			value: `<@&${discordSocialRoleId}>`,
 		},
-		cinema: {
+		CINEMA: {
 			value: `<@&${discordCinemaRoleId}>`,
 		},
-		art: {
+		ART: {
 			value: `<@&${discordArtRoleId}>`,
 		},
-		mindfulness: {
+		MINDFULNESS: {
 			value: `<@&${discordMindfulnessId}>`,
 		},
 	}
@@ -106,12 +106,12 @@ export const emojiMapPlatforms: Record<string, { emoji: string; label: string, e
 
 // Map for event type emojis
 export const emojiMapTypes: Record<string, { emoji: string; label: string, emojiText: string }> = {
-	discord: {
+	DISCORD: {
 		emoji: "<:DiscordLogo:1437580033312034846>",
 		label: "Discord",
 		emojiText: ":DiscordLogo:"
 	},
-	vrchat: {
+	VRCHAT: {
 		emoji: "<:VRCLogo:1437580004090445924>",
 		label: "VRChat",
 		emojiText: ":VRCLogo:"

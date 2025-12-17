@@ -120,9 +120,9 @@ function formatEventLine(ev: any, guildId: string, signupCount: number) {
 	const capBadge = hasCap ? `${signupCount}/${capTotal}` : `${signupCount}`;
 
 	const typeEmoji =
-		ev.type?.toLowerCase() === "vrc"
-			? emojiMapTypes["vrchat"].emoji
-			: emojiMapTypes["discord"].emoji;
+		ev.type === "VRCHAT"
+			? emojiMapTypes["VRCHAT"].emoji
+			: emojiMapTypes["DISCORD"].emoji;
 
 	// markdown inside TextDisplay
 	return `> <t:${unix}:t> ${typeEmoji} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;

@@ -296,11 +296,11 @@ export async function handleDraftButton(
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("select_subtype", "Choose subtype", [
-							{ label: "Gaming", value: "Gaming" },
-							{ label: "Social", value: "Social" },
-							{ label: "Cinema", value: "Cinema" },
-							{ label: "Art", value: "Art" },
-							{ label: "Mindfulness", value: "Mindfulness" },
+							{ label: "Gaming", value: "GAMING" },
+							{ label: "Social", value: "SOCIAL" },
+							{ label: "Cinema", value: "CINEMA" },
+							{ label: "Art", value: "ART" },
+							{ label: "Mindfulness", value: "MINDFULNESS" },
 						])
 					),
 				],
