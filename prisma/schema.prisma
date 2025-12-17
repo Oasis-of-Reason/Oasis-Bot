@@ -102,8 +102,8 @@ model Event {
   community                 String? // Can include other community hosting event name
   communityLink             String? // Can include a link to VRC Group               
   title                     String
-  type                      String // Whether it is Discord or VRC
-  subtype                   String // Where its Gaming, Social or Cinema
+  type                      eventType // Whether it is Discord or VRC
+  subtype                   eventSubType // Where its Gaming, Social or Cinema
   activity                  String? // Free field for the activity name
   platforms                 String? // Multi Select when event is VRC only Android, Quest or PCVR
   rolePings                 String? // for pings
@@ -136,7 +136,7 @@ enum eventType {
 enum eventSubType {
   CINEMA
   GAMING
-  MINDFULNESS
+  WELLNESS
   ART
   SOCIAL	
 }
