@@ -5,6 +5,7 @@ import { config } from './config';
 import { Client, Collection, GatewayIntentBits, ActivityType, Partials } from 'discord.js';
 import path from 'path';
 import fs from 'fs';
+import { calendarService } from './helpers/googleCalendarService';
 
 // Create Discord client
 const client = new Client({
@@ -36,8 +37,10 @@ if (fs.existsSync(commandsPath)) {
 
 	for (const file of commandFiles) {
 		const command = require(path.join(commandsPath, file));
-		if (command?.data?.name) {
-			(client as any).commands.set(command.data.name, command);
+		const cmd = command.default ?? command; // support TS default exports
+
+		if (cmd?.data?.name) {
+			(client as any).commands.set(cmd.data.name, cmd);
 			console.log(`Loaded command: ${file}`);
 		} else {
 			console.warn(`Invalid command module: ${file}`);
@@ -76,6 +79,20 @@ if (fs.existsSync(eventsPath)) {
 }
 
 // ------------------------
+// Initialize Google Calendar Service
+// ------------------------
+(async () => {
+	try {
+		await calendarService.init();
+		writeLog('✅ Google Calendar service initialized');
+		console.log('✅ Google Calendar service initialized');
+	} catch (err: any) {
+		writeLog(`❌ Failed to initialize Google Calendar service: ${err.message}`);
+		console.error('❌ Failed to initialize Google Calendar service:', err);
+	}
+})();
+
+// ------------------------
 // Login and Set Presence
 // ------------------------
 client.login(config.DISCORD_TOKEN)
@@ -90,8 +107,8 @@ client.login(config.DISCORD_TOKEN)
 		});
 		writeLog('Bot started and presence set.');
 		console.log(`Logged in as ${client.user?.tag}!`);
-
 	})
 	.catch((error: any) => {
+		writeLog(`❌ Error logging in: ${error.message}`);
 		console.error('Error logging in:', error);
 	});
