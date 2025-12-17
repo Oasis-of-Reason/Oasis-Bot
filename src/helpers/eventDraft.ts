@@ -30,7 +30,7 @@ import {
 	setLastTitleChangeTime,
 	hasTitleChangeCooldownPassed,
 	hasVrcUpdateCooldownPassed,
-	setLastVrcUpdateTime
+	setLastVrcUpdateTime,
 } from "./generalHelpers";
 
 import {
@@ -52,6 +52,8 @@ import { createOrUpdateGroupEvent, isVrcCookieValid, mapArray, parseAndMapArray,
 
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
+
+let publishInProgress = false;
 
 export function buildDraftEmbed(eventData: {
 	id: number;
@@ -553,11 +555,17 @@ export async function handleDraftButton(
 
 		case "publish_event": {
 			console.log("Start Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
+			if (publishInProgress) {
+				await i.reply({ content: "A Publish is already in progress. Please wait a few seconds and try again.", flags: MessageFlags.Ephemeral })
+				break;
+			}
+			publishInProgress = true;
 			try {
 				await i.deferUpdate();
 				const guild = i.guild as Guild;
 				if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
 					await i.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
+					publishInProgress = false;
 					return;
 				}
 				await publishEvent(i.client, guild, eventData.id);
@@ -575,6 +583,7 @@ export async function handleDraftButton(
 			} finally {
 				console.log("Ended Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
 			}
+			publishInProgress = false;
 			break;
 		}
 
