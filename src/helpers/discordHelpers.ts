@@ -12,6 +12,7 @@ import {
 	APIContainerComponent,
 } from "discord.js";
 import { emojiMapTypes } from "./generalConstants";
+import { prisma } from "../utils/prisma";
 
 /**
  * Compare a message's Components v2 container content to an expected container.
@@ -347,3 +348,13 @@ export async function removeRoleFromUser(
 		return "error";
 	}
 }
+
+export async function getVrcGroupId(guildId: string): Promise<string | null> {
+	const config = await prisma.guildConfig.findUnique({
+		where: { id: guildId },
+		select: { vrcGroupId: true },
+	});
+
+	return config?.vrcGroupId ?? null;
+}
+

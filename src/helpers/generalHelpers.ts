@@ -41,7 +41,7 @@ export function validateNumber(numberString: string): number {
 	let myNumber = numberString ? parseInt(numberString, 10) : 0;
 	if (Number.isNaN(myNumber) || myNumber < 0) myNumber = 0;
 
-	return Math.min(myNumber, 99999);
+	return Math.min(myNumber, 43200);
 }
 
 /**
@@ -104,3 +104,58 @@ export function splitArray<T>(arr: T[], maxFirst: number): [T[], T[]] {
 }
 
 export const toUnix = (d: Date) => Math.floor(d.getTime() / 1000);
+
+
+export async function setLastTitleChangeTime(eventId: number): Promise<void> {
+	await prisma.event.update({
+		where: { id: eventId },
+		data: { lastTitleChangeTime: new Date() },
+	});
+}
+
+export async function hasTitleChangeCooldownPassed(
+	eventId: number,
+	minutes: number = 5
+): Promise<boolean> {
+	const event = await prisma.event.findUnique({
+		where: { id: eventId },
+		select: { lastTitleChangeTime: true },
+	});
+
+	if (!event?.lastTitleChangeTime) {
+		// No timestamp stored → treat as "cooldown passed"
+		return true;
+	}
+
+	const elapsedMs = Date.now() - event.lastTitleChangeTime.getTime();
+	const requiredMs = minutes * 60 * 1000;
+
+	return elapsedMs >= requiredMs;
+}
+
+export async function setLastVrcUpdateTime(eventId: number): Promise<void> {
+	await prisma.event.update({
+		where: { id: eventId },
+		data: { lastVrcUpdateTime: new Date() },
+	});
+}
+
+export async function hasVrcUpdateCooldownPassed(
+	eventId: number,
+	minutes: number = 5
+): Promise<boolean> {
+	const event = await prisma.event.findUnique({
+		where: { id: eventId },
+		select: { lastVrcUpdateTime: true },
+	});
+
+	if (!event?.lastVrcUpdateTime) {
+		// No timestamp stored → treat as "cooldown passed"
+		return true;
+	}
+	
+	const elapsedMs = Date.now() - event.lastVrcUpdateTime.getTime();
+	const requiredMs = minutes * 60 * 1000;
+
+	return elapsedMs >= requiredMs;
+}

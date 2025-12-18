@@ -35,23 +35,41 @@ export async function refreshEventMessages(client: Client, eventId: number) {
 	}
 }
 
-export async function updateThreadTitle(client: any, threadId: string, newTitle: string, eventId: number): Promise<ThreadChannel | null>{
-try {
-        const thread = await client.channels.fetch(threadId);
+export async function updateThreadTitle(
+	client: Client,
+	threadId: string,
+	newTitle: string,
+	eventId: number
+): Promise<ThreadChannel | null> {
+	try {
+		// Fetch the channel
+		const channel = await client.channels.fetch(threadId);
 
-        // Ensure we actually got a thread channel
-        if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
-            console.log("Not a thread channel:", threadId);
-            return null;
-        }
-		const updatedTitle = ("Draft " + eventId + ": " + newTitle);
-        const updated = await thread.setName(updatedTitle);
-        console.log("Thread title updated:", updated.name);
+		// Make sure we actually got something and that it's a thread
+		if (!channel || !channel.isThread()) {
+			console.log("Not a thread channel:", threadId, "Resolved type:", channel?.type);
+			return null;
+		}
 
-        return updated;
+		const thread = channel as ThreadChannel;
 
-    } catch (err) {
-        console.error("Failed to update thread title:", err);
-        return null;
-    }
+		// Discord thread names have a length limit (100 chars), so be safe
+		const updatedTitle = `Draft ${eventId}: ${newTitle}`.slice(0, 100);
+		console.log("Renaming thread", thread.id, "to", updatedTitle);
+
+		// If the thread is archived, unarchive it first
+		if (thread.archived) {
+			console.log("Thread is archived, unarchiving first…");
+			await thread.setArchived(false, "Unarchive to rename thread");
+		}
+
+		// Now rename
+		const updated = await thread.setName(updatedTitle, "Update event draft title");
+		console.log("Thread title updated:", updated.name);
+
+		return updated;
+	} catch (err) {
+		console.error("Failed to update thread title:", err);
+		return null;
+	}
 }

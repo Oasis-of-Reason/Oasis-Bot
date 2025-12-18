@@ -76,7 +76,7 @@ export async function buildEventEmbedWithLists(
 		});
 	}
 
-	if (publishingEvent.platforms) {
+	if (publishingEvent.platforms && publishingEvent.platforms.length > 0 && publishingEvent.platforms != "[]") {
 		embed.addFields({
 			name: "Platforms",
 			value: `> ${getPlatformsString(publishingEvent.platforms)}`,

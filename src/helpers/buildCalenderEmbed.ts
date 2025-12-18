@@ -1,66 +1,105 @@
-// buildCalendarContainer.ts
 import {
 	ContainerBuilder,
 	TextDisplayBuilder,
 	SeparatorBuilder,
-	MessageFlags,
 	MessageFlagsBitField,
-	ButtonBuilder,
 	ButtonStyle,
 } from "discord.js";
 import { emojiMapTypes } from "./generalConstants";
 
-export function buildCalenderContainer(events: any[], guildId: string, ephemeral = false, myEventsOnly = false) {
-	// Group events by YYYY-MM-DD
+export function buildCalenderContainer(
+	events: any[],
+	guildId: string,
+	ephemeral = false,
+	myEventsOnly = false,
+	chunkIndex: number = 0
+) {
+	// Group events by YYYY-MM-DD plus a special "ongoing" bucket
 	const groups = new Map<string, { date: Date; lines: string[] }>();
+	const ongoingLines: string[] = [];
 
 	for (const ev of events) {
 		const dt = new Date(ev.startTime);
-		const key = ymd(dt);
 		const signupCount: number = ev._count?.signups ?? 0;
-		const line = formatEventLine(ev, guildId, signupCount);
 
+		const isOngoing = isEventOngoing(ev);
+		const line = formatEventLine(ev, guildId, signupCount, isOngoing);
+
+		if (isOngoing) {
+			ongoingLines.push(line);
+			continue;
+		}
+
+		const key = ymd(dt);
 		const g = groups.get(key);
 		if (g) g.lines.push(line);
 		else groups.set(key, { date: dt, lines: [line] });
 	}
 
 	// Sort by day
-	const sorted = [...groups.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
+	const sorted = [...groups.values()].sort(
+		(a, b) => a.date.getTime() - b.date.getTime()
+	);
 
 	// Build a Container with TextDisplays
-	const container = new ContainerBuilder().setAccentColor(myEventsOnly ? 0xb865f2 : 0x5865f2);
+	const container = new ContainerBuilder().setAccentColor(
+		myEventsOnly ? 0xb865f2 : chunkIndex % 2 === 0 ? 0x5658ff : 0xa3b9ff
+	);
 
-	if (ephemeral) { 
-		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(myEventsOnly ? '### 📅 My Events' : '### 📅 Upcoming Events'));
-	} else {
-		container.addSectionComponents((section) =>
-			section
-				.addTextDisplayComponents((textDisplay) =>
-					textDisplay.setContent('### 📅  Upcoming Events')
+	if (chunkIndex === 0) {
+		if (ephemeral) {
+			container.addTextDisplayComponents(
+				new TextDisplayBuilder().setContent(
+					myEventsOnly ? "### 📅 My Events" : "### 📅 Upcoming Events"
 				)
-				.setButtonAccessory((button) =>
-					button
-						.setCustomId(`calendar:listmyEvents:${guildId}`) // handle this in interactionCreate
-						.setLabel("My Events")
-						.setStyle(ButtonStyle.Primary)
-				)
-		);
+			);
+		} else {
+			container.addSectionComponents((section) =>
+				section
+					.addTextDisplayComponents((textDisplay) =>
+						textDisplay.setContent("### 📅  Upcoming Events")
+					)
+					.setButtonAccessory((button) =>
+						button
+							.setCustomId(`calendar:listmyEvents:${guildId}`)
+							.setLabel("My Events")
+							.setStyle(ButtonStyle.Primary)
+					)
+			);
+		}
+		container.addSeparatorComponents(new SeparatorBuilder());
 	}
-	container.addSeparatorComponents(new SeparatorBuilder());
+
+	// --- Ongoing section first (if any) ---
+	if (ongoingLines.length > 0) {
+		container.addTextDisplayComponents(
+			new TextDisplayBuilder().setContent("**Ongoing**")
+		);
+
+		const body = ongoingLines.join("\n");
+		const chunks = chunkString(body, 1800);
+
+		for (const chunk of chunks) {
+			container.addTextDisplayComponents(
+				new TextDisplayBuilder().setContent(chunk || "\u200B")
+			);
+		}
+
+		container.addSeparatorComponents(new SeparatorBuilder());
+	}
+
+	// --- Normal per-day sections ---
 	for (const group of sorted) {
 		const header = `**${formatDayHeader(group.date)}**`;
 		const body = group.lines.join("\n");
 
-		// TextDisplay has a content length limit; chunk if needed
-		const chunks = chunkString(body, 1800); // stay under 2k w/ header & margin
+		const chunks = chunkString(body, 1800);
 
-		// header as its own TextDisplay for readability
 		container.addTextDisplayComponents(new TextDisplayBuilder().setContent(header));
 
 		for (const chunk of chunks) {
 			container.addTextDisplayComponents(
-				new TextDisplayBuilder().setContent(chunk || "\u200B"),
+				new TextDisplayBuilder().setContent(chunk || "\u200B")
 			);
 		}
 	}
@@ -69,10 +108,12 @@ export function buildCalenderContainer(events: any[], guildId: string, ephemeral
 	if (ephemeral) {
 		return {
 			components: [container.toJSON()],
-			flags: MessageFlagsBitField.resolve(MessageFlagsBitField.Flags.IsComponentsV2) |
+			flags:
+				MessageFlagsBitField.resolve(MessageFlagsBitField.Flags.IsComponentsV2) |
 				MessageFlagsBitField.Flags.Ephemeral,
 		};
 	}
+
 	return {
 		components: [container.toJSON()],
 		flags: MessageFlagsBitField.resolve(MessageFlagsBitField.Flags.IsComponentsV2),
@@ -98,8 +139,9 @@ function formatDayHeader(date: Date) {
 }
 
 function eventLink(ev: any, guildId: string) {
-	if (ev.publishedThreadID) {
-		return `https://discord.com/channels/${guildId}/${ev.publishedThreadID}`;
+	// NOTE: your schema uses publishedThreadId, not publishedThreadID
+	if (ev.publishedThreadId) {
+		return `https://discord.com/channels/${guildId}/${ev.publishedThreadId}`;
 	}
 	if (ev.publishedChannelId && ev.publishedChannelMessageId) {
 		return `https://discord.com/channels/${guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`;
@@ -107,10 +149,12 @@ function eventLink(ev: any, guildId: string) {
 	return null;
 }
 
-function formatEventLine(ev: any, guildId: string, signupCount: number) {
+function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoing: boolean) {
 	const dt = new Date(ev.startTime);
 	const unix = Math.floor(dt.getTime() / 1000);
+
 	const draftText = ev.published ? "" : " • (Draft)";
+	const newText = ev.publishedAt ? (isWithinLastDay(new Date(ev.publishedAt)) ? "**NEW** •" : "") : "";
 
 	const link = eventLink(ev, guildId);
 	const title = link ? `[**${ev.title}**](${link})` : `**${ev.title}**`;
@@ -124,12 +168,34 @@ function formatEventLine(ev: any, guildId: string, signupCount: number) {
 			? emojiMapTypes["VRCHAT"].emoji
 			: emojiMapTypes["DISCORD"].emoji;
 
-	// markdown inside TextDisplay
-	return `> <t:${unix}:t> ${typeEmoji} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
+	// Ongoing events: replace the first timestamp with a green dot 🟢
+	const leftPrefix = isOngoing ? "🟢" : `<t:${unix}:t>`;
+
+	return `> ${leftPrefix} ${typeEmoji} ${newText} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
 function chunkString(str: string, size = 1800): string[] {
 	const chunks: string[] = [];
 	for (let i = 0; i < str.length; i += size) chunks.push(str.slice(i, i + size));
 	return chunks;
+}
+
+function isWithinLastDay(date: Date): boolean {
+	const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+	return Date.now() - date.getTime() <= ONE_DAY_MS;
+}
+
+/**
+ * Treat an event as "ongoing" if now is between startTime and (startTime + lengthMinutes).
+ * If lengthMinutes is missing/0, we treat it as not ongoing.
+ */
+function isEventOngoing(ev: any): boolean {
+	const lengthMinutes = Number(ev.lengthMinutes ?? 0);
+	if (!Number.isFinite(lengthMinutes) || lengthMinutes <= 0) return false;
+
+	const start = new Date(ev.startTime).getTime();
+	const end = start + lengthMinutes * 60 * 1000;
+	const now = Date.now();
+
+	return now >= start && now < end;
 }

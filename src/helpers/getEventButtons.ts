@@ -18,10 +18,8 @@ export function getEventButtons(eventId: number) {
 
 export async function checkEventPublishedOrDraftOnly(id: string): Promise<boolean> {
 	const event = await prisma.event.findUnique({
-		where: { draftThreadMessageId: id},
-		select: { published: true},
+		where: { draftThreadMessageId: id },
+		select: { published: true },
 	});
-	console.log("Event is: ", event)
-		return !!(event?.published);
-
+	return !!(event?.published);
 }

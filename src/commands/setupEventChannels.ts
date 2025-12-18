@@ -28,6 +28,11 @@ module.exports = {
 				.setRequired(true))
 		.addStringOption(option =>
 			option
+				.setName('publishing_media_channel')
+				.setDescription('The text channel Id where Media events are posted after publishing.')
+				.setRequired(true))
+		.addStringOption(option =>
+			option
 				.setName('upcoming_events_channel')
 				.setDescription('The text channel Id where upcoming events are announced.')
 				.setRequired(true))
@@ -48,6 +53,7 @@ module.exports = {
 		const draftChannelId = interaction.options.getString('draft_channel');
 		const publishingDiscordChannelId = interaction.options.getString('publishing_discord_channel');
 		const publishingVRCChannelId = interaction.options.getString('publishing_vrc_channel');
+		const publishingMediaChannelId = interaction.options.getString('publishing_media_channel');
 		const upcomingEventsChannelId = interaction.options.getString('upcoming_events_channel');
 		const cookieChannelId = interaction.options.getString('cookie_channel');
 
@@ -55,6 +61,7 @@ module.exports = {
 		const draftChannel = guild.channels.cache.get(draftChannelId);
 		const publishingDiscordChannel = guild.channels.cache.get(publishingDiscordChannelId);
 		const publishingVRCChannel = guild.channels.cache.get(publishingVRCChannelId);
+		const publishingMediaChannel = guild.channels.cache.get(publishingMediaChannelId);
 		const upcomingEventsChannel = guild.channels.cache.get(upcomingEventsChannelId);
 		const cookieChannel = guild.channels.cache.get(cookieChannelId);
 
@@ -65,6 +72,8 @@ module.exports = {
 			return await interaction.reply({ content: '❌ Publishing Discord channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!publishingVRCChannel)
 			return await interaction.reply({ content: '❌ Publishing VRC channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+		if (!publishingMediaChannel)
+			return await interaction.reply({ content: '❌ Publishing Media channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!upcomingEventsChannel)
 			return await interaction.reply({ content: '❌ Upcoming events channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!cookieChannel)
@@ -78,6 +87,8 @@ module.exports = {
 			return await interaction.reply({ content: '❌ The publishing Discord channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (publishingVRCChannel.type !== textType)
 			return await interaction.reply({ content: '❌ The publishing VRC channel must be a text channel!', flags: MessageFlags.Ephemeral });
+		if (publishingMediaChannel.type !== textType)
+			return await interaction.reply({ content: '❌ The publishing Media channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (upcomingEventsChannel.type !== textType)
 			return await interaction.reply({ content: '❌ The upcoming events channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (cookieChannel.type !== textType)
@@ -91,6 +102,7 @@ module.exports = {
 					draftChannelId,
 					publishingDiscordChannelId,
 					publishingVRCChannelId,
+					publishingMediaChannelId,
 					upcomingEventsChannelId,
 					cookieChannelId
 				},
@@ -99,6 +111,7 @@ module.exports = {
 					draftChannelId,
 					publishingDiscordChannelId,
 					publishingVRCChannelId,
+					publishingMediaChannelId,
 					upcomingEventsChannelId,
 					cookieChannelId
 				}
@@ -110,6 +123,7 @@ module.exports = {
 					`**Draft Channel:** ${draftChannel.name}\n` +
 					`**Publishing Discord Channel:** ${publishingDiscordChannel.name}\n` +
 					`**Publishing VRC Channel:** ${publishingVRCChannel.name}\n` +
+					`**Publishing Media Channel:** ${publishingMediaChannel.name}\n` +
 					`**Upcoming Events Channel:** ${upcomingEventsChannel.name}\n` +
 					`**Cookie Channel:** ${cookieChannel.name}`,
 				flags: MessageFlags.Ephemeral

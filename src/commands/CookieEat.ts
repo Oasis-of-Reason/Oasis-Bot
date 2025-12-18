@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { incrementCookieRage } from "../helpers/cookieHelpers";
+import { cookieUpdatesMentionString } from "../helpers/generalConstants";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -54,7 +55,7 @@ module.exports = {
 					create: { guildId, userId, cookies: 0, lastCookieAttempt: new Date(0) },
 				});
 
-				await interaction.reply({ content: "😕 You don’t have any cookies to eat.", flags: MessageFlags.Ephemeral});
+				await interaction.reply({ content: "😕 You don’t have any cookies to eat.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 
@@ -70,10 +71,22 @@ module.exports = {
 			const rand = randomInt(10, 30); // 0 or 1
 			if (rage > rand) {
 				const result = await shionRampage(interaction.guildId!);
+				const guild = interaction.guild!;
+				const memberIds = result.victims.map(v => v.userId);
+
+				// Bulk fetch members (one request)
+				const members = await guild.members.fetch({ user: memberIds });
+
+				// Build lines using display names
 				const victimLines = result.victims
-					.map(v => `• <@${v.userId}> lost **${v.stolen}** cookies`)
+					.map(v => {
+						const member = members.get(v.userId);
+						const name = member?.displayName ?? member?.user.username ?? "Unknown User";
+						return `• **${name}** lost **${v.stolen}** cookies`;
+					})
 					.join("\n");
 				await interaction.reply(
+					`${cookieUpdatesMentionString}\n` +
 					`🦈 **SHION RAMPAGE!** He stole a total of **${result.totalStolen}** cookies.\n` +
 					`${victimLines}\n\n` +
 					`Shion now has **${result.shionCookies}** cookies.`
@@ -252,4 +265,3 @@ function shuffleInPlace<T>(arr: T[]): void {
 		[arr[i], arr[j]] = [arr[j], arr[i]];
 	}
 }
-

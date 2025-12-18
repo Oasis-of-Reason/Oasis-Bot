@@ -19,12 +19,14 @@ import { refreshEventMessages } from "../helpers/refreshEventMessages";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 import { ensureUserReminderDefaults } from '../helpers/generalHelpers';
 import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
+import { writeLog } from '../helpers/logger';
 
 const prisma = new PrismaClient();
 
 module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction: Interaction) {
+		writeLog(`Interaction received: ${interaction.id} of type ${interaction.type}`);
 		if (interaction.isButton()) {
 			// Handle an event signup button
 			if (interaction.customId.startsWith('ev:')) {

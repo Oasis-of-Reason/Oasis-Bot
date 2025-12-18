@@ -20,13 +20,16 @@ model GuildConfig {
   voiceCreatorCategory   		String?
   discordEventCalenderMessageId String?
   vrcEventCalenderMessageId 	String?
+  mediaEventCalenderMessageId 	String?
   upcomingEventsCalenderMessageId 	String?
   draftChannelId         		String?
   publishingDiscordChannelId    String?
   publishingVRCChannelId    	String?
+  publishingMediaChannelId    	String?
   upcomingEventsChannelId    	String?
   cookieChannelId		    	String?
   vrcLoginToken			    	String?
+  vrcGroupId			    	String?
 }
 
 model TemporaryVoiceChannel {
@@ -94,7 +97,7 @@ model Event {
   guildId                   String // Guild Discord Server ID
   draftChannelId            String // ChannelID 
   draftThreadId             String
-  draftThreadMessageId      String              @unique
+  draftThreadMessageId      String?            @unique
   publishedChannelId        String? // ChannelID 
   publishedThreadId         String?
   publishedChannelMessageId String?             @unique
@@ -126,6 +129,14 @@ model Event {
   updatedAt                 DateTime            @updatedAt
   UserEventReminder         UserEventReminder[]
   googleEventId				String? @unique
+  vrcCalenderEventId        String?
+  vrcSendNotification       Boolean?
+  vrcDescription            String?             @db.Text
+  vrcImageId                String?
+  vrcGroupId                String?
+  lastTitleChangeTime       DateTime?
+  lastVrcUpdateTime         DateTime?
+  publishedAt               DateTime?
 }
 
 enum eventType {

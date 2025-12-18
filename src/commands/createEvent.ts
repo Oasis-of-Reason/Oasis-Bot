@@ -188,11 +188,11 @@ module.exports = {
 		let capacityCap = validateNumber(capacityCapText);
 
 		// Step 2: show ALL buttons at once
-		let type: string | null = null;
-		let subtype: string | null = null;
+		let type: string = "";
+		let subtype: string  ="";
 		let platformsSet = new Set<string>();
-		let requirements: string | null = null;
-		let scope: string | null = null;
+		let requirements: string = "";
+		let scope: string = "";
 
 		const allMsg = (await modalSubmit.editReply({
 			content:
@@ -226,8 +226,8 @@ module.exports = {
 					if (type !== "VRCHAT") {
 						// clear VRCHAT-only values
 						platformsSet.clear();
-						requirements = null;
-						scope = null;
+						requirements = "";
+						scope = "";
 					}
 				} else if (kind === "sub") {
 					subtype = value;
@@ -347,11 +347,11 @@ module.exports = {
 			time: 60_000,
 		});
 
-		let posterUrl: string | null = null;
+		let imageUrl: string = "https://cdn.discordapp.com/attachments/1414942384273227806/1442982567853949133/VRChat_2025-11-22_21-19-54.942_2160x3840.png?";
 		if (collected.size > 0) {
 			const collectedMsg = collected.first();
 			const attachment = collectedMsg!.attachments.first();
-			if (attachment && attachment.contentType?.startsWith("image/")) posterUrl = attachment.url;
+			if (attachment && attachment.contentType?.startsWith("image/")) imageUrl = attachment.url ?? "";
 		}
 		try {
 			await timingSubmit.deleteReply(imageMessage.id).catch(() => { });
@@ -371,13 +371,18 @@ module.exports = {
 			type,
 			subtype,
 			scope,
-			platforms: Array.from(platformsSet),
+			platforms: JSON.stringify(Array.from(platformsSet)),
 			requirements,
 			capacityCap,
 			startTime,
 			lengthMinutes,
-			posterUrl,
+			imageUrl,
 			hostId: interaction.user.id,
+			vrcCalenderEventId: "",
+			vrcSendNotification: false,
+			vrcDescription: "",
+			vrcImageId: "",
+			vrcGroupId: "",
 		};
 
 		const createdEvent = await prisma.event.create({
@@ -385,24 +390,27 @@ module.exports = {
 				guildId: interaction.guildId!,
 				draftChannelId: interaction.channelId,
 				draftThreadId: thread.id,
-				draftThreadMessageId: "",
+				draftThreadMessageId: null,
 				hostId: interaction.user.id,
 				title: eventData.title,
 				type: eventData.type ?? "DISCORD",
 				subtype: eventData.subtype ?? "SOCIAL",
+				activity: eventData.activity ?? "",
+				platforms: eventData.platforms,
+				requirements: eventData.type === "VRC" ? eventData.requirements ?? "" : "",
+				description: eventData.description ?? "",
+				scope: eventData.scope ?? "",
 				capacityBase: 0,
 				capacityCap: eventData.capacityCap,
 				startTime: eventData.startTime,
 				lengthMinutes: eventData.lengthMinutes ?? 0,
 				published: false,
-				...(eventData.activity ? { activity: eventData.activity } : {}),
-				...(eventData.type === "VRCHAT" && eventData.platforms?.length
-					? { platforms: JSON.stringify(eventData.platforms) }
-					: {}),
-				...(eventData.type === "VRCHAT" && eventData.requirements ? { requirements: eventData.requirements } : {}),
-				...(eventData.description ? { description: eventData.description } : {}),
-				...(eventData.scope ? { scope: eventData.scope } : {}),
-				...(eventData.posterUrl ? { imageUrl: eventData.posterUrl } : {}),
+				imageUrl: eventData.imageUrl ?? "",
+				vrcCalenderEventId: "",
+				vrcSendNotification: false,
+				vrcDescription: "",
+				vrcImageId: "",
+				vrcGroupId: "",
 			},
 		});
 
@@ -440,25 +448,29 @@ module.exports = {
 			id: createdEvent.id,
 			hostId: createdEvent.hostId,
 			title: createdEvent.title,
-			description: createdEvent.description,
+			description: createdEvent.description ?? "",
 			activity: (createdEvent as any).activity ?? null,
 			type: createdEvent.type,
 			subtype: createdEvent.subtype,
-			scope: createdEvent.scope,
-			platforms: createdEvent.platforms ? JSON.parse(createdEvent.platforms as any) : null,
-			requirements: createdEvent.requirements,
+			scope: createdEvent.scope ?? "",
+			platforms: createdEvent.platforms ?? "",
+			requirements: createdEvent.requirements ?? "",
 			capacityCap: createdEvent.capacityCap,
 			startTime: createdEvent.startTime,
-			lengthMinutes: createdEvent.lengthMinutes,
-			posterUrl: createdEvent.imageUrl ?? null,
+			lengthMinutes: createdEvent.lengthMinutes ?? 0,
+			imageUrl: createdEvent.imageUrl ?? "",
+			vrcCalenderEventId: createdEvent.vrcCalenderEventId ?? "",
+			vrcSendNotification: createdEvent.vrcSendNotification ?? false,
+			vrcDescription: createdEvent.vrcDescription ?? "",
+			vrcImageId: createdEvent.vrcImageId ?? "",
+			vrcGroupId: createdEvent.vrcGroupId ?? ""
 		};
 
 		const btnCollector = sent.createMessageComponentCollector({
 			componentType: ComponentType.Button,
-			time: 10 * 60_000,
-			filter: (i) => i.user.id === interaction.user.id,
+			time: 0,
 		});
-
+		
 		btnCollector.on("collect", async (i) => handleDraftButton(i, hydrated, sent));
 	},
 };
