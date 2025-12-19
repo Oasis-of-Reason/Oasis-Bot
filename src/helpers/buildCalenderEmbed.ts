@@ -140,11 +140,11 @@ function formatDayHeader(date: Date) {
 
 function eventLink(ev: any, guildId: string) {
 	// NOTE: your schema uses publishedThreadId, not publishedThreadID
+	if (ev.publishedChannelId && ev.publishedChannelMessageId) {
+		return `https://discord.com/channels/${guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`;
+	}
 	if (ev.publishedThreadId) {
 		return `https://discord.com/channels/${guildId}/${ev.publishedThreadId}`;
-	}
-	if (ev.publishedChannelId && ev.publishedChannelMessageId) {
-		return `https://discord.com/channels/${guildId}/${ev.publishedChannelId}`;
 	}
 	return null;
 }

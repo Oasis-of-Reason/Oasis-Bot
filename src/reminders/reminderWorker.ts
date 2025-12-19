@@ -131,10 +131,10 @@ async function sendReminderDM(
 		const whenFull = `<t:${unix}:F>`;
 		const whenRel = `<t:${unix}:R>`;
 		const joinLink =
-			ev.publishedThreadId
-				? `https://discord.com/channels/${ev.guildId}/${ev.publishedThreadId}`
-				: (ev.publishedChannelId && ev.publishedChannelMessageId)
-					? `https://discord.com/channels/${ev.guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`
+			ev.publishedChannelId && ev.publishedChannelMessageId
+				? `https://discord.com/channels/${ev.guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`
+				: ev.publishedThreadId
+					? `https://discord.com/channels/${ev.guildId}/${ev.publishedThreadId}`
 					: '';
 
 		const isHost = (userId === ev.hostId);
@@ -154,9 +154,9 @@ async function sendReminderDM(
 
 		const content =
 			`${header}\n\n` +
-				`Start time: ${whenFull} (${whenRel})\n\n` +
-				(joinLink ? `${joinLink}\n` : '') +
-				(isReminder ? '' : (isHost ? `\n You have been awarded ${cookieAmount} Cookies for hosting! 🍪` : `\n You have been awarded 1 Cookie for attending! 🍪`));
+			`Start time: ${whenFull} (${whenRel})\n\n` +
+			(joinLink ? `${joinLink}\n` : '') +
+			(isReminder ? '' : (isHost ? `\n You have been awarded ${cookieAmount} Cookies for hosting! 🍪` : `\n You have been awarded 1 Cookie for attending! 🍪`));
 
 		embed.addFields({
 			name: "",
