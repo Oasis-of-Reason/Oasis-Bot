@@ -144,7 +144,7 @@ function eventLink(ev: any, guildId: string) {
 		return `https://discord.com/channels/${guildId}/${ev.publishedThreadId}`;
 	}
 	if (ev.publishedChannelId && ev.publishedChannelMessageId) {
-		return `https://discord.com/channels/${guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`;
+		return `https://discord.com/channels/${guildId}/${ev.publishedChannelId}`;
 	}
 	return null;
 }
