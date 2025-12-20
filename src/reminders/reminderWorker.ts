@@ -131,7 +131,7 @@ async function sendReminderDM(
 		const whenFull = `<t:${unix}:F>`;
 		const whenRel = `<t:${unix}:R>`;
 		const joinLink =
-			ev.publishedChannelId && ev.publishedChannelMessageId
+  			ev.publishedChannelId && ev.publishedChannelMessageId
 				? `https://discord.com/channels/${ev.guildId}/${ev.publishedChannelId}/${ev.publishedChannelMessageId}`
 				: ev.publishedThreadId
 					? `https://discord.com/channels/${ev.guildId}/${ev.publishedThreadId}`

@@ -112,10 +112,10 @@ module.exports = {
 				// Optional fields copied
 				lastTitleChangeTime: new Date(),
 				...(eventData.activity ? { activity: eventData.activity } as any : {}),
-				...(eventData.type === "VRC" && eventData.platforms?.length
+				...(eventData.type === "VRCHAT" && eventData.platforms?.length
 					? { platforms: JSON.stringify(eventData.platforms) }
 					: {}),
-				...(eventData.type === "VRC" && eventData.requirements ? { requirements: eventData.requirements } : {}),
+				...(eventData.type === "VRCHAT" && eventData.requirements ? { requirements: eventData.requirements } : {}),
 				...(eventData.description ? { description: eventData.description } : {}),
 				...(eventData.scope ? { scope: eventData.scope } : {}),
 				...(src.community ? { community: src.community } : {}),
