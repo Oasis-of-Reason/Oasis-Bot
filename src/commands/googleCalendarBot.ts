@@ -84,6 +84,70 @@ interface CalendarEvent {
 	googleEventId: string | null;
 	published: boolean;
 }
+// Pull list of all events from calendar and match against database
+// remove from calendar if not in database
+
+async function syncCalendarEvents(guildId: string) {
+	const calendarId = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
+
+	writeLog(`Starting syncCalendarEvents for guild ${guildId}`);
+
+	// 1️⃣ Fetch all Google Calendar events
+	const res = await calendarService.client.events.list({
+		calendarId,
+		timeMin: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
+		timeMax: new Date(Date.now() + 1000 * 60 * 60 * 24 * 28).toISOString(),
+		maxResults: 2500,
+	});
+
+	const calendarItems = res.data.items ?? [];
+
+	// 2️⃣ Build map: prismaEventId -> googleEventId
+	const calendarMap = new Map<number, string>();
+	for (const item of calendarItems) {
+		const prismaId = item.extendedProperties?.private?.prismaEventId;
+		const googleId = item.id;
+		if (prismaId && googleId) {
+			calendarMap.set(parseInt(prismaId), googleId);
+		}
+	}
+
+	writeLog(`Fetched ${calendarMap.size} events from Google Calendar.`);
+
+	// 3️⃣ Fetch all DB events
+	const dbEvents = await getUpcomingEvents(guildId);
+	const dbEventIds = new Set(dbEvents.map(e => e.id));
+
+	writeLog(`Fetched ${dbEventIds.size} events from DB.`);
+
+	// 4️⃣ Compare and delete calendar events that no longer exist in DB
+	for (const [prismaId, googleEventId] of calendarMap.entries()) {
+		if (!dbEventIds.has(prismaId)) {
+			try {
+				await calendarService.client.events.delete({
+					calendarId,
+					eventId: googleEventId,
+				});
+				writeLog(
+					`Deleted Google Calendar event ${googleEventId} (prismaEventId=${prismaId}) as it no longer exists in DB.`
+				);
+
+				// Optional: simple rate-limit delay to avoid quota errors
+				await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms between deletes
+			} catch (err) {
+				writeLog(
+					`Failed to delete Google Calendar event ${googleEventId} (prismaEventId=${prismaId}): ${(err as Error).message}`
+				);
+			}
+		}
+	}
+
+	writeLog(`syncCalendarEvents completed for guild ${guildId}`);
+}
+
+function sleep(ms: number) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // --- Create or update Google Calendar event
 async function createOrUpdateGoogleEvent(event: CalendarEvent) {
@@ -148,12 +212,17 @@ module.exports = {
 		if (!guildId) return interaction.editReply("❌ Unable to determine guild ID.");
 
 		try {
+			writeLog("syncCalendarEvents started");
+			await syncCalendarEvents(guildId);
+			writeLog("syncCalendarEvents completed");
+
 			writeLog(`Running /gsync for guild ${guildId}`);
 			const events = await getUpcomingEvents(guildId);
 			const calendarEvents = await formatCalendarEvents(events);
 
 			for (const e of calendarEvents) {
 				await createOrUpdateGoogleEvent(e);
+				await sleep(250);
 			}
 
 			writeLog(`/gsync completed successfully for guild ${guildId}`);
