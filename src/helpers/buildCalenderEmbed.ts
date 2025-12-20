@@ -164,9 +164,9 @@ function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoin
 	const capBadge = hasCap ? `${signupCount}/${capTotal}` : `${signupCount}`;
 
 	const typeEmoji =
-		ev.type?.toLowerCase() === "vrc"
-			? emojiMapTypes["vrchat"].emoji
-			: emojiMapTypes["discord"].emoji;
+		ev.type === "VRCHAT"
+			? emojiMapTypes["VRCHAT"].emoji
+			: emojiMapTypes["DISCORD"].emoji;
 
 	// Ongoing events: replace the first timestamp with a green dot 🟢
 	const leftPrefix = isOngoing ? "🟢" : `<t:${unix}:t>`;

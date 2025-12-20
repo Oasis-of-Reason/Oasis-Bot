@@ -75,7 +75,7 @@ export function getRandomInt(min: number, max: number): number {
 }
 
 export function getPingString(eventType: string, eventSubtype: string): string {
-	return pingMap[eventType.toLowerCase()][eventSubtype.toLowerCase()].value;
+	return pingMap[eventType][eventSubtype].value;
 }
 
 export function getRequirementsString(value: string) {

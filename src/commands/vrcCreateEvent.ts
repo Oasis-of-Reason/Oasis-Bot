@@ -141,7 +141,7 @@ module.exports = {
 			}
 
 			// Optional: ensure it's a VRC-type event
-			if (ev.type.toLowerCase() !== "vrc") {
+			if (ev.type.toLowerCase() !== "VRCHAT") {
 				await interaction.editReply(
 					"❌ That event is not marked as a VRChat event."
 				);

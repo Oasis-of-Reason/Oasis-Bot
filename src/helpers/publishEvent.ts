@@ -32,7 +32,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
 
 	const defaultPublishingChannelId =
-		(publishingEvent.type?.toLowerCase() === "vrc"
+		(publishingEvent.type === "VRCHAT"
 			? guildConfig?.publishingVRCChannelId
 			: guildConfig?.publishingDiscordChannelId) ?? "";
 
@@ -104,6 +104,10 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,
 	});
+	await thread.send({
+		embeds: [embed],
+		components,
+	});
 
 	await prisma.event.update({
 		where: { id: eventId },
@@ -121,27 +125,29 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 export async function addHostToEventThread(guild: Guild, eventId: number) {
 	writeLog(`Adding host to event thread for event ${eventId}`);
 	const event = await getEventById(eventId);
-	if (event) { try {
-		if (!event?.published || !event.publishedThreadId) return;
-		const thread = await fetchThread(guild, event.publishedThreadId);
-		if (!thread) return;
+	if (event) {
+		try {
+			if (!event?.published || !event.publishedThreadId) return;
+			const thread = await fetchThread(guild, event.publishedThreadId);
+			if (!thread) return;
 
-	const hostUserId = (await prisma.event.findUnique({
-		where: { id: eventId },
-		select: { hostId: true },}))?.hostId
+			const hostUserId = (await prisma.event.findUnique({
+				where: { id: eventId },
+				select: { hostId: true },
+			}))?.hostId
 
-	// Add host to thread
-	if (hostUserId) {
-		try { 
-			await thread.members.add(hostUserId);
-		} catch (err) {
-			console.warn(`Failed to add host to thread: ${err}`);
+			// Add host to thread
+			if (hostUserId) {
+				try {
+					await thread.members.add(hostUserId);
+				} catch (err) {
+					console.warn(`Failed to add host to thread: ${err}`);
+				}
+			}
+		} catch (error) {
+			writeLog(`Error adding host to event thread: ${error}: ` + "error");
 		}
 	}
-	} catch (error) {
-		writeLog(`Error adding host to event thread: ${error}: ` + "error");
-					}
-	}	
 }
 
 async function loadSignupUserIds(eventId: number) {

@@ -105,8 +105,8 @@ model Event {
   community                 String? // Can include other community hosting event name
   communityLink             String? // Can include a link to VRC Group               
   title                     String
-  type                      String // Whether it is Discord or VRC
-  subtype                   String // Where its Gaming, Social or Cinema
+  type                      eventType // Whether it is Discord or VRC
+  subtype                   eventSubType // Where its Gaming, Social or Cinema
   activity                  String? // Free field for the activity name
   platforms                 String? // Multi Select when event is VRC only Android, Quest or PCVR
   rolePings                 String? // for pings
@@ -128,6 +128,7 @@ model Event {
   createdAt                 DateTime            @default(now())
   updatedAt                 DateTime            @updatedAt
   UserEventReminder         UserEventReminder[]
+  googleEventId				String? @unique
   vrcCalenderEventId        String?
   vrcSendNotification       Boolean?
   vrcDescription            String?             @db.Text
@@ -136,6 +137,19 @@ model Event {
   lastTitleChangeTime       DateTime?
   lastVrcUpdateTime         DateTime?
   publishedAt               DateTime?
+}
+
+enum eventType {
+  DISCORD
+  VRCHAT
+}
+
+enum eventSubType {
+  CINEMA
+  GAMING
+  WELLNESS
+  ART
+  SOCIAL	
 }
 
 model CohostsOnEvent {
