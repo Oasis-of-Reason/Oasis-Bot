@@ -397,7 +397,7 @@ module.exports = {
 				subtype: eventData.subtype as any,
 				activity: eventData.activity ?? "",
 				platforms: eventData.platforms,
-				requirements: eventData.type === "VRC" ? eventData.requirements ?? "" : "",
+				requirements: eventData.type === "VRCHAT" ? eventData.requirements ?? "" : "",
 				description: eventData.description ?? "",
 				scope: eventData.scope ?? "",
 				capacityBase: 0,

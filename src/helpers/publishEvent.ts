@@ -20,6 +20,7 @@ import { allowedPingRolesEvents } from "./generalConstants";
 import { writeLog } from "./logger";
 import { createOrUpdateGoogleEvent } from "../commands/googleCalendarBot";
 
+
 export async function publishEvent(client: Client, guild: Guild, eventId: number) {
 	const guildConfig = await prisma.guildConfig.findUnique({ where: { id: guild.id } });
 	const publishingEvent = await getEventById(eventId);
@@ -104,6 +105,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	// Trigger publish on Google Calendar
 	await createOrUpdateGoogleEvent(publishingEvent, false, "publish");
 
+	
 	const thread = await sentChannel.startThread({
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,

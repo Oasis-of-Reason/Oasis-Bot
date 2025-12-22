@@ -49,6 +49,7 @@ import { fetchMsgInThread, getVrcGroupId } from "./discordHelpers";
 import { checkEventPublishedOrDraftOnly } from "./getEventButtons";
 import { updateThreadTitle } from "./refreshEventMessages";
 import { createOrUpdateGroupEvent, isVrcCookieValid, mapArray, parseAndMapArray, platformMap, subtypeImageMap, subtypeMap, VrcEventDescription } from "./vrcHelpers";
+import { createOrUpdateGoogleEvent } from "../commands/googleCalendarBot";
 
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
@@ -96,7 +97,7 @@ export function buildDraftEmbed(eventData: {
 		value: `> **Start:** <t:${toUnix(eventData.startTime)}:F> (<t:${toUnix(eventData.startTime)}:R>)\n> **Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} min` : "Not set"}`,
 	});
 
-	if (eventData.type?.toLowerCase() === "vrc") {
+	if (eventData.type?.toLowerCase() === "vrchat") {
 		const parsedPlatforms = JSON.parse(eventData.platforms);
 		embed.addFields({
 			name: "VRC Information",
