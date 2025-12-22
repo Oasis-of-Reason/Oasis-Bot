@@ -426,7 +426,7 @@ module.exports = {
 				}
 
 				const draftEvents = await getUpcomingDraftEvents(guildId);
-				const draftCalendarEvents = await formatCalendarEvents(draftEvents);
+				const draftCalendarEvents = await formatCalendarEvents(draftEvents, true);
 
 				for (const e of draftCalendarEvents) {
 					await createOrUpdateGoogleEvent(e, true);
