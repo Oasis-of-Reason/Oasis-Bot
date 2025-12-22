@@ -20,15 +20,19 @@ export async function formatCalendarEvents(events: Event[], draft: boolean = fal
 	const formattedEvents = [];
 
 	// Preload signup counts to optimize
-	const signupCounts = await prisma.eventSignUps.groupBy({
-		by: ["eventId"],
-		_count: { userId: true },
-		where: { eventId: { in: events.map(e => e.id) } },
-	});
-	const countsMap = signupCounts.reduce((acc, cur) => {
-		acc[cur.eventId] = cur._count.userId;
-		return acc;
-	}, {} as Record<number, number>);
+	// We might have just published a draft so we won't see this event id in signups yet
+	const signupCounts = draft
+		? [] : await prisma.eventSignUps.groupBy({
+			by: ["eventId"],
+			_count: { userId: true },
+			where: { eventId: { in: events.map(e => e.id) } },
+		});
+
+	const countsMap: Record<number, number> = draft
+		? {} : signupCounts.reduce((acc, cur) => {
+			acc[cur.eventId] = cur._count.userId;
+			return acc;
+		}, {} as Record<number, number>);
 
 	for (const e of events) {
 		const totalSignedUp = countsMap[e.id] ?? 0;
@@ -38,7 +42,7 @@ export async function formatCalendarEvents(events: Event[], draft: boolean = fal
 		formattedEvents.push({
 			id: e.id,
 			dbguildId: parseInt(e.guildId),
-			title: `${getemojiFromSubtype(e.subtype as eventSubType)} ${e.title} (${totalSignedUp}/${totalCapacity})${e.published ? "" : " [Draft]"}`,
+			title: `${getemojiFromSubtype(e.subtype as eventSubType)} ${e.title} (${totalSignedUp}/${totalCapacity})${draft ? "" : " [Draft]"}`,
 			starts: e.startTime,
 			ends: e.lengthMinutes ? new Date(e.startTime.getTime() + e.lengthMinutes * 60000) : null,
 			type: e.type,
@@ -408,40 +412,40 @@ module.exports = {
 				writeLog(`/gsync forced refresh: calendars cleared for guild ${guildId}`);
 			}
 
-				writeLog("syncCalendarEvents started");
-				await syncCalendarEvents(guildId);
-				writeLog("syncCalendarEvents completed");
+			writeLog("syncCalendarEvents started");
+			await syncCalendarEvents(guildId);
+			writeLog("syncCalendarEvents completed");
 
-				writeLog("syncCalendarDraftEvents started");
-				await syncCalendarDraftEvents(guildId);
-				writeLog("syncCalendarDraftEvents completed");
+			writeLog("syncCalendarDraftEvents started");
+			await syncCalendarDraftEvents(guildId);
+			writeLog("syncCalendarDraftEvents completed");
 
-				writeLog(`Running /gsync for guild ${guildId}`);
-				const events = await getUpcomingEvents(guildId);
-				const calendarEvents = await formatCalendarEvents(events);
+			writeLog(`Running /gsync for guild ${guildId}`);
+			const events = await getUpcomingEvents(guildId);
+			const calendarEvents = await formatCalendarEvents(events);
 
-				for (const e of calendarEvents) {
-					await createOrUpdateGoogleEvent(e);
-					await sleep(250);
-				}
-
-				const draftEvents = await getUpcomingDraftEvents(guildId);
-				const draftCalendarEvents = await formatCalendarEvents(draftEvents, true);
-
-				for (const e of draftCalendarEvents) {
-					await createOrUpdateGoogleEvent(e, true);
-					await sleep(250);
-				}
-
-				writeLog(`/gsync completed successfully for guild ${guildId}`);
-				return interaction.editReply(
-					`✅ Successfully synced ${calendarEvents.length} events to Google Calendar.`
-				);
-
-
-			} catch (err) {
-				writeLog(`Error during /gsync: ${(err as Error).message}`);
-				return interaction.editReply("❌ Failed to sync events. Check logs.");
+			for (const e of calendarEvents) {
+				await createOrUpdateGoogleEvent(e);
+				await sleep(250);
 			}
-		},
-	};
+
+			const draftEvents = await getUpcomingDraftEvents(guildId);
+			const draftCalendarEvents = await formatCalendarEvents(draftEvents, true);
+
+			for (const e of draftCalendarEvents) {
+				await createOrUpdateGoogleEvent(e, true);
+				await sleep(250);
+			}
+
+			writeLog(`/gsync completed successfully for guild ${guildId}`);
+			return interaction.editReply(
+				`✅ Successfully synced ${calendarEvents.length} events to Google Calendar.`
+			);
+
+
+		} catch (err) {
+			writeLog(`Error during /gsync: ${(err as Error).message}`);
+			return interaction.editReply("❌ Failed to sync events. Check logs.");
+		}
+	},
+};
