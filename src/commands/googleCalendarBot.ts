@@ -276,7 +276,7 @@ async function clearGoogleCalendar(calendarId: string) {
 type Action = "update" | "publish";
 
 // --- Create or update Google Calendar event
-async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = false, action: Action = "update") {
+export async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = false, action: Action = "update") {
 	writeLog(`Processing event ID ${event.id} - ${event.title}`);
 
 	const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
@@ -293,7 +293,7 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = 
 			private: { prismaEventId: event.id.toString() },
 		},
 	};
-
+	writeLog(`Prepared request body for event ID ${event.id} google ID ${event.googleEventId} with Action: ${action}`);
 	try {
 		// --------------------------------------
 		// PUBLISH: move from draft → live calendar
@@ -302,7 +302,7 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = 
 			if (!event.googleEventId) {
 				throw new Error("Cannot publish event without googleEventId");
 			}
-
+			writeLog("We're going to try and publish this event");
 			// 1. Delete from draft calendar
 			await calendarService.client.events.delete({
 				calendarId: DRAFT_CALENDAR_ID,
@@ -312,12 +312,14 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = 
 			writeLog(`Deleted draft Google event ${event.googleEventId}`);
 
 			// 2. Insert into live calendar
+			writeLog(`Inserting event into live calendar`);
 			const res = await calendarService.client.events.insert({
 				calendarId: LIVE_CALENDAR_ID,
 				requestBody,
 			});
 
 			// 3. Store new Google event ID
+			writeLog(`Updating prisma with new google event id ${event}`);
 			await prisma.event.update({
 				where: { id: event.id },
 				data: {
@@ -325,17 +327,14 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = 
 					published: true, // if you track this
 				},
 			});
-
-			writeLog(
-				`Published event ${event.id} → new Google event ${res.data.id}`
-			);
-
+			writeLog(`Published event ${event.id} → new Google event ${res.data.id}`);
 			return;
 		}
 
 		// --------------------------------------
 		// UPDATE existing event
 		// --------------------------------------
+		writeLog(`Checking if we need to update existing event`);
 		if (event.googleEventId) {
 			await calendarService.client.events.update({
 				calendarId,
@@ -350,23 +349,20 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = 
 		// --------------------------------------
 		// CREATE new event
 		// --------------------------------------
+		writeLog(`creating a new event`);
 		const res = await calendarService.client.events.insert({
 			calendarId,
 			requestBody,
 		});
-
+		writeLog(`created new calendar event, now to update prisma`);
 		await prisma.event.update({
 			where: { id: event.id },
 			data: { googleEventId: res.data.id },
 		});
 
-		writeLog(
-			`Created new Google Calendar event ${res.data.id} for event ID ${event.id}`
-		);
+		writeLog(`Created new Google Calendar event ${res.data.id} for event ID ${event.id}`);
 	} catch (err) {
-		writeLog(
-			`Error processing event ID ${event.id}: ${(err as Error).message}`
-		);
+		writeLog(`Error processing event ID ${event.id}: ${(err as Error).message}`);
 		throw err;
 	}
 }
