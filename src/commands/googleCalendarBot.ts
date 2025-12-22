@@ -11,6 +11,10 @@ function getColourIdFromSubtype(subtype: eventSubType): string {
 	return EVENT_SUBTYPE_META[subtype].googleColorId;
 }
 
+function getemojiFromSubtype(subtype: eventSubType): string {
+	return EVENT_SUBTYPE_META[subtype].emoji;
+}
+
 // --- Format events for Google Calendar
 export async function formatCalendarEvents(events: Event[]) {
 	const formattedEvents = [];
@@ -34,7 +38,7 @@ export async function formatCalendarEvents(events: Event[]) {
 		formattedEvents.push({
 			id: e.id,
 			dbguildId: parseInt(e.guildId),
-			title: `${e.title} (${totalSignedUp}/${totalCapacity})${e.published ? "" : " [Draft]"}`,
+			title: `${getemojiFromSubtype(e.subtype as eventSubType)} ${e.title} (${totalSignedUp}/${totalCapacity})${e.published ? "" : " [Draft]"}`,
 			starts: e.startTime,
 			ends: e.lengthMinutes ? new Date(e.startTime.getTime() + e.lengthMinutes * 60000) : null,
 			type: e.type,
@@ -226,6 +230,47 @@ function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// --- Clear all events from a Google Calendar
+async function clearGoogleCalendar(calendarId: string) {
+	writeLog(`Clearing all events from calendar ${calendarId}`);
+
+	try {
+		// Fetch all events
+		const eventsRes = await calendarService.client.events.list({
+			calendarId,
+			showDeleted: false,
+			maxResults: 2500, // adjust if needed
+			singleEvents: true,
+		});
+
+		const events = eventsRes.data.items ?? [];
+
+		if (events.length === 0) {
+			writeLog(`No events found in calendar ${calendarId}`);
+			return;
+		}
+
+		writeLog(`Found ${events.length} events in calendar ${calendarId}, deleting...`);
+
+		// Delete all events
+		for (const event of events) {
+			if (event.id) {
+				await calendarService.client.events.delete({
+					calendarId,
+					eventId: event.id,
+				});
+				await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms between deletes
+				writeLog(`Deleted event ${event.id}`);
+			}
+		}
+
+		writeLog(`Finished clearing calendar ${calendarId}`);
+	} catch (err) {
+		writeLog(`Error clearing calendar ${calendarId}: ${(err as Error).message}`);
+		throw err;
+	}
+}
+
 type Action = "update" | "publish";
 
 // --- Create or update Google Calendar event
@@ -324,12 +369,17 @@ async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = 
 	}
 }
 
-
 // --- /gsync Slash Command
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("gsync")
-		.setDescription("Sync upcoming events to Google Calendar"),
+		.setDescription("Sync upcoming events to Google Calendar")
+		.addBooleanOption(option =>
+			option
+				.setName("forced-refresh")
+				.setDescription("Completely clear out the Google Calendar and re-add all events")
+				.setRequired(false)
+		),
 
 	async execute(interaction: ChatInputCommandInteraction) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -348,30 +398,42 @@ module.exports = {
 		if (!guildId) return interaction.editReply("❌ Unable to determine guild ID.");
 
 		try {
-			writeLog("syncCalendarEvents started");
-			await syncCalendarEvents(guildId);
-			writeLog("syncCalendarEvents completed");
+			const forcedRefresh = interaction.options.getBoolean("forced-refresh") ?? false;
 
-			writeLog("syncCalendarDraftEvents started");
-			await syncCalendarDraftEvents(guildId);
-			writeLog("syncCalendarDraftEvents completed");
-
-			writeLog(`Running /gsync for guild ${guildId}`);
-			const events = await getUpcomingEvents(guildId);
-			const calendarEvents = await formatCalendarEvents(events);
-
-			for (const e of calendarEvents) {
-				await createOrUpdateGoogleEvent(e);
-				await sleep(250);
+			if (forcedRefresh) {
+				writeLog(`/gsync forced refresh started for guild ${guildId}`);
+				// Clear both calendars
+				const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
+				const LIVE_CALENDAR_ID = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
+				await clearGoogleCalendar(`${DRAFT_CALENDAR_ID}`);
+				await clearGoogleCalendar(`${LIVE_CALENDAR_ID}`);
+				writeLog(`/gsync forced refresh: calendars cleared for guild ${guildId}`);
 			}
 
-			writeLog(`/gsync completed successfully for guild ${guildId}`);
-			return interaction.editReply(
-				`✅ Successfully synced ${calendarEvents.length} events to Google Calendar.`
-			);
-		} catch (err) {
-			writeLog(`Error during /gsync: ${(err as Error).message}`);
-			return interaction.editReply("❌ Failed to sync events. Check logs.");
-		}
-	},
-};
+				writeLog("syncCalendarEvents started");
+				await syncCalendarEvents(guildId);
+				writeLog("syncCalendarEvents completed");
+
+				writeLog("syncCalendarDraftEvents started");
+				await syncCalendarDraftEvents(guildId);
+				writeLog("syncCalendarDraftEvents completed");
+
+				writeLog(`Running /gsync for guild ${guildId}`);
+				const events = await getUpcomingEvents(guildId);
+				const calendarEvents = await formatCalendarEvents(events);
+
+				for (const e of calendarEvents) {
+					await createOrUpdateGoogleEvent(e);
+					await sleep(250);
+				}
+
+				writeLog(`/gsync completed successfully for guild ${guildId}`);
+				return interaction.editReply(
+					`✅ Successfully synced ${calendarEvents.length} events to Google Calendar.`
+				);
+			} catch (err) {
+				writeLog(`Error during /gsync: ${(err as Error).message}`);
+				return interaction.editReply("❌ Failed to sync events. Check logs.");
+			}
+		},
+	};
