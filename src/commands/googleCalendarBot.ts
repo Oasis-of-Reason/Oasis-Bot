@@ -16,7 +16,7 @@ function getemojiFromSubtype(subtype: eventSubType): string {
 }
 
 // --- Format events for Google Calendar
-export async function formatCalendarEvents(events: Event[]) {
+export async function formatCalendarEvents(events: Event[], draft: boolean = false): Promise<CalendarEvent[]> {
 	const formattedEvents = [];
 
 	// Preload signup counts to optimize
@@ -48,7 +48,7 @@ export async function formatCalendarEvents(events: Event[]) {
 			publishedChannelId: e.publishedChannelId ?? "",
 			publishedThreadId: e.publishedThreadId ?? "",
 			googleEventId: e.googleEventId ?? null,
-			published: e.published,
+			published: draft ? false : true,
 		});
 	}
 
@@ -164,7 +164,6 @@ async function syncCalendarEvents(guildId: string) {
 			}
 		}
 	}
-
 	writeLog(`syncCalendarEvents completed for guild ${guildId}`);
 }
 
@@ -222,8 +221,7 @@ async function syncCalendarDraftEvents(guildId: string) {
 			}
 		}
 	}
-
-	writeLog(`syncCalendarDraftEvents completed for guild ${guildId}`);
+	writeLog(`syncCalendar Draft Events completed for guild ${guildId}`);
 }
 
 function sleep(ms: number) {
@@ -427,10 +425,20 @@ module.exports = {
 					await sleep(250);
 				}
 
+				const draftEvents = await getUpcomingDraftEvents(guildId);
+				const draftCalendarEvents = await formatCalendarEvents(draftEvents);
+
+				for (const e of draftCalendarEvents) {
+					await createOrUpdateGoogleEvent(e, true);
+					await sleep(250);
+				}
+
 				writeLog(`/gsync completed successfully for guild ${guildId}`);
 				return interaction.editReply(
 					`✅ Successfully synced ${calendarEvents.length} events to Google Calendar.`
 				);
+
+
 			} catch (err) {
 				writeLog(`Error during /gsync: ${(err as Error).message}`);
 				return interaction.editReply("❌ Failed to sync events. Check logs.");
