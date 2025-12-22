@@ -226,45 +226,104 @@ function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+type Action = "update" | "publish";
+
 // --- Create or update Google Calendar event
-async function createOrUpdateGoogleEvent(event: CalendarEvent) {
+async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = false, action: Action = "update") {
 	writeLog(`Processing event ID ${event.id} - ${event.title}`);
-	const calendarId = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
-	writeLog(`CalendarEvent value: ${JSON.stringify(event)}`);
+
+	const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
+	const LIVE_CALENDAR_ID = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
+	const calendarId = draft ? DRAFT_CALENDAR_ID : LIVE_CALENDAR_ID;
 
 	const requestBody = {
 		summary: event.title,
 		colorId: event.color,
 		start: { dateTime: event.starts.toISOString() },
 		end: { dateTime: event.ends?.toISOString() ?? event.starts.toISOString() },
-		description: `${event.description}`,
-		extendedProperties: { private: { prismaEventId: event.id.toString() } },
+		description: event.description ?? "",
+		extendedProperties: {
+			private: { prismaEventId: event.id.toString() },
+		},
 	};
 
 	try {
+		// --------------------------------------
+		// PUBLISH: move from draft → live calendar
+		// --------------------------------------
+		if (action === "publish") {
+			if (!event.googleEventId) {
+				throw new Error("Cannot publish event without googleEventId");
+			}
+
+			// 1. Delete from draft calendar
+			await calendarService.client.events.delete({
+				calendarId: DRAFT_CALENDAR_ID,
+				eventId: event.googleEventId,
+			});
+
+			writeLog(`Deleted draft Google event ${event.googleEventId}`);
+
+			// 2. Insert into live calendar
+			const res = await calendarService.client.events.insert({
+				calendarId: LIVE_CALENDAR_ID,
+				requestBody,
+			});
+
+			// 3. Store new Google event ID
+			await prisma.event.update({
+				where: { id: event.id },
+				data: {
+					googleEventId: res.data.id,
+					published: true, // if you track this
+				},
+			});
+
+			writeLog(
+				`Published event ${event.id} → new Google event ${res.data.id}`
+			);
+
+			return;
+		}
+
+		// --------------------------------------
+		// UPDATE existing event
+		// --------------------------------------
 		if (event.googleEventId) {
 			await calendarService.client.events.update({
 				calendarId,
 				eventId: event.googleEventId,
 				requestBody,
 			});
+
 			writeLog(`Updated Google Calendar event ${event.googleEventId}`);
-		} else {
-			const res = await calendarService.client.events.insert({
-				calendarId,
-				requestBody,
-			});
-			await prisma.event.update({
-				where: { id: event.id },
-				data: { googleEventId: res.data.id },
-			});
-			writeLog(`Created new Google Calendar event ${res.data.id} for event ID ${event.id}`);
+			return;
 		}
+
+		// --------------------------------------
+		// CREATE new event
+		// --------------------------------------
+		const res = await calendarService.client.events.insert({
+			calendarId,
+			requestBody,
+		});
+
+		await prisma.event.update({
+			where: { id: event.id },
+			data: { googleEventId: res.data.id },
+		});
+
+		writeLog(
+			`Created new Google Calendar event ${res.data.id} for event ID ${event.id}`
+		);
 	} catch (err) {
-		writeLog(`Error processing event ID ${event.id}: ${(err as Error).message}`);
+		writeLog(
+			`Error processing event ID ${event.id}: ${(err as Error).message}`
+		);
 		throw err;
 	}
 }
+
 
 // --- /gsync Slash Command
 module.exports = {
