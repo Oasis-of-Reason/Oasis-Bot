@@ -61,6 +61,25 @@ async function getUpcomingEvents(guildId: string): Promise<Event[]> {
 				gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14), // last 14 days
 				lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 28), // next 28 days
 			},
+			published: true,
+		},
+		orderBy: { startTime: "asc" },
+	});
+	writeLog(`Fetched ${events.length} events for guild ${guildId}`);
+	return events;
+}
+
+// --- Fetch upcoming events
+async function getUpcomingDraftEvents(guildId: string): Promise<Event[]> {
+	writeLog(`Fetching upcoming draft events for guild ${guildId}`);
+	const events = await prisma.event.findMany({
+		where: {
+			guildId,
+			startTime: {
+				gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14), // last 14 days
+				lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 28), // next 28 days
+			},
+			published: false,
 		},
 		orderBy: { startTime: "asc" },
 	});
@@ -145,6 +164,64 @@ async function syncCalendarEvents(guildId: string) {
 	writeLog(`syncCalendarEvents completed for guild ${guildId}`);
 }
 
+async function syncCalendarDraftEvents(guildId: string) {
+	const calendarId = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
+
+	writeLog(`Starting syncCalendarDraftEvents for guild ${guildId}`);
+
+	// 1️⃣ Fetch all Google Calendar events
+	const res = await calendarService.client.events.list({
+		calendarId,
+		timeMin: new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString(),
+		timeMax: new Date(Date.now() + 1000 * 60 * 60 * 24 * 28).toISOString(),
+		maxResults: 2500,
+	});
+
+	const calendarItems = res.data.items ?? [];
+
+	// 2️⃣ Build map: prismaEventId -> googleEventId
+	const calendarMap = new Map<number, string>();
+	for (const item of calendarItems) {
+		const prismaId = item.extendedProperties?.private?.prismaEventId;
+		const googleId = item.id;
+		if (prismaId && googleId) {
+			calendarMap.set(parseInt(prismaId), googleId);
+		}
+	}
+
+	writeLog(`Fetched ${calendarMap.size} events from Google Calendar.`);
+
+	// 3️⃣ Fetch all DB events
+	const dbEvents = await getUpcomingDraftEvents(guildId);
+	const dbEventIds = new Set(dbEvents.map(e => e.id));
+
+	writeLog(`Fetched ${dbEventIds.size} events from DB.`);
+
+	// 4️⃣ Compare and delete calendar events that no longer exist in DB
+	for (const [prismaId, googleEventId] of calendarMap.entries()) {
+		if (!dbEventIds.has(prismaId)) {
+			try {
+				await calendarService.client.events.delete({
+					calendarId,
+					eventId: googleEventId,
+				});
+				writeLog(
+					`Deleted Google Calendar event ${googleEventId} (prismaEventId=${prismaId}) as it no longer exists in DB.`
+				);
+
+				// Optional: simple rate-limit delay to avoid quota errors
+				await new Promise((resolve) => setTimeout(resolve, 200)); // 200ms between deletes
+			} catch (err) {
+				writeLog(
+					`Failed to delete Google Calendar event ${googleEventId} (prismaEventId=${prismaId}): ${(err as Error).message}`
+				);
+			}
+		}
+	}
+
+	writeLog(`syncCalendarDraftEvents completed for guild ${guildId}`);
+}
+
 function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -215,6 +292,10 @@ module.exports = {
 			writeLog("syncCalendarEvents started");
 			await syncCalendarEvents(guildId);
 			writeLog("syncCalendarEvents completed");
+
+			writeLog("syncCalendarDraftEvents started");
+			await syncCalendarDraftEvents(guildId);
+			writeLog("syncCalendarDraftEvents completed");
 
 			writeLog(`Running /gsync for guild ${guildId}`);
 			const events = await getUpcomingEvents(guildId);
