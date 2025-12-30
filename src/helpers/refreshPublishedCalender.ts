@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { Client, Message, TextChannel } from 'discord.js';
+import { Client, Message, MessageFlags, TextChannel } from 'discord.js';
 import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
 import { fetchMsgInChannel, messageContainerEquals } from './discordHelpers';
 const prisma = new PrismaClient();
@@ -213,12 +213,18 @@ async function sendAndStoreMessages(
 				newIds.push(msg.id);
 			} catch {
 				// If edit fails → send fresh message
-				const newMsg = await channel.send(embed);
+				const newMsg = await channel.send({
+					embeds: [embed],
+					flags: MessageFlags.SuppressNotifications
+				});
 				newIds.push(newMsg.id);
 			}
 		} else {
 			// No existing message → send it
-			const newMsg = await channel.send(embed);
+			const newMsg = await channel.send({
+					embeds: [embed],
+					flags: MessageFlags.SuppressNotifications
+			});
 			newIds.push(newMsg.id);
 		}
 	}

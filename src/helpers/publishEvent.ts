@@ -2,6 +2,7 @@ import {
 	Client,
 	Guild,
 	ThreadAutoArchiveDuration,
+	MessageFlags,
 } from "discord.js";
 import {
 	getEventById,
@@ -18,7 +19,7 @@ import { buildEventEmbedWithLists } from "./buildEventEmbedWithLists";
 import { getEventButtons } from "./getEventButtons";
 import { allowedPingRolesEvents } from "./generalConstants";
 import { writeLog } from "./logger";
-import { createOrUpdateGoogleEvent } from "../commands/googleCalendarBot";
+import { createOrUpdateGoogleEvent, formatCalendarEvents } from "../commands/googleCalendarBot";
 
 
 export async function publishEvent(client: Client, guild: Guild, eventId: number) {
@@ -56,7 +57,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 			if (existing) {
 				await existing.edit({ embeds: [embed], components });
 			} else {
-				const sent = await publishedChannel.send({ embeds: [embed], components });
+				const sent = await publishedChannel.send({ embeds: [embed], flags: MessageFlags.SuppressNotifications, components });
 				channelMsgId = sent.id;
 			}
 		}
@@ -94,7 +95,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const channel = await fetchTextChannel(client, defaultPublishingChannelId);
 	if (!channel) throw new Error(`Publish channel not found: ${defaultPublishingChannelId}`);
 
-	const sentChannel = await channel.send({ embeds: [embed], components });
+	const sentChannel = await channel.send({ embeds: [embed], flags: MessageFlags.SuppressNotifications, components });
 
 	// Send pings message
 	await sentChannel.reply({
@@ -103,15 +104,17 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	});
 
 	// Trigger publish on Google Calendar
-	await createOrUpdateGoogleEvent(publishingEvent, false, "publish");
+	const [calEvent] = await formatCalendarEvents([publishingEvent], false);
+	if (!calEvent) throw new Error("Failed to format event for Google Calendar");
+	await createOrUpdateGoogleEvent(calEvent, false, "publish");
 
-	
 	const thread = await sentChannel.startThread({
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,
 	});
 	await thread.send({
-		embeds: [embed],
+		embeds: [embed], 
+		flags: MessageFlags.SuppressNotifications,
 		components,
 	});
 
