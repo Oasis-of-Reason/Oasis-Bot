@@ -34,9 +34,11 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
 
 	const defaultPublishingChannelId =
-		(publishingEvent.type === "VRCHAT"
+	(publishingEvent.subtype === "CINEMA"
+		? guildConfig?.publishingMediaChannelId
+		: (publishingEvent.type === "VRCHAT"
 			? guildConfig?.publishingVRCChannelId
-			: guildConfig?.publishingDiscordChannelId) ?? "";
+			: guildConfig?.publishingDiscordChannelId)) ?? "";
 
 	const embed = await buildEventEmbedWithLists(client, publishingEvent, signupUserIds, cohostsUserIds);
 	const components = getEventButtons(eventId);
