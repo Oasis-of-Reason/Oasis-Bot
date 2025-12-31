@@ -107,14 +107,9 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	// Trigger publish on Google Calendar
 	// await createOrUpdateGoogleEvent(publishingEvent, false, "publish");
 
-	
 	const thread = await sentChannel.startThread({
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,
-	});
-	await thread.send({
-		embeds: [embed],
-		components,
 	});
 
 	await prisma.event.update({
