@@ -103,7 +103,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	});
 
 	// Trigger publish on Google Calendar
-	await createOrUpdateGoogleEvent(publishingEvent, false, "publish");
+	// await createOrUpdateGoogleEvent(publishingEvent, false, "publish");
 
 	
 	const thread = await sentChannel.startThread({

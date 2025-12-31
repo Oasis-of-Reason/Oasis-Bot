@@ -444,4 +444,7 @@ module.exports = {
 			return interaction.editReply("❌ Failed to sync events. Check logs.");
 		}
 	},
+	// expose helper functions so requiring this module doesn't lose named exports
+	createOrUpdateGoogleEvent,
+	formatCalendarEvents,
 };
