@@ -317,8 +317,8 @@ export async function handleDraftButton(
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("select_type", "Choose type", [
-							{ label: "VRC", value: "VRC" },
-							{ label: "Discord", value: "Discord" },
+							{ label: "VRC", value: "VRCHAT" },
+							{ label: "Discord", value: "DISCORD" },
 						])
 					),
 				],
@@ -577,7 +577,7 @@ export async function handleDraftButton(
 			}
 			publishInProgress = true;
 			try {
-				await ix.deferUpdate();
+				await ix.deferReply();
 				const guild = ix.interaction.guild as Guild;
 				if (!userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
 					await ix.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
