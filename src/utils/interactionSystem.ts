@@ -7,6 +7,8 @@ import {
 	RepliableInteraction,
 	ButtonInteraction,
 	AnySelectMenuInteraction,
+	Message,
+	InteractionCallbackResponse,
 } from "discord.js";
 
 type ReplyPayload = string | MessagePayload | InteractionReplyOptions;
@@ -71,8 +73,8 @@ export class InteractionRegistry {
 		for (const ix of items) {
 			console.log(
 				`[IxRegistry] id=${ix.id} user=${ix.userId} guild=${ix.guildId ?? "n/a"} ` +
-					`deferReply=${ix.deferredReply} replied=${ix.replied} deferUpdate=${ix.deferredUpdate} updated=${ix.updated} ` +
-					`tags=[${ix.tags.join(", ")}] ageMs=${Date.now() - ix.createdAtMs}`
+				`deferReply=${ix.deferredReply} replied=${ix.replied} deferUpdate=${ix.deferredUpdate} updated=${ix.updated} ` +
+				`tags=[${ix.tags.join(", ")}] ageMs=${Date.now() - ix.createdAtMs}`
 			);
 			const last = ix.history[ix.history.length - 1];
 			if (last) {
@@ -143,8 +145,8 @@ export class TrackedInteraction {
 	private warn(msg: string, extra?: any) {
 		console.warn(
 			`[Ix WARN ${nowISO()}] ${msg} id=${this.id} user=${this.userId} guild=${this.guildId ?? "n/a"} ` +
-				`deferReply=${this.deferredReply} replied=${this.replied} deferUpdate=${this.deferredUpdate} updated=${this.updated} ` +
-				`tags=[${this.tags.join(", ")}] notes=[${this.notes.join(" | ")}]`,
+			`deferReply=${this.deferredReply} replied=${this.replied} deferUpdate=${this.deferredUpdate} updated=${this.updated} ` +
+			`tags=[${this.tags.join(", ")}] notes=[${this.notes.join(" | ")}]`,
 			extra ?? ""
 		);
 	}
@@ -172,31 +174,31 @@ export class TrackedInteraction {
 		return true;
 	}
 
-	async reply(payload: ReplyPayload, opts?: { tag?: string; note?: string; forceFollowUp?: boolean }) {
+	async reply(payload: ReplyPayload, opts?: { tag?: string; note?: string; forceFollowUp?: boolean }): Promise<{ success: boolean, response: InteractionCallbackResponse | Message | null }> {
 		if (!isRepliable(this.interaction)) {
 			this.push("reply", opts?.tag, opts?.note);
 			this.warn("reply() called on non-repliable interaction", { opts });
-			return false;
+			return { success: false, response: null };
 		}
 
 		if (this.replied) {
 			this.push("reply", opts?.tag, opts?.note);
 			this.warn("reply() called after already replied", { opts });
-			return false;
+			return { success: false, response: null };
 		}
 
 		// If deferredReply, first visible response should be editReply (unless forced followUp)
 		if (this.deferredReply && !opts?.forceFollowUp) {
 			this.push("editReply", opts?.tag, opts?.note);
-			await this.interaction.editReply(payload as any);
+			const response = await this.interaction.editReply(payload as any);
 			this.replied = true;
-			return true;
+			return { success: true, response: response };
 		}
 
 		this.push("reply", opts?.tag, opts?.note);
-		await this.interaction.reply(payload as any);
+		const response = await this.interaction.reply(payload as any);
 		this.replied = true;
-		return true;
+		return { success: true, response: response };
 	}
 
 	async editReply(payload: EditPayload, opts?: { tag?: string; note?: string }) {
@@ -216,12 +218,15 @@ export class TrackedInteraction {
 		return true;
 	}
 
-	async followUp(payload: ReplyPayload, opts?: { tag?: string; note?: string }) {
+	async followUp(
+		payload: ReplyPayload,
+		opts?: { tag?: string; note?: string }
+	): Promise<{ success: boolean; response: InteractionCallbackResponse | Message | null }> {
 		this.push("followUp", opts?.tag, opts?.note);
 
 		if (!isRepliable(this.interaction)) {
 			this.warn("followUp() called on non-repliable interaction", opts);
-			return false;
+			return { success: false, response: null };
 		}
 
 		// If nothing yet, followUp will error; fall back to reply
@@ -230,9 +235,10 @@ export class TrackedInteraction {
 			return this.reply(payload, { tag: opts?.tag, note: opts?.note });
 		}
 
-		await this.interaction.followUp(payload as any);
-		return true;
+		const response = await this.interaction.followUp(payload as any);
+		return { success: true, response: response as Message };
 	}
+
 
 	// ---------- Component update flow (buttons/select menus) ----------
 
