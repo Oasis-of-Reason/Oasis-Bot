@@ -9,6 +9,8 @@ import {
 	AnySelectMenuInteraction,
 	Message,
 	InteractionCallbackResponse,
+	ModalSubmitInteraction,
+	AwaitModalSubmitOptions
 } from "discord.js";
 
 type ReplyPayload = string | MessagePayload | InteractionReplyOptions;
@@ -21,7 +23,8 @@ type HistoryAction =
 	| "followUp"
 	| "deferUpdate"
 	| "update"
-	| "showModal";
+	| "showModal"
+	| "awaitModalSubmit";
 
 type HistoryEntry = {
 	at: number;
@@ -201,22 +204,32 @@ export class TrackedInteraction {
 		return { success: true, response: response };
 	}
 
-	async editReply(payload: EditPayload, opts?: { tag?: string; note?: string }) {
+	async editReply(
+		payload: EditPayload,
+		opts?: { tag?: string; note?: string }
+	): Promise<{ success: boolean; response: Message | InteractionCallbackResponse | null }> {
 		this.push("editReply", opts?.tag, opts?.note);
 
 		if (!isRepliable(this.interaction)) {
 			this.warn("editReply() called on non-repliable interaction", opts);
-			return false;
-		}
-		if (!this.deferredReply && !this.replied) {
-			this.warn("editReply() called before deferReply/reply", opts);
-			return false;
+			return { success: false, response: null };
 		}
 
-		await this.interaction.editReply(payload as any);
-		this.replied = true;
-		return true;
+		if (!this.deferredReply && !this.replied) {
+			this.warn("editReply() called before deferReply/reply", opts);
+			return { success: false, response: null };
+		}
+
+		try {
+			const response = await this.interaction.editReply(payload as any);
+			this.replied = true;
+			return { success: true, response };
+		} catch (err) {
+			this.warn("editReply() threw", { err, payload, opts });
+			return { success: false, response: null };
+		}
 	}
+
 
 	async followUp(
 		payload: ReplyPayload,
@@ -307,6 +320,79 @@ export class TrackedInteraction {
 		this.replied = true;
 		return true;
 	}
+
+	async awaitModalSubmit(
+		options: AwaitModalSubmitOptions<ModalSubmitInteraction>,
+		opts?: { tag?: string; note?: string }
+	): Promise<{ success: boolean; interaction: ModalSubmitInteraction | null }> {
+		this.push("awaitModalSubmit", opts?.tag, opts?.note);
+
+		// awaitModalSubmit is only meaningful after you've shown a modal
+		// (or at least intend to capture one). We don't strictly enforce,
+		// but we log if it looks suspicious.
+		if (!("awaitModalSubmit" in (this.interaction as any))) {
+			this.warn("awaitModalSubmit() not available on this interaction object (discord.js typings/runtime)", {
+				options,
+				tag: opts?.tag,
+				note: opts?.note,
+			});
+			return { success: false, interaction: null };
+		}
+
+		try {
+			const mi = (await (this.interaction as any).awaitModalSubmit(
+				options
+			)) as ModalSubmitInteraction;
+
+			return { success: true, interaction: mi };
+		} catch (err: any) {
+			// Most common "error" is just timeout, which throws.
+			this.warn("awaitModalSubmit() threw (often timeout)", {
+				err: err?.message ?? err,
+				options,
+				tag: opts?.tag,
+				note: opts?.note,
+			});
+			return { success: false, interaction: null };
+		}
+	}
+
+	async awaitModalSubmitTracked(
+		options: AwaitModalSubmitOptions<ModalSubmitInteraction>,
+		opts?: {
+			tag?: string;
+			note?: string;
+			// tags/notes applied to the NEW tracked modal interaction
+			modalTag?: string;
+			modalNote?: string;
+		}
+	): Promise<{ success: boolean; tracked: TrackedInteraction | null }> {
+		this.push("awaitModalSubmitTracked" as any, opts?.tag, opts?.note);
+
+		const result = await this.awaitModalSubmit(options, {
+			tag: opts?.tag ?? "awaitModalSubmitTracked",
+			note: opts?.note,
+		});
+
+		if (!result.success || !result.interaction) {
+			return { success: false, tracked: null };
+		}
+
+		// Wrap the modal submit interaction in a new tracker
+		const modalIx = new TrackedInteraction(
+			result.interaction,
+			opts?.modalTag ?? "modalSubmit",
+			opts?.modalNote ?? `modal submit for parent=${this.id}`
+		);
+
+		// Link back for debugging
+		modalIx.addTag(`parent:${this.id}`);
+		if (this.tags.length) modalIx.addTag(`parentTags:${this.tags.join(",")}`);
+		if (this.notes.length) modalIx.addNote(`parentNotes:${this.notes.join(" | ")}`);
+
+		return { success: true, tracked: modalIx };
+	}
+
 
 	dispose() {
 		InteractionRegistry.delete(this.id);
