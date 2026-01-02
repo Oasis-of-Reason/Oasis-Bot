@@ -69,7 +69,7 @@ module.exports = {
 			const remaining = updated?.cookies ?? 0;
 
 			const rage = await incrementCookieRage(guildId);
-			const rand = randomInt(10, 30); // 0 or 1
+			const rand = randomInt(14, 30); // 0 or 1
 			if (rage > rand) {
 				const result = await shionRampage(ix.guildId!);
 				const guild = ix.interaction.guild!;
