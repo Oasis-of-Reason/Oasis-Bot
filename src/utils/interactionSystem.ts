@@ -10,7 +10,8 @@ import {
 	Message,
 	InteractionCallbackResponse,
 	ModalSubmitInteraction,
-	AwaitModalSubmitOptions
+	AwaitModalSubmitOptions,
+	MessageFlags
 } from "discord.js";
 
 type ReplyPayload = string | MessagePayload | InteractionReplyOptions;
@@ -147,7 +148,7 @@ export class TrackedInteraction {
 
 	private warn(msg: string, extra?: any) {
 		console.warn(
-			`[Ix WARN ${nowISO()}] ${msg} id=${this.id} user=${this.userId} guild=${this.guildId ?? "n/a"} ` +
+			`[TrackedInteraction WARN ${nowISO()}] ${msg} id=${this.id} user=${this.userId} guild=${this.guildId ?? "n/a"} ` +
 			`deferReply=${this.deferredReply} replied=${this.replied} deferUpdate=${this.deferredUpdate} updated=${this.updated} ` +
 			`tags=[${this.tags.join(", ")}] notes=[${this.notes.join(" | ")}]`,
 			extra ?? ""
@@ -172,7 +173,7 @@ export class TrackedInteraction {
 			return false;
 		}
 
-		await this.interaction.deferReply({ ephemeral: opts?.ephemeral });
+		await this.interaction.deferReply(opts?.ephemeral ? { flags:MessageFlags.Ephemeral} : {});
 		this.deferredReply = true;
 		return true;
 	}
