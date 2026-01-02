@@ -3,6 +3,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -11,17 +12,17 @@ module.exports = {
 		.setName("cookie-check")
 		.setDescription("Check how many cookies you have."),
 
-	async execute(interaction: any) {
-		if (!interaction.guild) {
-			await interaction.reply({
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({
 				content: "❌ This command can only be used inside a server.",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
-		const guildId = interaction.guild.id;
-		const userId = interaction.user.id;
+		const guildId = ix.interaction.guild.id;
+		const userId = ix.interaction.user.id;
 
 		try {
 			// Look up the user's cookie record
@@ -33,13 +34,13 @@ module.exports = {
 
 			const cookies = cookieUser?.cookies ?? 0;
 
-			await interaction.reply({
+			await ix.reply({
 				content: `🍪 You currently have **${cookies} cookie${cookies === 1 ? "" : "s"}**.`,
 				flags: MessageFlags.Ephemeral,
 			});
 		} catch (error) {
 			console.error("Error fetching cookie count:", error);
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ Could not fetch your cookie count. Please try again later.",
 				flags: MessageFlags.Ephemeral,
 			});
