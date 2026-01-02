@@ -5,7 +5,6 @@ import {
 	GuildMember,
 	TextChannel,
 	ThreadChannel,
-	Guild,
 	ChatInputCommandInteraction,
 } from "discord.js";
 import {

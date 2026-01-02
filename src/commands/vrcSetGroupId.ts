@@ -1,4 +1,7 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import {
+	SlashCommandBuilder,
+	ChatInputCommandInteraction
+} from "discord.js";
 import { prisma } from "../utils/prisma";
 import { TrackedInteraction } from "../utils/interactionSystem";
 

@@ -1,4 +1,7 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { 
+	ChatInputCommandInteraction, 
+	SlashCommandBuilder 
+} from "discord.js";
 import axios from "axios";
 import { prisma } from "../utils/prisma";
 import {
@@ -13,25 +16,6 @@ import { TrackedInteraction } from "../utils/interactionSystem";
 
 const API_BASE = "https://api.vrchat.cloud/api/1";
 const API_KEY = process.env.VRC_API_KEY || "JlE5Jldo5Jibnk5O5hTx6XVqsJu4WJ26";
-
-// Simple helper: check if a stored cookie still represents a logged-in session
-async function isVrcCookieValid(cookie: string): Promise<boolean> {
-	if (!cookie) return false;
-
-	const http = axios.create({
-		baseURL: API_BASE,
-		withCredentials: true,
-		headers: {
-			"User-Agent": "OasisBot/1.0",
-			Cookie: cookie,
-		},
-		params: { apiKey: API_KEY },
-		validateStatus: () => true,
-	});
-
-	const res = await http.get("/auth/user");
-	return res.status === 200; // 200 => logged in
-}
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -211,3 +195,21 @@ module.exports = {
 		}
 	},
 };
+
+async function isVrcCookieValid(cookie: string): Promise<boolean> {
+	if (!cookie) return false;
+
+	const http = axios.create({
+		baseURL: API_BASE,
+		withCredentials: true,
+		headers: {
+			"User-Agent": "OasisBot/1.0",
+			Cookie: cookie,
+		},
+		params: { apiKey: API_KEY },
+		validateStatus: () => true,
+	});
+
+	const res = await http.get("/auth/user");
+	return res.status === 200; // 200 => logged in
+}

@@ -5,7 +5,10 @@ import {
 	SlashCommandBuilder,
 } from "discord.js";
 import { prisma } from "../utils/prisma";
-import { isVrcCookieValid, loginToVRChat } from "../helpers/vrcHelpers";
+import { 
+	isVrcCookieValid, 
+	loginToVRChat 
+} from "../helpers/vrcHelpers";
 import { TrackedInteraction } from "../utils/interactionSystem";
 
 module.exports = {

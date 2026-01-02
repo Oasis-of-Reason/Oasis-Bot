@@ -182,10 +182,10 @@ export async function execute(ix: TrackedInteraction) {
 		content:
 			isGift
 				? `✅ Congratulations ${recipientMention}! <@${ix.interaction.user.id}> has bought you **${modeText}**!\n` +
-				  `> New expiration: <t:${expiresTs}:f> (<t:${expiresTs}:R>)`
+				`> New expiration: <t:${expiresTs}:f> (<t:${expiresTs}:R>)`
 				: `✅ You have bought **${modeText}** for yourself!\n` +
-				  `> New expiration: <t:${expiresTs}:f> (<t:${expiresTs}:R>)\n` +
-				  `> Cookies remaining: **${result.newCookies}** 🍪`,
+				`> New expiration: <t:${expiresTs}:f> (<t:${expiresTs}:R>)\n` +
+				`> Cookies remaining: **${result.newCookies}** 🍪`,
 	});
 }
 

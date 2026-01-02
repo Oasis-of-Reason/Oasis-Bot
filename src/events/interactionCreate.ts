@@ -24,6 +24,8 @@ import { track, TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
+type ActionKind = "attend" | "interest" | "cohost";
+
 module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction: Interaction) {
@@ -357,10 +359,6 @@ export async function handleCalenderButtons(ix: TrackedInteraction) {
 		);
 	}
 }
-
-
-// map action -> prisma client + shape
-type ActionKind = "attend" | "interest" | "cohost";
 
 export async function handleEventButtons(ix: TrackedInteraction) {
 	if (!ix.interaction.isButton()) return;

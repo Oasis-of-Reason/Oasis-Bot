@@ -1,5 +1,10 @@
 import {
-	SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, ComponentType,
+	SlashCommandBuilder,
+	ChatInputCommandInteraction,
+	ActionRowBuilder,
+	StringSelectMenuBuilder,
+	StringSelectMenuInteraction,
+	ComponentType,
 	Message, MessageFlags
 } from "discord.js";
 
@@ -77,20 +82,21 @@ module.exports = {
 		const preview = `<t:${unixSeconds}:F>`; // Discord long datetime format
 
 		// Initial ephemeral reply with menu
-		const response = await ix.reply({ content: `Picked up date: ${preview} (renders in *your* local time)
+		const response = await ix.reply({
+			content: `Picked up date: ${preview} (renders in *your* local time)
   ISO (UTC): \`${date.toISOString()}\`
   Unix seconds: **${unixSeconds}**
   Choose which Discord timestamp format you want:`,
 			components: [row],
 			flags: MessageFlags.Ephemeral,
-			fetchReply: true},
+			fetchReply: true
+		},
 		);
 
 		try {
 			// Wait for the user to pick a format (60s)
-			if(!response.response || !(response.response as Message))
-			{
-				throw("no response");
+			if (!response.response || !(response.response as Message)) {
+				throw ("no response");
 			}
 			const collected = (await (response.response as Message).awaitMessageComponent({
 				filter: (i: StringSelectMenuInteraction) =>

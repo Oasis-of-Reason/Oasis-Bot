@@ -13,7 +13,6 @@ import {
 	Message,
 	MessageFlags,
 	ModalSubmitInteraction,
-	InteractionCallbackResponse,
 } from "discord.js";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";

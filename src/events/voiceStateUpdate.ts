@@ -1,4 +1,12 @@
-import { Events, VoiceState, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { 
+	Events, 
+	VoiceState, 
+	ChannelType, 
+	EmbedBuilder,
+	ActionRowBuilder, 
+	ButtonBuilder, 
+	ButtonStyle
+ } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();

@@ -17,18 +17,6 @@ const TARGET_ID = "289822517944778752"; // Shion
 const SUCCESS_RATE = 0.8;                // keep your adjusted rate
 const COOLDOWN_MS = 4 * 60 * 60 * 1000;  // 4 hours
 
-function formatRemaining(ms: number): string {
-	const s = Math.max(0, Math.floor(ms / 1000));
-	const h = Math.floor(s / 3600);
-	const m = Math.floor((s % 3600) / 60);
-	const sec = s % 60;
-	const parts = [];
-	if (h) parts.push(`${h}h`);
-	if (m) parts.push(`${m}m`);
-	if (sec || (!h && !m)) parts.push(`${sec}s`);
-	return parts.join(" ");
-}
-
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("cookie-tag-team")
@@ -207,3 +195,15 @@ module.exports = {
 		}
 	},
 };
+
+function formatRemaining(ms: number): string {
+	const s = Math.max(0, Math.floor(ms / 1000));
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	const sec = s % 60;
+	const parts = [];
+	if (h) parts.push(`${h}h`);
+	if (m) parts.push(`${m}m`);
+	if (sec || (!h && !m)) parts.push(`${sec}s`);
+	return parts.join(" ");
+}

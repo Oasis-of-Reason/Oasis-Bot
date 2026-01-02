@@ -108,7 +108,7 @@ module.exports = {
 	},
 };
 
-export function getShionRageText(rage: number): string {
+function getShionRageText(rage: number): string {
 	switch (true) {
 		case rage <= 0:
 			return "🦈 Shion seems calm... for now. 🦈";
@@ -148,7 +148,7 @@ type RampageResult = {
 	shionCookies: number;
 };
 
-export async function shionRampage(guildId: string): Promise<RampageResult> {
+async function shionRampage(guildId: string): Promise<RampageResult> {
 	return await prisma.$transaction(async (tx) => {
 		// Ensure Cookies row exists
 		await tx.cookies.upsert({
