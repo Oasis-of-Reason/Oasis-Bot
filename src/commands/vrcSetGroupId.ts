@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
 import { prisma } from "../utils/prisma";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -12,16 +13,17 @@ module.exports = {
 				.setRequired(true)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply("❌ This command can only be used inside a server.");
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply("❌ This command can only be used inside a server.");
 			return;
 		}
 
-		const guildId = interaction.guildId!;
+		const guildId = ix.guildId!;
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const groupId = interaction.options.getString("group_id", true).trim();
 
-		await interaction.reply("⏳ Updating VRChat Group ID…");
+		await ix.reply("⏳ Updating VRChat Group ID…");
 
 		try {
 			// Upsert ensures the row exists even if guild didn't have a config yet
@@ -34,12 +36,12 @@ module.exports = {
 				},
 			});
 
-			await interaction.editReply(
+			await ix.editReply(
 				`✅ VRChat Group ID has been set to:\n\`${updated.vrcGroupId}\``
 			);
 		} catch (err: any) {
 			console.error("set-vrc-group-id error:", err);
-			await interaction.editReply(
+			await ix.editReply(
 				`❌ Failed to update VRChat Group ID: ${err?.message ?? "Unknown error"}`
 			);
 		}

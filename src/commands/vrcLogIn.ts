@@ -6,6 +6,7 @@ import {
 } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { isVrcCookieValid, loginToVRChat } from "../helpers/vrcHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -18,24 +19,25 @@ module.exports = {
 				.setRequired(false)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply("❌ This command can only be used in a server.");
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply("❌ This command can only be used in a server.");
 			return;
 		}
 
-		const guildId = interaction.guildId!;
+		const guildId = ix.guildId!;
 		const username = process.env.VRC_USERNAME;  
 		const password = process.env.VRC_PASSWORD; 
 
 		if (!username || !password) {
-			await interaction.reply("❌ Missing VRChat credentials in environment variables.");
+			await ix.reply("❌ Missing VRChat credentials in environment variables.");
 			return;
 		}
 
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const otpCode = interaction.options.getString("otp_code") ?? undefined;
 
-		await interaction.reply({content:"⏳ Checking VRChat session…", flags: MessageFlags.Ephemeral});
+		await ix.reply({content:"⏳ Checking VRChat session…", flags: MessageFlags.Ephemeral});
 
 		try {
 			// 1) Look up existing cookie from DB
@@ -59,7 +61,7 @@ module.exports = {
 
 			// 3) If not logged in, perform login and store cookie
 			if (!cookie) {
-				await interaction.editReply("⏳ Existing session invalid or missing — logging into VRChat…");
+				await ix.editReply("⏳ Existing session invalid or missing — logging into VRChat…");
 
 				const result = await loginToVRChat(username, password, otpCode);
 				cookie = result.cookie;
@@ -77,13 +79,13 @@ module.exports = {
 
 			// 4) Final confirmation
 			if (reusedExisting) {
-				await interaction.editReply("✅ VRChat session is already valid. No new login was needed.");
+				await ix.editReply("✅ VRChat session is already valid. No new login was needed.");
 			} else {
-				await interaction.editReply("✅ Logged into VRChat and stored the new session in the database.");
+				await ix.editReply("✅ Logged into VRChat and stored the new session in the database.");
 			}
 		} catch (err: any) {
 			console.error("vrc-login error:", err?.response?.data ?? err);
-			await interaction.editReply(
+			await ix.editReply(
 				`❌ VRChat login failed: ${err?.message ?? "Unknown error"}`
 			);
 		}
