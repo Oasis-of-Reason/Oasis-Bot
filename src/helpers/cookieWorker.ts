@@ -33,6 +33,38 @@ export async function runCookieHourlyEvent(client: Client, guild: Guild) {
 	catch (e) { console.error(e); }
 }
 
+export async function getCookieChannelId(guildId: string): Promise<string | null> {
+	const config = await prisma.guildConfig.findUnique({
+		where: { id: guildId },
+		select: { cookieChannelId: true },
+	});
+
+	return config?.cookieChannelId ?? null;
+}
+
+export function buildVoiceCookieRewardEmbed(): {
+	content: string;
+	embeds: EmbedBuilder[];
+	allowedMentions: { roles: string[] };
+} {
+	const embed = new EmbedBuilder()
+		.setColor(0xffb703) // warm cookie color 🍪
+		.setTitle("🦈 Cookie Time!")
+		.setDescription(
+			"Shion splashes happily and hands out **cookies to everyone in voice chat**!\n\n" +
+			"🍪 **+1 cookie** for each brave swimmer!"
+		)
+		.setFooter({ text: "Be nice to Shion. He remembers everything." });
+
+	return {
+		content: cookieUpdatesMentionString,
+		embeds: [embed],
+		allowedMentions: {
+			roles: allowedPingRolesCookies,
+		},
+	};
+}
+
 async function giveCookiesToEveryoneExcept(
 	guildId: string,
 	excludedUserId: string,
@@ -72,15 +104,6 @@ async function giveCookiesToVC(guild: Guild) {
 	const newMsg = await (cookieChannel as TextChannel).send(buildVoiceCookieRewardEmbed());
 }
 
-export async function getCookieChannelId(guildId: string): Promise<string | null> {
-	const config = await prisma.guildConfig.findUnique({
-		where: { id: guildId },
-		select: { cookieChannelId: true },
-	});
-
-	return config?.cookieChannelId ?? null;
-}
-
 async function giveCookiesToUsers(
 	guildId: string,
 	userIds: string[],
@@ -112,27 +135,4 @@ async function getUsersInAnyVoice(guild: Guild): Promise<string[]> {
 		if (vs.channelId) ids.add(vs.id); // vs.id === userId
 	}
 	return [...ids];
-}
-
-export function buildVoiceCookieRewardEmbed(): {
-	content: string;
-	embeds: EmbedBuilder[];
-	allowedMentions: { roles: string[] };
-} {
-	const embed = new EmbedBuilder()
-		.setColor(0xffb703) // warm cookie color 🍪
-		.setTitle("🦈 Cookie Time!")
-		.setDescription(
-			"Shion splashes happily and hands out **cookies to everyone in voice chat**!\n\n" +
-			"🍪 **+1 cookie** for each brave swimmer!"
-		)
-		.setFooter({ text: "Be nice to Shion. He remembers everything." });
-
-	return {
-		content: cookieUpdatesMentionString,
-		embeds: [embed],
-		allowedMentions: {
-			roles: allowedPingRolesCookies,
-		},
-	};
 }

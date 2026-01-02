@@ -1,10 +1,21 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, GuildMember, MessageFlags } from "discord.js";
-import { PrismaClient, Event, eventSubType } from "@prisma/client";
+import {
+	SlashCommandBuilder,
+	ChatInputCommandInteraction,
+	GuildMember
+} from "discord.js";
+import {
+	PrismaClient,
+	Event,
+	eventSubType
+} from "@prisma/client";
 import { calendarService } from "../helpers/googleCalendarService";
-import { getStandardRolesAdmin, userHasAllowedRole } from "../helpers/securityHelpers";
+import {
+	getStandardRolesAdmin,
+	userHasAllowedRole
+} from "../helpers/securityHelpers";
 import { writeLog } from "../helpers/logger";
-import { EVENT_SUBTYPE_META } from "../helpers/eventSubTypes";
 import { TrackedInteraction } from "../utils/interactionSystem";
+import { EVENT_SUBTYPE_META } from "../helpers/generalConstants";
 
 const prisma = new PrismaClient();
 

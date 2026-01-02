@@ -20,8 +20,8 @@ import { userHasAllowedRole, getStandardRolesHost } from "../helpers/securityHel
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { validateNumber } from "../helpers/generalHelpers";
 import { updateThreadTitle } from "../helpers/refreshEventMessages"
-import { EVENT_SUBTYPE_META } from "../helpers/eventSubTypes";
 import { track, TrackedInteraction } from "../utils/interactionSystem";
+import { EVENT_SUBTYPE_META } from "../helpers/generalConstants";
 
 module.exports = {
 	data: new SlashCommandBuilder().setName("create-event").setDescription("Start the event creation wizard"),
