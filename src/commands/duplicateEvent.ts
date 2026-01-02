@@ -15,6 +15,7 @@ import {
 } from "../helpers/securityHelpers";
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { updateThreadTitle } from "../helpers/refreshEventMessages";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -24,9 +25,10 @@ module.exports = {
 			opt.setName("id").setDescription("ID of the event to duplicate").setRequired(true)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply({
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
+		if (!ix.interaction.guild) {
+			await ix.reply({
 				content: "❌ This command can only be used in a server.",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -34,38 +36,38 @@ module.exports = {
 		}
 
 		const eventId = interaction.options.getNumber("id", true);
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		await ix.deferReply({ ephemeral: true });
 
 		// Load the source event
 		const src = await prisma.event.findUnique({ where: { id: eventId } });
 		if (!src) {
-			await interaction.editReply({ content: `❌ No event found with ID **${eventId}**.` });
+			await ix.editReply({ content: `❌ No event found with ID **${eventId}**.` });
 			return;
 		}
 
 		// Permission: organizer OR original host
 		const ok = userHasAllowedRoleOrId(
-			interaction.member as GuildMember,
+			ix.interaction.member as GuildMember,
 			getStandardRolesOrganizer(),
 			[src.hostId]
 		);
 		if (!ok) {
-			await interaction.editReply({ content: "❌ You don't have permission to duplicate this event." });
+			await ix.editReply({ content: "❌ You don't have permission to duplicate this event." });
 			return;
 		}
 
 		// Draft channel config
-		const guildConfig = await prisma.guildConfig.findUnique({ where: { id: interaction.guildId! } });
+		const guildConfig = await prisma.guildConfig.findUnique({ where: { id: ix.guildId! } });
 		const draftChannelId = guildConfig?.draftChannelId;
 		if (!draftChannelId) {
-			await interaction.editReply({ content: "❌ No draft channel configured for this server." });
+			await ix.editReply({ content: "❌ No draft channel configured for this server." });
 			return;
 		}
 
 		// Fetch draft channel
-		const draftChannel = (await interaction.client.channels.fetch(draftChannelId).catch(() => null)) as TextChannel | null;
+		const draftChannel = (await ix.interaction.client.channels.fetch(draftChannelId).catch(() => null)) as TextChannel | null;
 		if (!draftChannel) {
-			await interaction.editReply({ content: "❌ Unable to access the draft channel." });
+			await ix.editReply({ content: "❌ Unable to access the draft channel." });
 			return;
 		}
 
@@ -84,7 +86,7 @@ module.exports = {
 			startTime: src.startTime,
 			lengthMinutes: src.lengthMinutes ?? 0,
 			posterUrl: src.imageUrl ?? null,
-			hostId: interaction.user.id, // duplicator becomes the host; change to src.hostId if you want original host retained
+			hostId: ix.interaction.user.id, // duplicator becomes the host; change to src.hostId if you want original host retained
 		};
 
 		const thread = await draftChannel.threads.create({
@@ -95,11 +97,11 @@ module.exports = {
 		// Create the new (unpublished) event in DB
 		const duplicated = await prisma.event.create({
 			data: {
-				guildId: interaction.guildId!,
+				guildId: ix.guildId!,
 				draftChannelId: draftChannel.id,
 				draftThreadId: thread.id,
 				draftThreadMessageId: null,
-				hostId: interaction.user.id, // or src.hostId to keep original host
+				hostId: ix.interaction.user.id, // or src.hostId to keep original host
 				title: eventData.title,
 				type: eventData.type,
 				subtype: eventData.subtype,
@@ -108,7 +110,7 @@ module.exports = {
 				startTime: eventData.startTime,
 				lengthMinutes: eventData.lengthMinutes,
 				published: false,
-				
+
 				// Optional fields copied
 				lastTitleChangeTime: new Date(),
 				...(eventData.activity ? { activity: eventData.activity } as any : {}),
@@ -154,7 +156,7 @@ module.exports = {
 		});
 		// Update to fit new Thread name Style for drafts
 		// Needs to update the new draft channel, not the location the interaction took place. 
-		await updateThreadTitle(interaction.client, duplicated.draftThreadId, duplicated.title, hydrated.id)
+		await updateThreadTitle(ix.interaction.client, duplicated.draftThreadId, duplicated.title, hydrated.id)
 
 		await prisma.event.update({
 			where: { id: duplicated.id },
@@ -162,7 +164,7 @@ module.exports = {
 		});
 
 		// Make sure the invoking user is added to the thread
-		await thread.members.add(interaction.user.id).catch(() => { });
+		await thread.members.add(ix.interaction.user.id).catch(() => { });
 
 		const btnCollector = sent.createMessageComponentCollector({
 			componentType: ComponentType.Button,
@@ -171,7 +173,7 @@ module.exports = {
 		btnCollector.on("collect", async (i) => handleDraftButton(i, hydrated, sent));
 
 		// Done
-		await interaction.editReply({
+		await ix.editReply({
 			content: `✅ Duplicated event **#${eventId} → #${duplicated.id}**.\nDraft thread: <#${thread.id}>`,
 		});
 	},

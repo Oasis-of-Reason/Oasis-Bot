@@ -4,6 +4,7 @@ import { calendarService } from "../helpers/googleCalendarService";
 import { getStandardRolesAdmin, userHasAllowedRole } from "../helpers/securityHelpers";
 import { writeLog } from "../helpers/logger";
 import { EVENT_SUBTYPE_META } from "../helpers/eventSubTypes";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -38,23 +39,24 @@ module.exports = {
 				.setRequired(false)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+	async execute(ix: TrackedInteraction) {
+		await ix.deferReply({ ephemeral: true });
 
 		// --- Permission check
 		const hasPermission = userHasAllowedRole(
-			interaction.member as GuildMember,
+			ix.interaction.member as GuildMember,
 			getStandardRolesAdmin()
 		);
 		if (!hasPermission) {
-			writeLog(`User ${interaction.user.tag} attempted to run /gsync without permission`);
-			return interaction.editReply("❌ You do not have permission to run this.");
+			writeLog(`User ${ix.interaction.user.tag} attempted to run /gsync without permission`);
+			return ix.editReply("❌ You do not have permission to run this.");
 		}
 
-		const guildId = interaction.guildId;
-		if (!guildId) return interaction.editReply("❌ Unable to determine guild ID.");
+		const guildId = ix.guildId;
+		if (!guildId) return ix.editReply("❌ Unable to determine guild ID.");
 
 		try {
+			const interaction = ix.interaction as ChatInputCommandInteraction;
 			const forcedRefresh = interaction.options.getBoolean("forced-refresh") ?? false;
 
 			if (forcedRefresh) {
@@ -93,14 +95,14 @@ module.exports = {
 			}
 
 			writeLog(`/gsync completed successfully for guild ${guildId}`);
-			return interaction.editReply(
+			return ix.editReply(
 				`✅ Successfully synced ${calendarEvents.length} events to Google Calendar.`
 			);
 
 
 		} catch (err) {
 			writeLog(`Error during /gsync: ${(err as Error).message}`);
-			return interaction.editReply("❌ Failed to sync events. Check logs.");
+			return ix.editReply("❌ Failed to sync events. Check logs.");
 		}
 	},
 	// expose helper functions so requiring this module doesn't lose named exports

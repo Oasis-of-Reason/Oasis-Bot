@@ -5,6 +5,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -21,9 +22,10 @@ module.exports = {
 				.setMaxValue(1440)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const minutes = interaction.options.getInteger("minutes", true);
-		const userId = interaction.user.id;
+		const userId = ix.interaction.user.id;
 
 		await prisma.user.upsert({
 			where: { id: userId },
@@ -36,6 +38,6 @@ module.exports = {
 				? "⏸️ You will no longer receive pre-event reminders."
 				: `✅ You will now receive reminders **${minutes} minute${minutes === 1 ? "" : "s"}** before an event.`;
 
-		await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+		await ix.reply({ content: msg, flags: MessageFlags.Ephemeral });
 	},
 };
