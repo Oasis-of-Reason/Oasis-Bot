@@ -1,6 +1,5 @@
 import {
 	SlashCommandBuilder,
-	ChatInputCommandInteraction,
 	ActionRowBuilder,
 	ModalBuilder,
 	TextInputBuilder,
@@ -16,8 +15,15 @@ import {
 } from "discord.js";
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
-import { userHasAllowedRole, getStandardRolesHost } from "../helpers/securityHelpers";
-import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
+import {
+	userHasAllowedRole,
+	getStandardRolesHost
+} from "../helpers/securityHelpers";
+import {
+	buildDraftEmbed,
+	editButtons,
+	handleDraftButton
+} from "../helpers/eventDraft";
 import { validateNumber } from "../helpers/generalHelpers";
 import { updateThreadTitle } from "../helpers/refreshEventMessages"
 import { track, TrackedInteraction } from "../utils/interactionSystem";
@@ -96,7 +102,7 @@ module.exports = {
 
 		// Step 2: show ALL buttons at once
 		let type: string = "";
-		let subtype: string  ="";
+		let subtype: string = "";
 		let platformsSet = new Set<string>();
 		let requirements: string = "";
 		let scope: string = "";
@@ -377,7 +383,7 @@ module.exports = {
 			componentType: ComponentType.Button,
 			time: 0,
 		});
-		
+
 		btnCollector.on("collect", async (i) => handleDraftButton(track(i, "From Create Event", hydrated.id + " " + hydrated.title + " By: " + hydrated.hostId), hydrated, sent));
 	},
 };
