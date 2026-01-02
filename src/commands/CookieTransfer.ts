@@ -38,7 +38,7 @@ module.exports = {
 		const guildId = interaction.guild.id;
 		const senderId = interaction.user.id;
 		const recipient = interaction.options.getUser("recipient") as User;
-		const amount = interaction.options.getInteger("amount") ?? 0;
+		const amount = interaction.options.getInteger("amount", true);
 
 		if (recipient.id === senderId) {
 			await ix.reply({
