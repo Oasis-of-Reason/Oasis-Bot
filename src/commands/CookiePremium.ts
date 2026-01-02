@@ -7,6 +7,7 @@ import {
 import { PrismaClient } from "@prisma/client";
 import { oasisPremiumId } from "../helpers/generalConstants";
 import { giveRoleToUser } from "../helpers/discordHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 const COST = 50;
@@ -21,15 +22,16 @@ export const data = new SlashCommandBuilder()
 			.setRequired(false)
 	);
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-	if (!interaction.inGuild() || !interaction.guildId) {
-		return interaction.reply({
+export async function execute(ix: TrackedInteraction) {
+	const interaction = ix.interaction as ChatInputCommandInteraction;
+	if (!interaction.inGuild() || !ix.guildId) {
+		return ix.reply({
 			content: "❌ This command can only be used in a server.",
 			flags: MessageFlags.Ephemeral,
 		});
 	}
 
-	const guildId = interaction.guildId;
+	const guildId = ix.guildId;
 	const purchaserId = interaction.user.id;
 	const targetUser = interaction.options.getUser("gift_recipient", false);
 	const recipientId = targetUser?.id ?? purchaserId;
@@ -155,14 +157,14 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	});
 
 	if (!result.canBuy) {
-		return interaction.reply({
+		return ix.reply({
 			content: `❌ You need **${COST} cookies** to buy/extend Oasis Premium, but you only have **${result.currentCookies}**.`,
 			flags: MessageFlags.Ephemeral,
 		});
 	}
 
 	// Give premium role to the recipient
-	const status = await giveRoleToUser(interaction.guild!, result.recipientId, oasisPremiumId);
+	const status = await giveRoleToUser(ix.interaction.guild!, result.recipientId, oasisPremiumId);
 	if (status !== "ok") {
 		console.error("Failed to give premium role:", status);
 		// We won't fail the whole command, but we can mention it optionally
@@ -176,10 +178,10 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	const isGift = !!targetUser?.id;
 	const recipientMention = `<@${result.recipientId}>`;
 
-	return interaction.reply({
+	return ix.reply({
 		content:
 			isGift
-				? `✅ Congratulations ${recipientMention}! <@${interaction.user.id}> has bought you **${modeText}**!\n` +
+				? `✅ Congratulations ${recipientMention}! <@${ix.interaction.user.id}> has bought you **${modeText}**!\n` +
 				  `> New expiration: <t:${expiresTs}:f> (<t:${expiresTs}:R>)`
 				: `✅ You have bought **${modeText}** for yourself!\n` +
 				  `> New expiration: <t:${expiresTs}:f> (<t:${expiresTs}:R>)\n` +

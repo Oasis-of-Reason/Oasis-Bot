@@ -5,6 +5,7 @@ import {
 	ChatInputCommandInteraction,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -20,9 +21,10 @@ module.exports = {
 		)
 		.setDMPermission(false),
 
-	async execute(interaction: ChatInputCommandInteraction) {
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		if (!interaction.guild) {
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ This command can only be used inside a server.",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -36,14 +38,14 @@ module.exports = {
 
 		// prevent self-targeting or targeting the bot
 		if (target.id === senderId) {
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ You can’t timeout yourself!",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 		if (target.bot) {
-			await interaction.reply({
+			await ix.reply({
 				content: "🤖 You can’t timeout bots — they’re immune to cookie power.",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -65,7 +67,7 @@ module.exports = {
 
 			const cost = 20;
 			if (sender.cookies < cost) {
-				await interaction.reply({
+				await ix.reply({
 					content: `❌ You need **${cost} cookies** to use this! You only have **${sender.cookies}**.`,
 					flags: MessageFlags.Ephemeral,
 				});
@@ -74,7 +76,7 @@ module.exports = {
 
 			const member = await guild.members.fetch(target.id).catch(() => null);
 			if (!member) {
-				await interaction.reply({
+				await ix.reply({
 					content: "❌ Couldn’t find that member in the server.",
 					flags: MessageFlags.Ephemeral,
 				});
@@ -88,7 +90,7 @@ module.exports = {
 				await member.timeout(timeoutDurationMs, `Timed out by ${interaction.user.tag} using 20 cookies 🍪`);
 			} catch (err) {
 				console.error("Timeout error:", err);
-				await interaction.reply({
+				await ix.reply({
 					content: "❌ I couldn’t timeout that user. I may lack permissions or the user outranks me.",
 					flags: MessageFlags.Ephemeral,
 				});
@@ -101,12 +103,12 @@ module.exports = {
 				data: { cookies: { decrement: cost } },
 			});
 
-			await interaction.reply({
+			await ix.reply({
 				content: `🔨 ${interaction.user} SMITED (timed out) ${target} for **1 minute** using **${cost} cookies**! 🍪`
 			});
 		} catch (error) {
 			console.error("Error in /cookie-smite:", error);
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ Something went wrong while trying to timeout the user.",
 				flags: MessageFlags.Ephemeral,
 			});

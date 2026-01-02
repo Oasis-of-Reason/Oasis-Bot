@@ -2,8 +2,10 @@ import {
 	SlashCommandBuilder,
 	MessageFlags,
 	User,
+	ChatInputCommandInteraction,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -23,9 +25,10 @@ module.exports = {
 				.setMinValue(1)
 				.setRequired(true)),
 
-	async execute(interaction: any) {
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		if (!interaction.guild) {
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ This command can only be used in a server.",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -35,10 +38,10 @@ module.exports = {
 		const guildId = interaction.guild.id;
 		const senderId = interaction.user.id;
 		const recipient = interaction.options.getUser("recipient") as User;
-		const amount = interaction.options.getInteger("amount");
+		const amount = interaction.options.getInteger("amount") ?? 0;
 
 		if (recipient.id === senderId) {
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ You can’t transfer cookies to yourself!",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -59,7 +62,7 @@ module.exports = {
 			});
 
 			if (sender.cookies < amount) {
-				await interaction.reply({
+				await ix.reply({
 					content: `❌ You only have **${sender.cookies}** cookies — not enough to send ${amount}.`,
 					flags: MessageFlags.Ephemeral,
 				});
@@ -90,12 +93,12 @@ module.exports = {
 				}),
 			]);
 
-			await interaction.reply({
+			await ix.reply({
 				content: `🍪 <@${senderId}> gave **${amount} cookie${amount === 1 ? "" : "s"}** to ${recipient.toString()}! 🍪`
 			});
 		} catch (error) {
 			console.error("Error transferring cookies:", error);
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ Something went wrong while transferring cookies. Please try again later.",
 				flags: MessageFlags.Ephemeral,
 			});

@@ -3,6 +3,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -11,19 +12,19 @@ module.exports = {
 		.setName("cookie-leaderboard")
 		.setDescription("View the top 10 cookie-havers in this server."),
 
-	async execute(interaction: any) {
-		if (!interaction.guild) {
-			await interaction.reply({
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({
 				content: "❌ This command can only be used in a server.",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
-		const guildId = interaction.guild.id;
+		const guildId = ix.interaction.guild.id;
 
 		try {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			await ix.deferReply({ ephemeral: true });
 
 			// Get top 10 users by cookies for this guild
 			const top = await prisma.cookiesUser.findMany({
@@ -36,7 +37,7 @@ module.exports = {
 			});
 
 			if (top.length === 0 || top.every(u => (u.cookies ?? 0) === 0)) {
-				await interaction.editReply("🍪 No cookies have been earned yet. Be the first!");
+				await ix.editReply("🍪 No cookies have been earned yet. Be the first!");
 				return;
 			}
 
@@ -45,7 +46,7 @@ module.exports = {
 			let names = new Map<string, string>();
 
 			try {
-				const members = await interaction.guild.members.fetch({ user: ids });
+				const members = await ix.interaction.guild.members.fetch({ user: ids });
 				for (const [id, m] of members) {
 					names.set(id, m.displayName);
 				}
@@ -67,10 +68,10 @@ module.exports = {
 				`**🍪 Cookie Leaderboard — Top 10**\n` +
 				lines.join("\n");
 
-			await interaction.editReply({ content });
+			await ix.editReply({ content });
 		} catch (error) {
 			console.error("Error fetching cookie leaderboard:", error);
-			await interaction.editReply("❌ Could not fetch the leaderboard. Please try again later.");
+			await ix.editReply("❌ Could not fetch the leaderboard. Please try again later.");
 		}
 	},
 };

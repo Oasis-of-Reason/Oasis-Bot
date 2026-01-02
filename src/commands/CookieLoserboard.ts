@@ -3,6 +3,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -11,19 +12,19 @@ module.exports = {
 		.setName("cookie-loserboard")
 		.setDescription("View the top 10 cookie-losers in this server (most lost in gamba)."),
 
-	async execute(interaction: any) {
-		if (!interaction.guild) {
-			await interaction.reply({
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({
 				content: "❌ This command can only be used in a server.",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
-		const guildId = interaction.guild.id;
+		const guildId = ix.interaction.guild.id;
 
 		try {
-			await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+			await ix.deferReply({ ephemeral: true });
 
 			// Get top 10 users by cookies lost for this guild
 			const top = await prisma.cookiesUser.findMany({
@@ -36,7 +37,7 @@ module.exports = {
 			});
 
 			if (top.length === 0 || top.every(u => (u.mostCookiesLost ?? 0) === 0)) {
-				await interaction.editReply("🍪 No cookies have been lost yet. Be the first!");
+				await ix.editReply("🍪 No cookies have been lost yet. Be the first!");
 				return;
 			}
 
@@ -45,7 +46,7 @@ module.exports = {
 			let names = new Map<string, string>();
 
 			try {
-				const members = await interaction.guild.members.fetch({ user: ids });
+				const members = await ix.interaction.guild.members.fetch({ user: ids });
 				for (const [id, m] of members) {
 					names.set(id, m.displayName);
 				}
@@ -67,10 +68,10 @@ module.exports = {
 				`**🍪 Cookie Loserboard — Top 10 Losers**\n` +
 				lines.join("\n");
 
-			await interaction.editReply({ content });
+			await ix.editReply({ content });
 		} catch (error) {
 			console.error("Error fetching cookie loserboard:", error);
-			await interaction.editReply("❌ Could not fetch the loserboard. Please try again later.");
+			await ix.editReply("❌ Could not fetch the loserboard. Please try again later.");
 		}
 	},
 };
