@@ -18,3 +18,8 @@ VRC_PASSWORD=
 
 ##Database URL
 DATABASE_URL="mysql://USRRNAME:PASSWORD@localhost:3306/oasisbot"
+
+DATABASE_ROOT_PASSWORD="secret"
+DATABASE_USERNAME="oasisbot"
+DATABASE_PASSWORD="oasisbot"
+DATABASE_NAME="oasisbot"

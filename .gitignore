@@ -6,3 +6,4 @@ prisma/app/
 dist
 logs/app.log
 src/utils/googleBotCalendar.json
+volumes/
