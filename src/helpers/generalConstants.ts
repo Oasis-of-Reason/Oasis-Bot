@@ -1,3 +1,5 @@
+import { eventSubType } from "@prisma/client";
+
 const vrcGamingRoleId = `1416811955074891776`;
 const vrcSocialRoleId = `1425104014084673556`;
 const vrcCinemaRoleId = `1422352173622366358`;
@@ -124,3 +126,12 @@ export const emojiMapTypes: Record<string, { emoji: string; label: string, emoji
 		emojiText: ":VRCLogo:"
 	},
 };
+
+// --- Event subtype metadata
+export const EVENT_SUBTYPE_META = {
+	GAMING: { label: "Gaming", emoji: "🎮", googleColorId: "2" },
+	SOCIAL: { label: "Social", emoji: "🧑‍🤝‍🧑", googleColorId: "11" },
+	CINEMA: { label: "Cinema", emoji: "🎬", googleColorId: "1" },
+	WELLNESS: { label: "Wellness", emoji: "🧘", googleColorId: "7" },
+	ART: { label: "Art", emoji: "🎨", googleColorId: "5" },
+} satisfies Record<eventSubType, { label: string; emoji: string; googleColorId: string }>;

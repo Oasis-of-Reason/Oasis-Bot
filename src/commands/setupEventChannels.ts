@@ -1,9 +1,11 @@
 import {
 	SlashCommandBuilder,
 	PermissionFlagsBits,
-	MessageFlags
+	MessageFlags,
+	ChatInputCommandInteraction
 } from 'discord.js';
 import { PrismaClient } from '@prisma/client';
+import { TrackedInteraction } from '../utils/interactionSystem';
 
 const prisma = new PrismaClient();
 
@@ -43,19 +45,21 @@ module.exports = {
 				.setRequired(true))
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-	async execute(interaction: any) {
-		if (!interaction.guild) {
-			await interaction.reply({ content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({ content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });
 			return;
 		}
 
-		const guild = interaction.guild;
-		const draftChannelId = interaction.options.getString('draft_channel');
-		const publishingDiscordChannelId = interaction.options.getString('publishing_discord_channel');
-		const publishingVRCChannelId = interaction.options.getString('publishing_vrc_channel');
-		const publishingMediaChannelId = interaction.options.getString('publishing_media_channel');
-		const upcomingEventsChannelId = interaction.options.getString('upcoming_events_channel');
-		const cookieChannelId = interaction.options.getString('cookie_channel');
+		const guild = ix.interaction.guild;
+		const interaction = ix.interaction as ChatInputCommandInteraction;
+
+		const draftChannelId = interaction.options.getString('draft_channel', true);
+		const publishingDiscordChannelId = interaction.options.getString('publishing_discord_channel', true);
+		const publishingVRCChannelId = interaction.options.getString('publishing_vrc_channel', true);
+		const publishingMediaChannelId = interaction.options.getString('publishing_media_channel', true);
+		const upcomingEventsChannelId = interaction.options.getString('upcoming_events_channel', true);
+		const cookieChannelId = interaction.options.getString('cookie_channel', true);
 
 		// Fetch channels
 		const draftChannel = guild.channels.cache.get(draftChannelId);
@@ -67,32 +71,32 @@ module.exports = {
 
 		// Validate all channels exist
 		if (!draftChannel)
-			return await interaction.reply({ content: '❌ Draft channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ Draft channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!publishingDiscordChannel)
-			return await interaction.reply({ content: '❌ Publishing Discord channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ Publishing Discord channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!publishingVRCChannel)
-			return await interaction.reply({ content: '❌ Publishing VRC channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ Publishing VRC channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!publishingMediaChannel)
-			return await interaction.reply({ content: '❌ Publishing Media channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ Publishing Media channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!upcomingEventsChannel)
-			return await interaction.reply({ content: '❌ Upcoming events channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ Upcoming events channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 		if (!cookieChannel)
-			return await interaction.reply({ content: '❌ Cookie channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ Cookie channel not found! Please check the channel Id.', flags: MessageFlags.Ephemeral });
 
 		// Ensure all are text channels (type 0 = GuildText)
 		const textType = 0;
 		if (draftChannel.type !== textType)
-			return await interaction.reply({ content: '❌ The draft channel must be a text channel!', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ The draft channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (publishingDiscordChannel.type !== textType)
-			return await interaction.reply({ content: '❌ The publishing Discord channel must be a text channel!', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ The publishing Discord channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (publishingVRCChannel.type !== textType)
-			return await interaction.reply({ content: '❌ The publishing VRC channel must be a text channel!', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ The publishing VRC channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (publishingMediaChannel.type !== textType)
-			return await interaction.reply({ content: '❌ The publishing Media channel must be a text channel!', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ The publishing Media channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (upcomingEventsChannel.type !== textType)
-			return await interaction.reply({ content: '❌ The upcoming events channel must be a text channel!', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ The upcoming events channel must be a text channel!', flags: MessageFlags.Ephemeral });
 		if (cookieChannel.type !== textType)
-			return await interaction.reply({ content: '❌ The cookie channel must be a text channel!', flags: MessageFlags.Ephemeral });
+			return await ix.reply({ content: '❌ The cookie channel must be a text channel!', flags: MessageFlags.Ephemeral });
 
 		try {
 			// Upsert the guild configuration in the DB
@@ -117,7 +121,7 @@ module.exports = {
 				}
 			});
 
-			await interaction.reply({
+			await ix.reply({
 				content:
 					`✅ **Event channel setup complete!**\n\n` +
 					`**Draft Channel:** ${draftChannel.name}\n` +
@@ -130,7 +134,7 @@ module.exports = {
 			});
 		} catch (error) {
 			console.error('Error setting up event channels:', error);
-			await interaction.reply({
+			await ix.reply({
 				content: '❌ An error occurred while setting up the event channels. Please try again.',
 				flags: MessageFlags.Ephemeral
 			});

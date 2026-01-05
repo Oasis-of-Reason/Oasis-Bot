@@ -20,22 +20,26 @@ import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 import { ensureUserReminderDefaults } from '../helpers/generalHelpers';
 import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
 import { writeLog } from '../helpers/logger';
+import { track, TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
+
+type ActionKind = "attend" | "interest" | "cohost";
 
 module.exports = {
 	name: Events.InteractionCreate,
 	async execute(interaction: Interaction) {
 		writeLog(`Interaction received: ${interaction.id} of type ${interaction.type}`);
+		const ix = track(interaction, "interactionCreate");
 		if (interaction.isButton()) {
 			// Handle an event signup button
 			if (interaction.customId.startsWith('ev:')) {
-				await handleEventButtons(interaction); // <- your handler
+				await handleEventButtons(ix); // <- your handler
 				return;
 			}
 
 			if (interaction.customId.startsWith('calendar:')) {
-				await handleCalenderButtons(interaction); // <- your handler
+				await handleCalenderButtons(ix); // <- your handler
 				return;
 			}
 
@@ -306,65 +310,60 @@ module.exports = {
 			}
 
 			try {
-				await command.execute(interaction);
+				await command.execute(ix);
 			} catch (error) {
 				console.error(error);
-				if (interaction.replied || interaction.deferred) {
-					await interaction.followUp({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
-				} else {
-					await interaction.reply({ content: 'There was an error while executing this command!', flags: MessageFlags.Ephemeral });
-				}
+				await ix.reply(
+					{ content: "There was an error while executing this interaction!", flags: MessageFlags.Ephemeral },
+					{ tag: "top-level-error" }
+				);
+			} finally {
+				ix.dispose();
 			}
 		}
 	},
 };
 
-export async function handleCalenderButtons(interaction: Interaction) {
-	const bi = interaction as ButtonInteraction;
+export async function handleCalenderButtons(ix: TrackedInteraction) {
+	if (!ix.interaction.isButton()) return;
+
+	const bi = ix.interaction; // ButtonInteraction
 	try {
-		const now = new Date(Date.now() - 2 * 60 * 60 * 1000); // -2 hours
-		const guildId = interaction.guildId as string;
-		const userId = interaction.user.id as string;
-		let events;
-		events = await prisma.event.findMany({
+		const now = new Date(Date.now() - 2 * 60 * 60 * 1000);
+		const guildId = bi.guildId as string;
+		const userId = bi.user.id as string;
+
+		const events = await prisma.event.findMany({
 			where: {
-				guildId: guildId,
+				guildId,
 				startTime: { gte: now },
 				published: true,
-				signups: {
-					some: {
-						userId: userId,
-					},
-				},
+				signups: { some: { userId } },
 			},
-			orderBy: { startTime: 'asc' },
-			include: {
-				_count: { select: { signups: true } },
-			},
+			orderBy: { startTime: "asc" },
+			include: { _count: { select: { signups: true } } },
 		});
+
 		if (events.length === 0) {
-			await bi.reply({ content: 'ℹ️ No upcoming events.', flags: MessageFlags.Ephemeral});
+			await ix.reply({ content: "ℹ️ No upcoming events.", flags: MessageFlags.Ephemeral }, { tag: "calendar-empty" });
 			return;
 		}
 
 		const container = buildCalenderContainer(events, guildId, true, true);
-		await bi.reply(container);
+		await ix.reply(container, { tag: "calendar-my-events" });
 	} catch (err) {
 		console.error("Button handler error:", err);
-		if (bi.deferred || bi.replied) {
-			await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
-		} else {
-			await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
-		}
+		await ix.reply(
+			{ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral },
+			{ tag: "calendar-error" }
+		);
 	}
 }
 
-// map action -> prisma client + shape
-type ActionKind = "attend" | "interest" | "cohost";
+export async function handleEventButtons(ix: TrackedInteraction) {
+	if (!ix.interaction.isButton()) return;
 
-export async function handleEventButtons(interaction: Interaction) {
-	if (!interaction.isButton()) return;
-
+	const interaction = ix.interaction; // ButtonInteraction
 	const m = interaction.customId.match(/^ev:(\d+):(attend|interest|cohost):(on|off)$/);
 	if (!m) return;
 
@@ -373,59 +372,48 @@ export async function handleEventButtons(interaction: Interaction) {
 	const userId = interaction.user.id;
 
 	try {
-		await interaction.deferUpdate();
+		await ix.deferUpdate({ tag: "ev-deferUpdate" });
 
 		switch (action as ActionKind) {
 			case "attend": {
 				const guildId = interaction.guildId as string;
-				const userId = interaction.user.id;
 
-				// Fetch the event from your database
-				const event = await prisma.event.findUnique({
-					where: { id: eventId },
-				});
-
+				const event = await prisma.event.findUnique({ where: { id: eventId } });
 				if (!event || !event.publishedThreadId) {
 					console.warn("Event or publishedThreadId not found");
-					break;
+					return;
 				}
 
-				// Fetch the thread from Discord
 				const thread = await interaction.client.channels.fetch(event.publishedThreadId);
-
-				if (!thread || thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread) {
+				if (!thread || (thread.type !== ChannelType.PublicThread && thread.type !== ChannelType.PrivateThread)) {
 					console.warn("Channel is not a thread");
-					break;
+					return;
 				}
 
 				if (op === "on") {
 					const existing = await prisma.eventSignUps.findFirst({ where: { eventId: event.id, userId } });
 					if (!existing) await prisma.eventSignUps.create({ data: { eventId: event.id, userId } });
 
-					// ✅ Add user to thread
 					await ensureUserReminderDefaults(userId);
 					await refreshPublishedCalender(interaction.client, guildId, false);
-
-					await thread.members.add(userId);
-				} else if (op === "off") { // Technically else alone works but in future we may want more options
+					await (thread as any).members.add(userId);
+				} else {
 					await prisma.eventSignUps.deleteMany({ where: { eventId: event.id, userId } });
 
-					// ✅ Remove user from thread
 					await refreshPublishedCalender(interaction.client, guildId, false);
-
-					await thread.members.remove(userId);
+					await (thread as any).members.remove(userId);
 				}
 			}
 		}
-		// Refresh both published messages with updated lists
+
 		await refreshEventMessages(interaction.client, eventId);
 	} catch (err) {
 		console.error("Button handler error:", err);
-		const bi = interaction as ButtonInteraction;
-		if (bi.deferred || bi.replied) {
-			await bi.followUp({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
-		} else {
-			await bi.reply({ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral });
-		}
+
+		// for component interactions after deferUpdate, followUp is safe
+		await ix.followUp(
+			{ content: "❌ Something went wrong. Please try again.", flags: MessageFlags.Ephemeral },
+			{ tag: "ev-error" }
+		);
 	}
 }

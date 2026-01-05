@@ -1,5 +1,4 @@
 import axios from "axios";
-import { start } from "repl";
 
 const API_BASE = "https://api.vrchat.cloud/api/1";
 const API_KEY = process.env.VRC_API_KEY || "JlE5Jldo5Jibnk5O5hTx6XVqsJu4WJ26";
@@ -272,12 +271,12 @@ export async function createOrUpdateGroupEvent(
 	}
 }
 
-
 function extractCookie(setCookie: string[] | undefined): string[] {
 	if (!setCookie?.length) return [];
 	// keep only name=value
 	return setCookie.map(c => c.split(";")[0]).filter(Boolean);
 }
+
 function mergeCookies(...lists: (string | null | undefined | string[])[]): string {
 	const parts = new Map<string, string>(); // name -> value
 	for (const list of lists) {

@@ -7,10 +7,12 @@ import {
 	ButtonStyle,
 	ComponentType,
 	User,
-	MessageFlags
+	MessageFlags,
+	Message
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 import { getStandardRolesOrganizer } from "../helpers/securityHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 const prisma = new PrismaClient();
 
 export const data = new SlashCommandBuilder()
@@ -29,19 +31,20 @@ export const data = new SlashCommandBuilder()
 			.setRequired(false)
 	);
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-	const guild = interaction.guild;
+export async function execute(ix: TrackedInteraction) {
+	const guild = ix.interaction.guild;
 	if (!guild) {
-		return interaction.reply({
+		return ix.reply({
 			content: "This command must be used inside a server.",
 			flags: MessageFlags.Ephemeral,
 		});
 	}
 
+	const interaction = ix.interaction as ChatInputCommandInteraction;
 	const hostUser: User | null = interaction.options.getUser("host");
 	const search = interaction.options.getString("search");
 
-	const requestingUserId = interaction.user.id;
+	const requestingUserId = ix.interaction.user.id;
 	const targetHostId = hostUser ? hostUser.id : requestingUserId;
 
 
@@ -50,21 +53,21 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		const rolesAllowed = getStandardRolesOrganizer();
 
 		// Narrow to GuildMember
-		if (!interaction.member || !("roles" in interaction.member)) {
-			return interaction.reply({
+		if (!ix.interaction.member || !("roles" in ix.interaction.member)) {
+			return ix.reply({
 				content: "Could not determine your permissions.",
 				flags: MessageFlags.Ephemeral,
 			});
 		}
 
-		const member = interaction.member as import("discord.js").GuildMember;
+		const member = ix.interaction.member as import("discord.js").GuildMember;
 
 		const hasPermission = member.roles.cache.some(role =>
 			rolesAllowed.includes(role.name)
 		);
 
 		if (!hasPermission) {
-			return interaction.reply({
+			return ix.reply({
 				content: "Sorry, you do not have permission to run this command.",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -151,13 +154,13 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	};
 
 	// Send first page
-	const message = await interaction.reply({
+	const response = await ix.reply({
 		embeds: [buildPageEmbed(currentPage)],
 		components: [buildButtons(currentPage)],
 		fetchReply: true,
 		flags: MessageFlags.Ephemeral,
 	});
-
+	const message = response.response as Message
 	// Collector
 	const collector = message.createMessageComponentCollector({
 		componentType: ComponentType.Button,
@@ -165,7 +168,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	});
 
 	collector.on("collect", async btnInt => {
-		if (btnInt.user.id !== interaction.user.id) {
+		if (btnInt.user.id !== ix.interaction.user.id) {
 			return btnInt.reply({
 				content: "You cannot control another user's pagination.",
 				flags: MessageFlags.Ephemeral,

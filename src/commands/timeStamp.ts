@@ -1,9 +1,15 @@
 import {
-	SlashCommandBuilder, ChatInputCommandInteraction, ActionRowBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, ComponentType,
+	SlashCommandBuilder,
+	ChatInputCommandInteraction,
+	ActionRowBuilder,
+	StringSelectMenuBuilder,
+	StringSelectMenuInteraction,
+	ComponentType,
 	Message, MessageFlags
 } from "discord.js";
 
 import * as chrono from "chrono-node";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const FORMATS = [
 	{ label: "Short time", value: "t", description: "15:03" },
@@ -26,7 +32,8 @@ module.exports = {
 				.setRequired(true)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const input = interaction.options.getString("datetime", true).trim();
 
 		// Parse input
@@ -46,7 +53,7 @@ module.exports = {
 		}
 
 		if (isNaN(date.getTime())) {
-			await interaction.reply({
+			await ix.reply({
 				content:
 					"❌ Could not parse that date/time. Try ISO (2025-09-27T15:00), `YYYY-MM-DD HH:MM`, or epoch seconds.",
 				flags: MessageFlags.Ephemeral,
@@ -75,21 +82,25 @@ module.exports = {
 		const preview = `<t:${unixSeconds}:F>`; // Discord long datetime format
 
 		// Initial ephemeral reply with menu
-		const replyMsg = (await interaction.reply({
+		const response = await ix.reply({
 			content: `Picked up date: ${preview} (renders in *your* local time)
   ISO (UTC): \`${date.toISOString()}\`
   Unix seconds: **${unixSeconds}**
   Choose which Discord timestamp format you want:`,
 			components: [row],
 			flags: MessageFlags.Ephemeral,
-			fetchReply: true,
-		})) as Message<boolean>;
+			fetchReply: true
+		},
+		);
 
 		try {
 			// Wait for the user to pick a format (60s)
-			const collected = (await replyMsg.awaitMessageComponent({
+			if (!response.response || !(response.response as Message)) {
+				throw ("no response");
+			}
+			const collected = (await (response.response as Message).awaitMessageComponent({
 				filter: (i: StringSelectMenuInteraction) =>
-					i.user.id === interaction.user.id && i.customId === "ts_format",
+					i.user.id === ix.interaction.user.id && i.customId === "ts_format",
 				componentType: ComponentType.StringSelect,
 				time: 60_000,
 			})) as StringSelectMenuInteraction;
@@ -100,12 +111,12 @@ module.exports = {
 			const discordString = `<t:${unixSeconds}:${fmt}>`;
 
 			// Edit the ephemeral reply with the result
-			await interaction.editReply({
+			await ix.editReply({
 				content: `Here is your Discord timestamp:\n\`${discordString}\`\nRendered: ${discordString}`,
 				components: [],
 			});
 		} catch {
-			await interaction.editReply({
+			await ix.editReply({
 				content: "⌛ No selection made. Command timed out.",
 				components: [],
 			});

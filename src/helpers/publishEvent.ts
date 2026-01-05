@@ -35,9 +35,11 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
 
 	const defaultPublishingChannelId =
-		(publishingEvent.type === "VRCHAT"
+	(publishingEvent.subtype === "CINEMA"
+		? guildConfig?.publishingMediaChannelId
+		: (publishingEvent.type === "VRCHAT"
 			? guildConfig?.publishingVRCChannelId
-			: guildConfig?.publishingDiscordChannelId) ?? "";
+			: guildConfig?.publishingDiscordChannelId)) ?? "";
 
 	const embed = await buildEventEmbedWithLists(client, publishingEvent, signupUserIds, cohostsUserIds);
 	const components = getEventButtons(eventId);
@@ -104,18 +106,11 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	});
 
 	// Trigger publish on Google Calendar
-	const [calEvent] = await formatCalendarEvents([publishingEvent], false);
-	if (!calEvent) throw new Error("Failed to format event for Google Calendar");
-	await createOrUpdateGoogleEvent(calEvent, false, "publish");
+	// await createOrUpdateGoogleEvent(publishingEvent, false, "publish");
 
 	const thread = await sentChannel.startThread({
 		name: `${publishingEvent.subtype}: ${publishingEvent.title}`,
 		autoArchiveDuration: ThreadAutoArchiveDuration.ThreeDays,
-	});
-	await thread.send({
-		embeds: [embed], 
-		flags: MessageFlags.SuppressNotifications,
-		components,
 	});
 
 	await prisma.event.update({

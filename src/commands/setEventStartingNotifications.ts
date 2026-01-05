@@ -4,6 +4,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -18,9 +19,10 @@ module.exports = {
 				.setRequired(true)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const enabled = interaction.options.getBoolean("enabled", true);
-		const userId = interaction.user.id;
+		const userId = ix.interaction.user.id;
 
 		await prisma.user.upsert({
 			where: { id: userId },
@@ -36,6 +38,6 @@ module.exports = {
 			? "🔔 You will now be notified when an event starts!"
 			: "🔕 You will no longer receive 'event starting' notifications.";
 
-		await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+		await ix.reply({ content: msg, flags: MessageFlags.Ephemeral });
 	},
 };

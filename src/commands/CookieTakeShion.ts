@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { formatRemaining } from "../helpers/generalHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
@@ -16,15 +17,15 @@ module.exports = {
 		.setName("cookie-steal")
 		.setDescription("Attempt to steal a cookie from Shion (50% success, 4h cooldown)"),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply({ content: "❌ This command can only be used in a server.", flags: MessageFlags.Ephemeral });
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({ content: "❌ This command can only be used in a server.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
-		const guildId = interaction.guildId!;
+		const guildId = ix.guildId!;
 		const targetId = "289822517944778752";
-		const thiefId = interaction.user.id;
+		const thiefId = ix.interaction.user.id;
 
 		// Ensure guild Cookies row exists
 		await prisma.cookies.upsert({
@@ -44,7 +45,7 @@ module.exports = {
 			const since = now.getTime() - new Date(thiefRow.lastCookieAttempt).getTime();
 			if (since < COOLDOWN_MS) {
 				const remaining = COOLDOWN_MS - since;
-				await interaction.reply({ content: `⏳ You can attempt a steal in **${formatRemaining(remaining)}**.`, flags: MessageFlags.Ephemeral });
+				await ix.reply({ content: `⏳ You can attempt a steal in **${formatRemaining(remaining)}**.`, flags: MessageFlags.Ephemeral });
 				return;
 			}
 		}
@@ -54,15 +55,15 @@ module.exports = {
 			const reverseSteal = Math.random() < 0.1;
 			const result = reverseSteal ? await stealCookieReverse(guildId, thiefId, targetId) : await stealCookie(guildId, targetId, thiefId);
 
-			const ch = interaction.channel;
+			const ch = ix.interaction.channel;
 			if (!ch || !(ch instanceof TextChannel || ch instanceof ThreadChannel)) {
-				await interaction.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
+				await ix.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 			if (reverseSteal) {
 				// Announce publicly in the channel
 				if (result.transferHappened) {
-					await interaction.reply({
+					await ix.reply({
 						content: `> 🦈 Shion with flawless dexterity **countered!** And stole a cookie from <@${thiefId}>! 🍪\n` +
 							`> <@${thiefId}> now has **${result.targetCookies}** cookies. ` +
 							`Shion now has **${result.thiefCookies}** cookies.`,
@@ -70,7 +71,7 @@ module.exports = {
 					});
 				} else {
 					// success==true but transferHappened==false implies target had no cookies
-					await interaction.reply({
+					await ix.reply({
 						content: `> 🦈 Shion **countered** but found <@${thiefId}> had no cookies to steal, what a cookieless bum.`,
 						allowedMentions: { users: [thiefId] },
 					});
@@ -78,7 +79,7 @@ module.exports = {
 			} else {
 				// Announce publicly in the channel
 				if (result.transferHappened) {
-					await interaction.reply({
+					await ix.reply({
 						content: `> 🕵️‍♂️ <@${thiefId}> **successfully stole** a cookie from Shion! 🍪\n` +
 							`> <@${thiefId}> now has **${result.thiefCookies}** cookies. ` +
 							`Shion now has **${result.targetCookies}** cookies.`,
@@ -87,13 +88,13 @@ module.exports = {
 				} else {
 					// failed steal (either RNG fail, or target had no cookies)
 					if (!result.success && result.targetHasCookies) {
-						await interaction.reply({
+						await ix.reply({
 							content: `> ❌ <@${thiefId}> attempted to steal a cookie but Shion guarded fiercely. Better luck next time!`,
 							allowedMentions: { users: [thiefId] },
 						});
 					} else {
 						// success==true but transferHappened==false implies target had no cookies
-						await interaction.reply({
+						await ix.reply({
 							content: `> ❌ <@${thiefId}> tried to steal from Shion, but they have no cookies to steal.`,
 							allowedMentions: { users: [thiefId] },
 						});
@@ -102,7 +103,7 @@ module.exports = {
 			}
 		} catch (err) {
 			console.error("steal-cookie failed:", err);
-			await interaction.reply({ content: "❌ Something went wrong while attempting the steal.", flags: MessageFlags.Ephemeral });
+			await ix.reply({ content: "❌ Something went wrong while attempting the steal.", flags: MessageFlags.Ephemeral });
 		}
 	},
 };

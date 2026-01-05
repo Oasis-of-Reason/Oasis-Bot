@@ -9,23 +9,24 @@ import {
 import { prisma } from "../utils/prisma";
 import { incrementCookieRage } from "../helpers/cookieHelpers";
 import { cookieUpdatesMentionString } from "../helpers/generalConstants";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("cookie-eat")
 		.setDescription("Eat one of your cookies (decrement your cookie count by 1)"),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply({
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({
 				content: "❌ This command can only be used in a server.",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
-		const guildId = interaction.guildId!;
-		const userId = interaction.user.id;
+		const guildId = ix.guildId!;
+		const userId = ix.interaction.user.id;
 
 		try {
 			// Ensure guild parent row exists (harmless if already there)
@@ -41,9 +42,9 @@ module.exports = {
 				data: { cookies: { decrement: 1 } },
 			});
 
-			const ch = interaction.channel;
+			const ch = ix.interaction.channel;
 			if (!ch || !(ch instanceof TextChannel || ch instanceof ThreadChannel)) {
-				await interaction.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
+				await ix.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 
@@ -55,7 +56,7 @@ module.exports = {
 					create: { guildId, userId, cookies: 0, lastCookieAttempt: new Date(0) },
 				});
 
-				await interaction.reply({ content: "😕 You don’t have any cookies to eat.", flags: MessageFlags.Ephemeral });
+				await ix.reply({ content: "😕 You don’t have any cookies to eat.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 
@@ -68,10 +69,10 @@ module.exports = {
 			const remaining = updated?.cookies ?? 0;
 
 			const rage = await incrementCookieRage(guildId);
-			const rand = randomInt(10, 30); // 0 or 1
+			const rand = randomInt(14, 30); // 0 or 1
 			if (rage > rand) {
-				const result = await shionRampage(interaction.guildId!);
-				const guild = interaction.guild!;
+				const result = await shionRampage(ix.guildId!);
+				const guild = ix.interaction.guild!;
 				const memberIds = result.victims.map(v => v.userId);
 
 				// Bulk fetch members (one request)
@@ -85,7 +86,7 @@ module.exports = {
 						return `• **${name}** lost **${v.stolen}** cookies`;
 					})
 					.join("\n");
-				await interaction.reply(
+				await ix.reply(
 					`${cookieUpdatesMentionString}\n` +
 					`🦈 **SHION RAMPAGE!** He stole a total of **${result.totalStolen}** cookies.\n` +
 					`${victimLines}\n\n` +
@@ -94,7 +95,7 @@ module.exports = {
 				return
 			}
 
-			await interaction.reply({
+			await ix.reply({
 				content: `> <@${userId}> just ate a cookie in front of Shion, are you mad?! 🍪 They now have **${remaining}** cookie${remaining === 1 ? "" : "s"} left.\n` +
 					`> Shion's mood: _` + getShionRageText(rage) + `_`,
 				allowedMentions: { users: [userId] },
@@ -102,12 +103,12 @@ module.exports = {
 
 		} catch (err) {
 			console.error("eat-cookie failed:", err);
-			await interaction.reply({ content: "❌ Something went wrong while eating your cookie.", flags: MessageFlags.Ephemeral });
+			await ix.reply({ content: "❌ Something went wrong while eating your cookie.", flags: MessageFlags.Ephemeral });
 		}
 	},
 };
 
-export function getShionRageText(rage: number): string {
+function getShionRageText(rage: number): string {
 	switch (true) {
 		case rage <= 0:
 			return "🦈 Shion seems calm... for now. 🦈";
@@ -147,7 +148,7 @@ type RampageResult = {
 	shionCookies: number;
 };
 
-export async function shionRampage(guildId: string): Promise<RampageResult> {
+async function shionRampage(guildId: string): Promise<RampageResult> {
 	return await prisma.$transaction(async (tx) => {
 		// Ensure Cookies row exists
 		await tx.cookies.upsert({

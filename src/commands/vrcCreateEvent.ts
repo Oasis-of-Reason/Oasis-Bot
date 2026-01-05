@@ -1,4 +1,7 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { 
+	ChatInputCommandInteraction, 
+	SlashCommandBuilder 
+} from "discord.js";
 import axios from "axios";
 import { prisma } from "../utils/prisma";
 import {
@@ -9,28 +12,10 @@ import {
 	VrcEventDescription,
 } from "../helpers/vrcHelpers";
 import { getVrcGroupId } from "../helpers/discordHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const API_BASE = "https://api.vrchat.cloud/api/1";
 const API_KEY = process.env.VRC_API_KEY || "JlE5Jldo5Jibnk5O5hTx6XVqsJu4WJ26";
-
-// Simple helper: check if a stored cookie still represents a logged-in session
-async function isVrcCookieValid(cookie: string): Promise<boolean> {
-	if (!cookie) return false;
-
-	const http = axios.create({
-		baseURL: API_BASE,
-		withCredentials: true,
-		headers: {
-			"User-Agent": "OasisBot/1.0",
-			Cookie: cookie,
-		},
-		params: { apiKey: API_KEY },
-		validateStatus: () => true,
-	});
-
-	const res = await http.get("/auth/user");
-	return res.status === 200; // 200 => logged in
-}
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -61,13 +46,15 @@ module.exports = {
 				.setRequired(false)
 		),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply("❌ This command can only be used in a server.");
+	async execute(ix: TrackedInteraction) {
+
+		if (!ix.interaction.guild) {
+			await ix.reply("❌ This command can only be used in a server.");
 			return;
 		}
 
-		const guildId = interaction.guildId!;
+		const guildId = ix.guildId!;
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const eventId = interaction.options.getInteger("event_id", true);
 		const shortDesc = interaction.options.getString("short_desc", false);
 		const sendCreationNotification = interaction.options.getBoolean(
@@ -76,7 +63,7 @@ module.exports = {
 		);
 		const imageId = interaction.options.getString("image_id", false);
 
-		await interaction.reply("⏳ Checking VRChat login and loading event…");
+		await ix.reply("⏳ Checking VRChat login and loading event…");
 
 		try {
 			// 1) Grab the VRChat cookie for this guild from GuildConfig
@@ -85,16 +72,16 @@ module.exports = {
 				select: { vrcLoginToken: true },
 			});
 
-			const groupId = await getVrcGroupId(interaction.guildId!);
+			const groupId = await getVrcGroupId(ix.guildId!);
 
 			if (!groupId) {
-				return interaction.reply("❌ No VRChat Group ID is set for this server.");
+				return ix.reply("❌ No VRChat Group ID is set for this server.");
 			}
 
 			const cookie = guildConfig?.vrcLoginToken ?? null;
 
 			if (!cookie) {
-				await interaction.editReply(
+				await ix.editReply(
 					"❌ The bot is not logged into VRChat. Please run `/vrc-login` first."
 				);
 				return;
@@ -103,7 +90,7 @@ module.exports = {
 			// 2) Check if cookie is still valid
 			const valid = await isVrcCookieValid(cookie);
 			if (!valid) {
-				await interaction.editReply(
+				await ix.editReply(
 					"❌ VRChat session is no longer valid. Please run `/vrc-login` again."
 				);
 				return;
@@ -134,7 +121,7 @@ module.exports = {
 			});
 
 			if (!ev || ev.guildId !== guildId) {
-				await interaction.editReply(
+				await ix.editReply(
 					"❌ Could not find that event for this server."
 				);
 				return;
@@ -142,7 +129,7 @@ module.exports = {
 
 			// Optional: ensure it's a VRC-type event
 			if (ev.type.toLowerCase() !== "VRCHAT") {
-				await interaction.editReply(
+				await ix.editReply(
 					"❌ That event is not marked as a VRChat event."
 				);
 				return;
@@ -192,7 +179,7 @@ module.exports = {
 			const idText = createdOrUpdated?.id
 				? ` (id: \`${createdOrUpdated.id}\`)`
 				: "";
-			await interaction.editReply(
+			await ix.editReply(
 				`✅ Created/updated VRChat event${idText} from Event #${ev.id}:\n` +
 					`• **${ev.title}**\n` +
 					`• Starts: \`${eventDesc.startAtISO}\`\n` +
@@ -200,7 +187,7 @@ module.exports = {
 			);
 		} catch (err: any) {
 			console.error("vrc-create-event error:", err?.response?.data ?? err);
-			await interaction.editReply(
+			await ix.editReply(
 				`❌ Failed to create/update VRChat event: ${
 					err?.message ?? "Unknown error"
 				}`
@@ -208,3 +195,21 @@ module.exports = {
 		}
 	},
 };
+
+async function isVrcCookieValid(cookie: string): Promise<boolean> {
+	if (!cookie) return false;
+
+	const http = axios.create({
+		baseURL: API_BASE,
+		withCredentials: true,
+		headers: {
+			"User-Agent": "OasisBot/1.0",
+			Cookie: cookie,
+		},
+		params: { apiKey: API_KEY },
+		validateStatus: () => true,
+	});
+
+	const res = await http.get("/auth/user");
+	return res.status === 200; // 200 => logged in
+}

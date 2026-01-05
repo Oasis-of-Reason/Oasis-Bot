@@ -5,7 +5,7 @@ import {
 	GuildMember,
 	TextChannel,
 	ThreadChannel,
-	Guild,
+	ChatInputCommandInteraction,
 } from "discord.js";
 import {
 	userHasAllowedRoleOrId,
@@ -15,6 +15,7 @@ import {
 import { PrismaClient } from "@prisma/client";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 import { fetchMsgInChannel, fetchTextChannel } from "../helpers/discordHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -30,9 +31,11 @@ module.exports = {
 		)
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-	async execute(interaction: any) {
-		if (!interaction.guild) {
-			await interaction.reply({
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction;
+
+		if (!ix.interaction.guild) {
+			await ix.reply({
 				content: "❌ This command can only be used in a server!",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -41,7 +44,7 @@ module.exports = {
 
 		const id = interaction.options.getNumber("id");
 		if (!id) {
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ You must specify an event ID.",
 				flags: MessageFlags.Ephemeral,
 			});
@@ -52,7 +55,7 @@ module.exports = {
 			const event = await prisma.event.findUnique({ where: { id } });
 
 			if (!event) {
-				await interaction.reply({
+				await ix.reply({
 					content: `❌ No event found with ID **${id}**.`,
 					flags: MessageFlags.Ephemeral,
 				});
@@ -60,17 +63,17 @@ module.exports = {
 			}
 
 			// Permission check: mod if published, organizer||event's host if not
-			if ((!event.published && !userHasAllowedRoleOrId(interaction.member as GuildMember, getStandardRolesOrganizer(), [event.hostId]) ||
-				!userHasAllowedRoleOrId(interaction.member as GuildMember, getStandardRolesMod()))
+			if ((!event.published && !userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesOrganizer(), [event.hostId]) ||
+				!userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesMod()))
 			) {
-				await interaction.reply({
+				await ix.reply({
 					content: "❌ You don't have permission for this command.",
 					flags: MessageFlags.Ephemeral,
 				});
 				return;
 			}
 
-			const client = interaction.client;
+			const client = ix.interaction.client;
 
 			let deletedPublishedMsg = false;
 			let deletedPublishedThread = false;
@@ -137,7 +140,7 @@ module.exports = {
 			const deletedEvent = await prisma.event.delete({ where: { id } });
 
 			// --- FINAL REPLY ---
-			await interaction.reply({
+			await ix.reply({
 				content:
 					`✅ **Event Deleted Successfully!**\n\n` +
 					`**Event:** ${deletedEvent.title}\n` +
@@ -150,21 +153,21 @@ module.exports = {
 				flags: MessageFlags.Ephemeral,
 			});
 
-			await refreshPublishedCalender(client, interaction.guildId as string, false);
+			await refreshPublishedCalender(client, ix.guildId as string, false);
 
 		} catch (error: any) {
 			console.error("Error deleting event:", error);
 			if (error.code === "P2025") {
-				await interaction.reply({
+				await ix.reply({
 					content: `❌ No event found with ID **${id}**.`,
 					flags: MessageFlags.Ephemeral,
 				});
 			} else {
-				await interaction.reply({
+				await ix.reply({
 					content: "❌ An unexpected error occurred while deleting the event.",
 					flags: MessageFlags.Ephemeral,
 				});
-				await refreshPublishedCalender(interaction.client, interaction.guildId as string, false);
+				await refreshPublishedCalender(ix.interaction.client, ix.guildId as string, false);
 			}
 		}
 	},

@@ -1,6 +1,7 @@
 import { SlashCommandBuilder, ChatInputCommandInteraction, PermissionFlagsBits, MessageFlags } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 import { randomInt } from "crypto";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 const juni = "1372336181492318241";
@@ -9,13 +10,13 @@ export const data = new SlashCommandBuilder()
 	.setName("cookie-gamba")
 	.setDescription("Gamble ALL your cookies: 50% to double, 50% to lose them all.")
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-	if (!interaction.inGuild() || !interaction.guildId) {
-		return interaction.reply({ content: "This command can only be used in a server.", flags: MessageFlags.Ephemeral });
+export async function execute(ix: TrackedInteraction) {
+	if (!ix.interaction.inGuild() || !ix.guildId) {
+		return ix.reply({ content: "This command can only be used in a server.", flags: MessageFlags.Ephemeral });
 	}
 
-	const guildId = interaction.guildId;
-	const userId = interaction.user.id;
+	const guildId = ix.guildId;
+	const userId = ix.interaction.user.id;
 
 	// Do the whole thing transactionally to avoid partial updates
 	const result = await prisma.$transaction(async (tx) => {
@@ -69,7 +70,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	});
 
 	if (!result.canGamble) {
-		return interaction.reply({
+		return ix.reply({
 			content: "You have **0 cookies** — nothing to gamble. Earn some first! 🍪",
 			flags: MessageFlags.Ephemeral,
 		});
@@ -81,11 +82,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		`> 💀 **LOSS!** <@${userId}> gambled **${result.before}** cookies and lost it all. Better luck next time…`;
 
 	if (result.win) {
-		return interaction.reply(
+		return ix.reply(
 			winMessage
 		);
 	} else {
-		return interaction.reply(
+		return ix.reply(
 			loseMessage
 		);
 	}

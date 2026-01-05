@@ -14,6 +14,7 @@ import {
 import { publishEvent } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "../helpers/refreshPublishedCalender";
 import { writeLog } from "../helpers/logger";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -26,33 +27,34 @@ module.exports = {
 				.setRequired(true))
 		.setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		writeLog(`PublishEvent command invoked by user ${interaction.member} tagged ${interaction.user.tag} (${interaction.user.id}) in guild ${interaction.guild?.name} (${interaction.guildId})`);
+	async execute(ix: TrackedInteraction) {
+		writeLog(`PublishEvent command invoked by user ${ix.interaction.member} tagged ${ix.interaction.user.tag} (${ix.interaction.user.id}) in guild ${ix.interaction.guild?.name} (${ix.guildId})`);
 		
-		if (!userHasAllowedRole(interaction.member as GuildMember, getStandardRolesHost())) {
-			await interaction.reply({
+		if (!userHasAllowedRole(ix.interaction.member as GuildMember, getStandardRolesHost())) {
+			await ix.reply({
 				content: "❌ You don't have permission for this command.",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
+		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const id = interaction.options.getNumber('id');
 		if (!id) {
-			await interaction.reply({
+			await ix.reply({
 				content: "❌ Please enter a valid Id.",
 				flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
-		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+		await ix.deferReply({ ephemeral: true });
 		try {
-			await publishEvent(interaction.client, interaction.guild as Guild, id);
-			await refreshPublishedCalender(interaction.client, interaction.guildId as string, true);
-			await interaction.editReply({ content: `Successfully published event: ${id}.` })
+			await publishEvent(ix.interaction.client, ix.interaction.guild as Guild, id);
+			await refreshPublishedCalender(ix.interaction.client, ix.guildId as string, true);
+			await ix.editReply({ content: `Successfully published event: ${id}.` })
 		} catch (e) {
-			await interaction.editReply({ content: `Error publishing event: ${e}.` })
+			await ix.editReply({ content: `Error publishing event: ${e}.` })
 		}
 	},
 }; 

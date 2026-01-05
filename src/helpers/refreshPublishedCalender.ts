@@ -1,62 +1,121 @@
-import { PrismaClient } from '@prisma/client';
-import { Client, Message, MessageFlags, TextChannel } from 'discord.js';
-import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
-import { fetchMsgInChannel, messageContainerEquals } from './discordHelpers';
+import { PrismaClient } from "@prisma/client";
+import { Client, Message, TextChannel } from "discord.js";
+import { buildCalenderContainer } from "../helpers/buildCalenderEmbed";
+import { fetchMsgInChannel, messageContainerEquals } from "./discordHelpers";
 const prisma = new PrismaClient();
 
-export async function refreshPublishedCalender(client: Client, guildId: string, deleteAndResend: boolean) {
+export async function refreshPublishedCalender(
+	client: Client,
+	guildId: string,
+	deleteAndResend: boolean
+) {
 	const now = new Date(Date.now() - 2 * 60 * 60 * 1000); // -2 hours
 	const guildConfig = await prisma.guildConfig.findUnique({
-		where: { id: guildId }
+		where: { id: guildId },
 	});
 
 	// Fetch channels
-	const discordChannel = await client.channels.cache.get(guildConfig?.publishingDiscordChannelId as string) as TextChannel ?? await client.channels.fetch(guildConfig!.publishingDiscordChannelId!) as TextChannel;
-	const vrcChannel = await client.channels.cache.get(guildConfig?.publishingVRCChannelId as string) as TextChannel ?? await client.channels.fetch(guildConfig!.publishingVRCChannelId!) as TextChannel;
-	const upcomingChannel = await client.channels.cache.get(guildConfig?.upcomingEventsChannelId as string) as TextChannel ?? await client.channels.fetch(guildConfig!.upcomingEventsChannelId!) as TextChannel;
+	const discordChannel =
+		((await client.channels.cache.get(
+			guildConfig?.publishingDiscordChannelId as string
+		)) as TextChannel) ??
+		((await client.channels.fetch(
+			guildConfig!.publishingDiscordChannelId!
+		)) as TextChannel);
+
+	const vrcChannel =
+		((await client.channels.cache.get(
+			guildConfig?.publishingVRCChannelId as string
+		)) as TextChannel) ??
+		((await client.channels.fetch(
+			guildConfig!.publishingVRCChannelId!
+		)) as TextChannel);
+
+	const mediaChannel =
+		((await client.channels.cache.get(
+			guildConfig?.publishingMediaChannelId as string
+		)) as TextChannel) ??
+		((await client.channels.fetch(
+			guildConfig!.publishingMediaChannelId!
+		)) as TextChannel);
+
+	const upcomingChannel =
+		((await client.channels.cache.get(
+			guildConfig?.upcomingEventsChannelId as string
+		)) as TextChannel) ??
+		((await client.channels.fetch(
+			guildConfig!.upcomingEventsChannelId!
+		)) as TextChannel);
 
 	// Fetch events
+	// Discord events: exclude CINEMA
 	const discordEvents = await prisma.event.findMany({
 		where: {
 			guildId,
 			startTime: { gte: now },
 			published: true,
-			type: "DISCORD"
+			type: "DISCORD",
+			subtype: { not: "CINEMA" },
 		},
-		orderBy: { startTime: 'asc' },
-		include: { _count: { select: { signups: true } } }
+		orderBy: { startTime: "asc" },
+		include: { _count: { select: { signups: true } } },
 	});
 
+	// VRC events: exclude CINEMA
 	const vrcEvents = await prisma.event.findMany({
 		where: {
 			guildId,
 			startTime: { gte: now },
 			published: true,
-			type: "VRCHAT"
+			type: "VRCHAT",
+			subtype: { not: "CINEMA" },
 		},
-		orderBy: { startTime: 'asc' },
-		include: { _count: { select: { signups: true } } }
+		orderBy: { startTime: "asc" },
+		include: { _count: { select: { signups: true } } },
 	});
 
+	// Media events: CINEMA only (any type)
+	const mediaEvents = await prisma.event.findMany({
+		where: {
+			guildId,
+			startTime: { gte: now },
+			published: true,
+			subtype: "CINEMA",
+		},
+		orderBy: { startTime: "asc" },
+		include: { _count: { select: { signups: true } } },
+	});
+
+	// All events: includes everything (including CINEMA)
 	const allEvents = await prisma.event.findMany({
 		where: {
 			guildId,
 			startTime: { gte: now },
-			published: true
+			published: true,
 		},
-		orderBy: { startTime: 'asc' },
-		include: { _count: { select: { signups: true } } }
+		orderBy: { startTime: "asc" },
+		include: { _count: { select: { signups: true } } },
 	});
 
-	// Split events into chunks of 15 each
+	// Split events into chunks of 15 each (day-aware)
 	const discordChunks = chunkEventsByDay(discordEvents, 15);
 	const vrcChunks = chunkEventsByDay(vrcEvents, 15);
+	const mediaChunks = chunkEventsByDay(mediaEvents, 15);
 	const allChunks = chunkEventsByDay(allEvents, 15);
 
 	// Build multiple embeds per calendar
-	const discordEmbeds = discordChunks.map((chunk, i) => buildCalenderContainer(chunk, guildId, false, false, i));
-	const vrcEmbeds = vrcChunks.map((chunk, i) => buildCalenderContainer(chunk, guildId, false, false, i));
-	const allEmbeds = allChunks.map((chunk, i) => buildCalenderContainer(chunk, guildId, false, false, i));
+	const discordEmbeds = discordChunks.map((chunk, i) =>
+		buildCalenderContainer(chunk, guildId, false, false, i)
+	);
+	const vrcEmbeds = vrcChunks.map((chunk, i) =>
+		buildCalenderContainer(chunk, guildId, false, false, i)
+	);
+	const mediaEmbeds = mediaChunks.map((chunk, i) =>
+		buildCalenderContainer(chunk, guildId, false, false, i)
+	);
+	const allEmbeds = allChunks.map((chunk, i) =>
+		buildCalenderContainer(chunk, guildId, false, false, i)
+	);
 
 	// Process Discord calendar messages
 	await sendAndStoreMessages(
@@ -78,7 +137,17 @@ export async function refreshPublishedCalender(client: Client, guildId: string, 
 		deleteAndResend
 	);
 
-	// Process Upcoming calendar
+	// Process Media (CINEMA) calendar messages
+	await sendAndStoreMessages(
+		mediaChannel,
+		guildConfig!.mediaEventCalenderMessageId,
+		mediaEmbeds,
+		"mediaEventCalenderMessageId",
+		guildId,
+		deleteAndResend
+	);
+
+	// Process Upcoming calendar (all events)
 	await sendAndStoreMessages(
 		upcomingChannel,
 		guildConfig!.upcomingEventsCalenderMessageId,
@@ -113,18 +182,13 @@ export function chunkEventsByDay<T extends { startTime: Date }>(
 		if (dayKey === currentDayKey) {
 			currentDayEvents.push(ev);
 		} else {
-			// push finished day
 			dayGroups.push(currentDayEvents);
-			// start new day group
 			currentDayKey = dayKey;
 			currentDayEvents = [ev];
 		}
 	}
 
-	// push last day's events
-	if (currentDayEvents.length > 0) {
-		dayGroups.push(currentDayEvents);
-	}
+	if (currentDayEvents.length > 0) dayGroups.push(currentDayEvents);
 
 	// 2) Build chunks of whole days, respecting maxPerMessage where possible
 	const chunks: T[][] = [];
@@ -134,25 +198,18 @@ export function chunkEventsByDay<T extends { startTime: Date }>(
 	for (const dayEvents of dayGroups) {
 		const dayCount = dayEvents.length;
 
-		// If adding this entire day would exceed the limit,
-		// start a new chunk *before* adding the day.
-		// This ensures we never split a day across two messages.
+		// If adding this entire day would exceed the limit, start a new chunk first
 		if (currentCount > 0 && currentCount + dayCount > maxPerMessage) {
 			chunks.push(currentChunk);
 			currentChunk = [];
 			currentCount = 0;
 		}
 
-		// Now add the whole day to the current chunk.
-		// Note: if dayCount > maxPerMessage, this chunk will exceed the max,
-		// but the entire day stays together (as requested).
 		currentChunk.push(...dayEvents);
 		currentCount += dayCount;
 	}
 
-	if (currentChunk.length > 0) {
-		chunks.push(currentChunk);
-	}
+	if (currentChunk.length > 0) chunks.push(currentChunk);
 
 	return chunks;
 }
@@ -161,16 +218,19 @@ async function sendAndStoreMessages(
 	channel: TextChannel,
 	existingIds: string | null,
 	embeds: any[],
-	fieldName: "discordEventCalenderMessageId" | "vrcEventCalenderMessageId" | "upcomingEventsCalenderMessageId",
+	fieldName:
+		| "discordEventCalenderMessageId"
+		| "vrcEventCalenderMessageId"
+		| "mediaEventCalenderMessageId"
+		| "upcomingEventsCalenderMessageId",
 	guildId: string,
 	deleteAndResend: boolean
 ) {
-	// Convert string → list of IDs
 	const ids = existingIds?.split(" ").filter(Boolean) ?? [];
 
 	let messages: (Message<boolean> | null)[] = [];
 
-	// Fetch existing messages IF not delete-and-resend
+	// Fetch existing messages
 	for (const id of ids) {
 		try {
 			const m = await fetchMsgInChannel(channel, id);
@@ -180,68 +240,60 @@ async function sendAndStoreMessages(
 		}
 	}
 
-	let anyChanged = false
+	let anyChanged = false;
 	for (let i = 0; i < embeds.length && !anyChanged; i++) {
-		anyChanged = anyChanged || !messageContainerEquals(messages[i] as Message<boolean>, embeds[i])
+		anyChanged = anyChanged || !messageContainerEquals(messages[i] as Message<boolean>, embeds[i]);
 	}
-	let calenderStillLast = messages[messages.length - 1]?.channel.lastMessageId === messages[messages.length - 1]?.id
+	const calenderStillLast =
+		messages[messages.length - 1]?.channel.lastMessageId === messages[messages.length - 1]?.id;
 
 	if (!anyChanged && !(deleteAndResend && !calenderStillLast)) {
-		// No changes and no need for calender re-send to ensure place as last message in channel
 		return;
 	}
 
-	// If delete & resend → delete old messages entirely
 	if (deleteAndResend) {
 		for (const id of ids) {
-			try { await channel.messages.delete(id); } catch { }
+			try {
+				await channel.messages.delete(id);
+			} catch { }
 		}
-		messages = []; // start fresh
+		messages = [];
 	}
 
 	const newIds: string[] = [];
 
-	// Iterate over calendar chunks and either edit or send new messages
 	for (let i = 0; i < embeds.length; i++) {
 		const embed = embeds[i];
 
 		if (messages[i]) {
-			// Message exists → edit it if needed
 			const msg = messages[i]!;
 			try {
 				await msg.edit(embed);
 				newIds.push(msg.id);
 			} catch {
-				// If edit fails → send fresh message
-				const newMsg = await channel.send({
-					embeds: [embed],
-					flags: MessageFlags.SuppressNotifications
-				});
+				const newMsg = await channel.send(embed);
 				newIds.push(newMsg.id);
 			}
 		} else {
-			// No existing message → send it
-			const newMsg = await channel.send({
-					embeds: [embed],
-					flags: MessageFlags.SuppressNotifications
-			});
+			const newMsg = await channel.send(embed);
 			newIds.push(newMsg.id);
 		}
 	}
 
-	// If there were too many old messages → delete extras
+	// Delete extra old messages if we now have fewer chunks
 	if (messages.length > embeds.length) {
 		for (let i = embeds.length; i < messages.length; i++) {
 			const m = messages[i];
 			if (m) {
-				try { await m.delete(); } catch { }
+				try {
+					await m.delete();
+				} catch { }
 			}
 		}
 	}
 
-	// Save updated list of message IDs
 	await prisma.guildConfig.update({
 		where: { id: guildId },
-		data: { [fieldName]: newIds.join(" ") }
+		data: { [fieldName]: newIds.join(" ") },
 	});
 }

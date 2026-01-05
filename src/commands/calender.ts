@@ -12,6 +12,7 @@ import {
 import { PrismaClient } from '@prisma/client';
 import { buildCalenderContainer } from '../helpers/buildCalenderEmbed';
 import { writeLog } from '../helpers/logger';
+import { TrackedInteraction } from '../utils/interactionSystem';
 const prisma = new PrismaClient();
 
 module.exports = {
@@ -19,7 +20,8 @@ module.exports = {
 		.setName('calendar')
 		.setDescription('Show all upcoming events grouped by day (host + time + linked title + relative time + capacity)'),
 
-	async execute(interaction: ChatInputCommandInteraction<CacheType>) {
+	async execute(ix: TrackedInteraction) {
+		const interaction = ix.interaction as ChatInputCommandInteraction<CacheType>;
 
 		if (!interaction.guildId) {
 			await interaction.reply({ content: 'This command can only be used in a server!', flags: MessageFlags.Ephemeral });

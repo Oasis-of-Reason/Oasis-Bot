@@ -5,6 +5,7 @@ import {
 	MessageFlags,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -16,31 +17,19 @@ const TARGET_ID = "289822517944778752"; // Shion
 const SUCCESS_RATE = 0.8;                // keep your adjusted rate
 const COOLDOWN_MS = 4 * 60 * 60 * 1000;  // 4 hours
 
-function formatRemaining(ms: number): string {
-	const s = Math.max(0, Math.floor(ms / 1000));
-	const h = Math.floor(s / 3600);
-	const m = Math.floor((s % 3600) / 60);
-	const sec = s % 60;
-	const parts = [];
-	if (h) parts.push(`${h}h`);
-	if (m) parts.push(`${m}m`);
-	if (sec || (!h && !m)) parts.push(`${sec}s`);
-	return parts.join(" ");
-}
-
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("cookie-tag-team")
 		.setDescription("Team up with someone to mug Shion. If successful, both get +1 and Shion loses 2 cookies."),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply("❌ This command can only be used in a server.");
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply("❌ This command can only be used in a server.");
 			return;
 		}
 
-		const guildId = interaction.guild.id;
-		const userId = interaction.user.id;
+		const guildId = ix.interaction.guild.id;
+		const userId = ix.interaction.user.id;
 		const now = new Date();
 
 		// Ensure guild Cookies row exists
@@ -70,7 +59,7 @@ module.exports = {
 		if (!pending) {
 			const remaining = await checkCooldown(userId);
 			if (remaining) {
-				await interaction.reply({content: `⏳ You can attempt a tag-team in **${remaining}**.`, flags: MessageFlags.Ephemeral});
+				await ix.reply({content: `⏳ You can attempt a tag-team in **${remaining}**.`, flags: MessageFlags.Ephemeral});
 				return;
 			}
 
@@ -83,7 +72,7 @@ module.exports = {
 
 			PENDING_BY_GUILD.set(guildId, { initiatorId: userId });
 
-			await interaction.reply(
+			await ix.reply(
 				`> 🕵️ <@${userId}> is looking for an **accomplice** to mug Shion! ` +
 				`Run **/cookie-tag-team** to join the heist. 🍪`
 			);
@@ -92,19 +81,19 @@ module.exports = {
 
 		// --- Case 2: Pending exists
 		if (pending.initiatorId === userId) {
-			await interaction.reply({content: "⏳ You already started this tag-team — wait for someone else to join!", flags: MessageFlags.Ephemeral});
+			await ix.reply({content: "⏳ You already started this tag-team — wait for someone else to join!", flags: MessageFlags.Ephemeral});
 			return;
 		}
 
 		if (pending.locked) {
-			await interaction.reply({content: "⏳ Someone else is already joining this tag-team. Try again shortly.", flags: MessageFlags.Ephemeral});
+			await ix.reply({content: "⏳ Someone else is already joining this tag-team. Try again shortly.", flags: MessageFlags.Ephemeral});
 			return;
 		}
 
 		// Enforce cooldown for the accomplice
 		const remaining = await checkCooldown(userId);
 		if (remaining) {
-			await interaction.reply({content: `⏳ You can attempt a tag-team in **${remaining}**.`, flags: MessageFlags.Ephemeral});
+			await ix.reply({content: `⏳ You can attempt a tag-team in **${remaining}**.`, flags: MessageFlags.Ephemeral});
 			return;
 		}
 
@@ -129,7 +118,7 @@ module.exports = {
 			const shionCookiesPre = shionRow?.cookies ?? 0;
 
 			if (shionCookiesPre < 2) {
-				await interaction.reply(
+				await ix.reply(
 					`> 🕵️ <@${initiatorId}> and <@${accompliceId}> tried to mug Shion... but Shion didn't have enough cookies. 💀`
 				);
 				return;
@@ -138,7 +127,7 @@ module.exports = {
 			const success = Math.random() < SUCCESS_RATE;
 
 			if (!success) {
-				await interaction.reply(
+				await ix.reply(
 					`> 🚨 <@${initiatorId}> and <@${accompliceId}> tried to mug Shion but **failed**! Our scrappy shark is tougher than he looks!`
 				);
 				return;
@@ -186,7 +175,7 @@ module.exports = {
 				};
 			});
 
-			await interaction.reply(
+			await ix.reply(
 				`> <@${initiatorId}> and <@${accompliceId}> **successfully mugged** Shion! 🍪\n` +
 				`> Shion loses **2 cookies**. Each accomplice gains **+1 cookie**.\n` +
 				`> 🍪 **New totals:** <@${initiatorId}>: ${result.initiatorCookies}, <@${accompliceId}>: ${result.accompliceCookies}\n` +
@@ -194,15 +183,27 @@ module.exports = {
 			);
 		} catch (err: any) {
 			if (err?.message === "SHION_INSUFFICIENT_COOKIES") {
-				await interaction.reply(
+				await ix.reply(
 					`> 🕵️ The mugging fizzled — Shion's cookie stash dropped below **2** right before the heist.`
 				);
 			} else {
 				console.error("cookie-tag-team error:", err);
-				await interaction.reply("❌ Something went wrong resolving the tag-team mug.");
+				await ix.reply("❌ Something went wrong resolving the tag-team mug.");
 			}
 		} finally {
 			PENDING_BY_GUILD.delete(guildId);
 		}
 	},
 };
+
+function formatRemaining(ms: number): string {
+	const s = Math.max(0, Math.floor(ms / 1000));
+	const h = Math.floor(s / 3600);
+	const m = Math.floor((s % 3600) / 60);
+	const sec = s % 60;
+	const parts = [];
+	if (h) parts.push(`${h}h`);
+	if (m) parts.push(`${m}m`);
+	if (sec || (!h && !m)) parts.push(`${sec}s`);
+	return parts.join(" ");
+}

@@ -50,6 +50,7 @@ import { checkEventPublishedOrDraftOnly } from "./getEventButtons";
 import { updateThreadTitle } from "./refreshEventMessages";
 import { createOrUpdateGroupEvent, isVrcCookieValid, mapArray, parseAndMapArray, platformMap, subtypeImageMap, subtypeMap, VrcEventDescription } from "./vrcHelpers";
 import { createOrUpdateGoogleEvent } from "../commands/googleCalendarBot";
+import { track, TrackedInteraction } from "../utils/interactionSystem";
 
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
@@ -178,7 +179,7 @@ export const updateDraftByMsgId = (draftThreadMessageId: string, data: Record<st
 /* ─────────────────────── button interaction handler ─────────────────────── */
 
 export async function handleDraftButton(
-	i: ButtonInteraction,
+	ix: TrackedInteraction,
 	eventData: {
 		id: number;
 		hostId: string;
@@ -207,7 +208,7 @@ export async function handleDraftButton(
 		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons(message.id, pubCheck) });
 	};
 
-	const modalInput = async (id: string, title: string, field: string, label: string, defaultValue: string = "", size = 100): Promise<ModalSubmitInteraction | null> => {
+	const modalInput = async (id: string, title: string, field: string, label: string, defaultValue: string = "", size = 100): Promise<TrackedInteraction | null> => {
 		const modal = new ModalBuilder()
 			.setCustomId(id)
 			.setTitle(title)
@@ -222,41 +223,44 @@ export async function handleDraftButton(
 						.setValue(defaultValue)
 				)
 			);
-		await i.showModal(modal);
+		await ix.showModal(modal);
 
 		try {
-			const sub = await i.awaitModalSubmit({
-				filter: (x) => x.customId === id && x.user.id === i.user.id,
+			const sub = await ix.awaitModalSubmitTracked({
+				filter: (x) => x.customId === id && x.user.id === ix.interaction.user.id,
 				time: TIMEOUT_TIME_LONG,
 			});
-			await sub.deferReply({ flags: MessageFlags.Ephemeral });
-			return sub;
+			await sub.tracked?.deferReply({ ephemeral: true });
+			return sub.tracked;
 		} catch (e) { writeLog("Modal submit timed out or errored."); return null; }
 	};
 
-	const memberUsername = i.member?.user.username ?? "";
-	console.log("Run: " + i.customId + " By: " + memberUsername + " at: " + new Date().toISOString());
+	const memberUsername = ix.interaction.member?.user.username ?? "";
+	const ib = ix.interaction as ButtonInteraction;
+	console.log("Run: " + ib.customId + " By: " + memberUsername + " at: " + new Date().toISOString());
 
-	switch (i.customId) {
+	switch (ib.customId) {
 		case "edit_title": {
 			if (!await hasTitleChangeCooldownPassed(eventData.id)) {
-				await i.reply({ content: "5 min cooldown for title change has not passed.", flags: MessageFlags.Ephemeral })
+				await ix.reply({ content: "5 min cooldown for title change has not passed.", flags: MessageFlags.Ephemeral })
 				break;
 			}
 			const sub = await modalInput("modal_edit_title", "Edit Title", "new_title", "New Title", eventData.title ?? "");
 			if (!sub) return;
-			eventData.title = sub.fields.getTextInputValue("new_title") || eventData.title;
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			eventData.title = typedSub.fields.getTextInputValue("new_title") || eventData.title;
 			await sub.editReply({ content: "✅ Title updated! (5 min cooldown)" });
 			await setLastTitleChangeTime(eventData.id);
 			await updateDraftByMsgId(message.id, { title: eventData.title });
-			await updateThreadTitle(i.client, i.channelId, eventData.title, eventData.id);
+			await updateThreadTitle(ix.interaction.client, ib.channelId, eventData.title, eventData.id);
 			await rerender();
 			break;
 		}
 		case "edit_description": {
 			const sub = await modalInput("modal_edit_description", "Edit Description", "new_description", "New Description", eventData.description ?? "", 4000);
 			if (!sub) return;
-			eventData.description = sub.fields.getTextInputValue("new_description") || "";
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			eventData.description = typedSub.fields.getTextInputValue("new_description") || "";
 			await updateDraftByMsgId(message.id, { description: eventData.description });
 			await sub.editReply({ content: "✅ Description updated!" });
 			await rerender();
@@ -265,7 +269,8 @@ export async function handleDraftButton(
 		case "edit_activity": {
 			const sub = await modalInput("modal_edit_activity", "Edit Activity", "new_activity", "Activity", eventData.activity ?? "");
 			if (!sub) return;
-			eventData.activity = sub.fields.getTextInputValue("new_activity") || "";
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			eventData.activity = typedSub.fields.getTextInputValue("new_activity") || "";
 			await updateDraftByMsgId(message.id, { activity: eventData.activity });
 			await sub.editReply({ content: "✅ Activity updated!" });
 			await rerender();
@@ -274,7 +279,8 @@ export async function handleDraftButton(
 		case "edit_capacity": {
 			const sub = await modalInput("modal_edit_capacity", "Edit Capacity", "new_capacity_cap", "Max Capacity");
 			if (!sub) return;
-			eventData.capacityCap = validateNumber(sub.fields.getTextInputValue("new_capacity_cap"));
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			eventData.capacityCap = validateNumber(typedSub.fields.getTextInputValue("new_capacity_cap"));
 			await updateDraftByMsgId(message.id, { capacityCap: eventData.capacityCap });
 			await sub.editReply({ content: "✅ Capacity updated!" });
 			await rerender();
@@ -283,7 +289,8 @@ export async function handleDraftButton(
 		case "edit_start": {
 			const sub = await modalInput("modal_edit_start", "Edit Start Time", "new_start", "When does it start?");
 			if (!sub) return;
-			const parsed = chrono.parseDate(sub.fields.getTextInputValue("new_start"));
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			const parsed = chrono.parseDate(typedSub.fields.getTextInputValue("new_start"));
 			if (parsed) {
 				eventData.startTime = parsed;
 				await updateDraftByMsgId(message.id, { startTime: eventData.startTime });
@@ -297,32 +304,33 @@ export async function handleDraftButton(
 		case "edit_length": {
 			const sub = await modalInput("modal_edit_length", "Edit Length", "new_length", "Length in minutes");
 			if (!sub) return;
-			eventData.lengthMinutes = validateNumber(sub.fields.getTextInputValue("new_length"));
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			eventData.lengthMinutes = validateNumber(typedSub.fields.getTextInputValue("new_length"));
 			await updateDraftByMsgId(message.id, { lengthMinutes: eventData.lengthMinutes });
 			await sub.editReply({ content: "✅ Length updated!" });
 			await rerender();
 			break;
 		}
 		case "edit_type": {
-			const msg = await i.reply({
+			const response = await ix.reply({
 				content: "Select a new type:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 						mkSelect("select_type", "Choose type", [
-							{ label: "VRC", value: "VRC" },
-							{ label: "Discord", value: "Discord" },
+							{ label: "VRC", value: "VRCHAT" },
+							{ label: "Discord", value: "DISCORD" },
 						])
 					),
 				],
 				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
-
+			const msg = response.response as Message;
 			if (!msg) return;
-			const col = (msg as Message).createMessageComponentCollector({
+			const col = msg.createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === i.user.id && x.customId === "select_type",
+				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_type",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.type = s.values[0];
@@ -333,7 +341,7 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_subtype": {
-			const msg = await i.reply({
+			const response = await ix.reply({
 				content: "Select a new subtype:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -350,11 +358,12 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			const msg = response.response as Message;
 			if (!msg) return;
-			const col = (msg as Message).createMessageComponentCollector({
+			const col = msg.createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === i.user.id && x.customId === "select_subtype",
+				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_subtype",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.subtype = s.values[0];
@@ -365,7 +374,7 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_scope": {
-			const msg = await i.reply({
+			const response = await ix.reply({
 				content: "Select a new instance type:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -379,11 +388,12 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			const msg = response.response as Message;
 			if (!msg) return;
-			const col = (msg as Message).createMessageComponentCollector({
+			const col = msg.createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === i.user.id && x.customId === "select_scope",
+				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_scope",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.scope = s.values[0];
@@ -394,7 +404,7 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_platforms": {
-			const msg = await i.reply({
+			const response = await ix.reply({
 				content: "Select new platforms:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -414,11 +424,12 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			const msg = response.response as Message;
 			if (!msg) return;
-			const col = (msg as Message).createMessageComponentCollector({
+			const col = msg.createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === i.user.id && x.customId === "select_platforms",
+				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_platforms",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.platforms = JSON.stringify(s.values);
@@ -429,7 +440,7 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_requirements": {
-			const msg = await i.reply({
+			const response = await ix.reply({
 				content: "Select new avatar performance requirement:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -445,11 +456,13 @@ export async function handleDraftButton(
 				flags: MessageFlags.Ephemeral,
 				fetchReply: true,
 			});
+
+			const msg = response.response as Message;
 			if (!msg) return;
-			const col = (msg as Message).createMessageComponentCollector({
+			const col = msg.createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === i.user.id && x.customId === "select_requirements",
+				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_requirements",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.requirements = s.values[0];
@@ -460,13 +473,13 @@ export async function handleDraftButton(
 			break;
 		}
 		case "edit_poster": {
-			await i.reply({
+			await ix.reply({
 				content: "Please upload a new poster image in this thread within 30 seconds.",
 				flags: MessageFlags.Ephemeral,
 			});
-			const channel = i.channel as TextChannel | ThreadChannel;
+			const channel = ix.interaction.channel as TextChannel | ThreadChannel;
 			const collected = await channel.awaitMessages({
-				filter: (m) => m.author.id === i.user.id && m.attachments.size > 0,
+				filter: (m) => m.author.id === ix.interaction.user.id && m.attachments.size > 0,
 				max: 1,
 				time: TIMEOUT_TIME_SHORT,
 			});
@@ -495,17 +508,18 @@ export async function handleDraftButton(
 						components: editButtons(message.id, pubCheck),
 					});
 
-					await i.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
+					await ix.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
 				}
 			} else {
-				await i.followUp({ content: "❌ No image uploaded.", flags: MessageFlags.Ephemeral });
+				await ix.followUp({ content: "❌ No image uploaded.", flags: MessageFlags.Ephemeral });
 			}
 			break;
 		}
 		case "edit_vrc_description": {
 			const sub = await modalInput("modal_edit_vrc_description", "Edit VRC Description", "new_vrc_description", "New VRC Description", eventData.vrcDescription ?? "", 1000);
 			if (!sub) return;
-			eventData.vrcDescription = sub.fields.getTextInputValue("new_vrc_description") || "";
+			const typedSub = sub.interaction as ModalSubmitInteraction;
+			eventData.vrcDescription = typedSub.fields.getTextInputValue("new_vrc_description") || "";
 			await updateDraftByMsgId(message.id, { description: eventData.vrcDescription });
 			await sub.editReply({ content: "✅ VRC Description updated!" });
 			await rerender();
@@ -514,14 +528,14 @@ export async function handleDraftButton(
 		case "edit_vrc_notify": {
 
 			if (!userHasAllowedRole(
-				i.member as GuildMember,
+				ix.interaction.member as GuildMember,
 				getStandardRolesOrganizer()
 			)) {
-				await i.reply({ content: `Ask an Admin/Mod/Organizer to do this for you. (for now).`, flags: MessageFlags.Ephemeral });
+				await ix.reply({ content: `Ask an Admin/Mod/Organizer to do this for you. (for now).`, flags: MessageFlags.Ephemeral });
 				break;
 			}
 
-			const msg = await i.reply({
+			const response = await ix.reply({
 				content: "Select whether to notify the vrc group on creation:",
 				components: [
 					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -535,11 +549,12 @@ export async function handleDraftButton(
 				fetchReply: true,
 			});
 
+			const msg = response.response as Message;
 			if (!msg) return;
-			const col = (msg as Message).createMessageComponentCollector({
+			const col = msg.createMessageComponentCollector({
 				componentType: ComponentType.StringSelect,
 				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === i.user.id && x.customId === "select_vrc_notify",
+				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_vrc_notify",
 			});
 			col.on("collect", async (s: StringSelectMenuInteraction) => {
 				eventData.vrcSendNotification = s.values[0] === "True";
@@ -551,36 +566,36 @@ export async function handleDraftButton(
 		}
 
 		case "get_event_id":
-			await i.reply({ content: `This event's ID is \`${eventData.id}\``, flags: MessageFlags.Ephemeral });
+			await ix.reply({ content: `This event's ID is \`${eventData.id}\``, flags: MessageFlags.Ephemeral });
 			break;
 
 		case "publish_event": {
 			console.log("Start Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
 			if (publishInProgress) {
-				await i.reply({ content: "A Publish is already in progress. Please wait a few seconds and try again.", flags: MessageFlags.Ephemeral })
+				await ix.reply({ content: "A Publish is already in progress. Please wait a few seconds and try again.", flags: MessageFlags.Ephemeral })
 				break;
 			}
 			publishInProgress = true;
 			try {
-				await i.deferUpdate();
-				const guild = i.guild as Guild;
-				if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
-					await i.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
+				await ix.deferReply();
+				const guild = ix.interaction.guild as Guild;
+				if (!userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
+					await ix.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
 					publishInProgress = false;
 					return;
 				}
-				await publishEvent(i.client, guild, eventData.id);
+				await publishEvent(ix.interaction.client, guild, eventData.id);
 				await addHostToEventThread(guild, eventData.id);
 				const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
-				await i.message.edit({
+				await ib.message.edit({
 					embeds: [buildDraftEmbed(eventData)],
-					components: editButtons(i.message.id, pubCheck),
+					components: editButtons(ib.message.id, pubCheck),
 				});
-				await i.followUp({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
-				await refreshPublishedCalender(i.client, guild.id, true);
+				await ix.followUp({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
+				await refreshPublishedCalender(ix.interaction.client, guild.id, true);
 			} catch (err) {
 				console.error("Publish error:", err);
-				await i.followUp({ content: "⚠️ Something went wrong while publishing.", flags: MessageFlags.Ephemeral });
+				await ix.followUp({ content: "⚠️ Something went wrong while publishing.", flags: MessageFlags.Ephemeral });
 			} finally {
 				console.log("Ended Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
 			}
@@ -592,33 +607,33 @@ export async function handleDraftButton(
 			console.log("Start VRC Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
 			try {
 				if (!await hasVrcUpdateCooldownPassed(eventData.id)) {
-					await i.reply({ content: "5 min cooldown for vrc update has not passed.", flags: MessageFlags.Ephemeral })
+					await ix.reply({ content: "5 min cooldown for vrc update has not passed.", flags: MessageFlags.Ephemeral })
 					break;
 				}
-				await i.deferUpdate();
+				await ix.deferUpdate();
 				await setLastVrcUpdateTime(eventData.id);
-				const guild = i.guild as Guild;
-				if (!userHasAllowedRoleOrId(i.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
-					await i.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
+				const guild = ix.interaction.guild as Guild;
+				if (!userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
+					await ix.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
 					return;
 				}
 				// 1) Grab the VRChat cookie for this guild from GuildConfig
 				const guildConfig = await prisma.guildConfig.findUnique({
-					where: { id: i.guildId as string },
+					where: { id: ix.guildId as string },
 					select: { vrcLoginToken: true },
 				});
 
-				const groupId = await getVrcGroupId(i.guildId!);
+				const groupId = await getVrcGroupId(ix.guildId!);
 
 				if (!groupId) {
-					await i.followUp("❌ No VRChat Group ID is set for this server. Tell an admin.");
+					await ix.followUp("❌ No VRChat Group ID is set for this server. Tell an admin.");
 					return
 				}
 
 				const cookie = guildConfig?.vrcLoginToken ?? null;
 
 				if (!cookie) {
-					await i.followUp(
+					await ix.followUp(
 						"❌ The bot is not logged into VRChat. Tell an admin."
 					);
 					return;
@@ -627,7 +642,7 @@ export async function handleDraftButton(
 				// 2) Check if cookie is still valid
 				const valid = await isVrcCookieValid(cookie);
 				if (!valid) {
-					await i.followUp(
+					await ix.followUp(
 						"❌ VRChat session is no longer valid. Tell an admin."
 					);
 					return;
@@ -666,10 +681,10 @@ export async function handleDraftButton(
 				});
 
 				await rerender();
-				await i.followUp({ content: "✅ Event (re)published to VRC!", flags: MessageFlags.Ephemeral });
+				await ix.followUp({ content: "✅ Event (re)published to VRC!", flags: MessageFlags.Ephemeral });
 			} catch (err) {
 				console.error("VRC Publish error:", err);
-				await i.followUp({ content: "⚠️ Something went wrong while publishing to vrc: " + err, flags: MessageFlags.Ephemeral });
+				await ix.followUp({ content: "⚠️ Something went wrong while publishing to vrc: " + err, flags: MessageFlags.Ephemeral });
 			} finally {
 				console.log("Ended Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
 			}
@@ -677,7 +692,7 @@ export async function handleDraftButton(
 		}
 
 		default:
-			await i.deferUpdate(); // safe ack
+			await ix.deferUpdate(); // safe ack
 	}
 }
 
@@ -787,7 +802,7 @@ export async function restoreEventDraftCollectors(guild: Guild, draft: any) {
 		time: 0, // infinite
 	});
 
-	collector.on("collect", async (i) => handleDraftButton(i, eventData, msg));
+	collector.on("collect", async (i) => handleDraftButton(track(i, "From Restore", eventData.id + " " + eventData.title + " By: " + eventData.hostId), eventData, msg));
 
 	// Re-archive the thread if we opened it
 	if (reArchive) {

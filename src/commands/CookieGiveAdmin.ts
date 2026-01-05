@@ -4,8 +4,10 @@ import {
 	ChatInputCommandInteraction,
 	PermissionFlagsBits,
 	MessageFlags,
+	CacheType,
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const prisma = new PrismaClient();
 
@@ -23,20 +25,21 @@ export const data = new SlashCommandBuilder()
 			.setRequired(true)
 	)
 
-export async function execute(interaction: ChatInputCommandInteraction) {
-	if (!interaction.inGuild() || !interaction.guildId) {
-		return interaction.reply({
+export async function execute(ix: TrackedInteraction) {
+	const interaction = ix.interaction as ChatInputCommandInteraction;
+	if (!interaction.inGuild() || !ix.guildId) {
+		return ix.reply({
 			content: "❌ This command can only be used in a server.",
 			flags: MessageFlags.Ephemeral,
 		});
 	}
 
-	const guildId = interaction.guildId;
+	const guildId = ix.guildId;
 	const targetUser = interaction.options.getUser("user", true);
 	const amount = interaction.options.getInteger("amount", true);
 
 	if (amount <= 0) {
-		return interaction.reply({
+		return ix.reply({
 			content: "❌ Amount must be **greater than zero**.",
 			flags: MessageFlags.Ephemeral,
 		});
@@ -70,7 +73,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 		return updated.cookies;
 	});
 
-	await interaction.reply(
+	await ix.reply(
 		`🍪 **Gave ${amount} cookies** to <@${userId}>.\n` +
 		`They now have **${result} cookies**!`
 	);

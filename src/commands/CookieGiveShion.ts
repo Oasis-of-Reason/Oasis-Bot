@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import { prisma } from "../utils/prisma";
 import { formatRemaining } from "../helpers/generalHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 const COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
@@ -15,15 +16,15 @@ module.exports = {
 		.setName("cookie-give")
 		.setDescription("Give one cookie to a Shion (4h cooldown)"),
 
-	async execute(interaction: ChatInputCommandInteraction) {
-		if (!interaction.guild) {
-			await interaction.reply({ content: "❌ This command can only be used in a server.", flags: MessageFlags.Ephemeral });
+	async execute(ix: TrackedInteraction) {
+		if (!ix.interaction.guild) {
+			await ix.reply({ content: "❌ This command can only be used in a server.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
-		const guildId = interaction.guildId!;
+		const guildId = ix.guildId!;
 		const receiverId = "289822517944778752"; // Shion
-		const giverId = interaction.user.id;
+		const giverId = ix.interaction.user.id;
 
 		try {
 			// Ensure guild Cookies row exists
@@ -44,7 +45,7 @@ module.exports = {
 				const since = now.getTime() - new Date(giverRow.lastCookieAttempt).getTime();
 				if (since < COOLDOWN_MS) {
 					const remaining = COOLDOWN_MS - since;
-					await interaction.reply({
+					await ix.reply({
 						content: `⏳ You can give a cookie in **${formatRemaining(remaining)}**.`, flags: MessageFlags.Ephemeral
 					});
 					return;
@@ -96,21 +97,21 @@ module.exports = {
 			}
 
 			// Make sure channel supports send()
-			const ch = interaction.channel;
+			const ch = ix.interaction.channel;
 			if (!ch || !(ch instanceof TextChannel || ch instanceof ThreadChannel)) {
-				await interaction.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
+				await ix.reply({ content: "✅ Cookie recorded, but I couldn't post to this channel.", flags: MessageFlags.Ephemeral });
 				return;
 			}
 
 			// Public announcement
-			await interaction.reply({
+			await ix.reply({
 				content: cookieSuccessMessage,
 				allowedMentions: { users: [giverId] },
 			});
 
 		} catch (err) {
 			console.error("cookie-give failed:", err);
-			await interaction.reply({ content: "❌ Something went wrong while giving the cookie.", flags: MessageFlags.Ephemeral });
+			await ix.reply({ content: "❌ Something went wrong while giving the cookie.", flags: MessageFlags.Ephemeral });
 		}
 	},
 };

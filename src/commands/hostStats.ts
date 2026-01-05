@@ -12,30 +12,31 @@ import {
 	userHasAllowedRole,
 	getStandardRolesOrganizer,
 } from "../helpers/securityHelpers";
+import { TrackedInteraction } from "../utils/interactionSystem";
 
 export const data = new SlashCommandBuilder()
 	.setName("host-stats")
 	.setDescription("Shows event stats grouped by host (restricted)");
 
-export async function execute(interaction: ChatInputCommandInteraction) {
+export async function execute(ix: TrackedInteraction) {
 	// --- Permission Check ---
 	const canSee = userHasAllowedRole(
-		interaction.member as GuildMember,
+		ix.interaction.member as GuildMember,
 		getStandardRolesOrganizer()
 	);
 
 	if (!canSee) {
-		return interaction.reply({
+		return ix.reply({
 			content: "You do not have permission to run this.",
 			flags: MessageFlags.Ephemeral,
 		});
 	}
 
 	// --- Defer reply immediately (ephemeral) ---
-	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+	await ix.deferReply({ ephemeral: true });
 
-	const guildId = interaction.guildId!;
-	const guild = interaction.guild!;
+	const guildId = ix.guildId!;
+	const guild = ix.interaction.guild!;
 
 	// --- Fetch all events for this guild ---
 	const events = await prisma.event.findMany({
@@ -44,7 +45,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	});
 
 	if (events.length === 0) {
-		return interaction.editReply({
+		return ix.editReply({
 			content: "No events found for this guild.",
 		});
 	}
@@ -74,7 +75,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 			if (member) {
 				username = member.user.displayName;
 			} else {
-				const user = await interaction.client.users.fetch(hostId).catch(() => null);
+				const user = await ix.interaction.client.users.fetch(hostId).catch(() => null);
 				if (user) username = user.username;
 				leftGuild = true;
 			}
@@ -118,7 +119,7 @@ export async function execute(interaction: ChatInputCommandInteraction) {
 	const output = "```\n" + lines.join("\n") + "\n```";
 
 	// --- Send the table as the final ephemeral response ---
-	return interaction.editReply({
+	return ix.editReply({
 		content: output,
 	});
 }
