@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mysql:latest
+    restart: always
+    command: --lower_case_table_names=1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+      MYSQL_USER: ${DATABASE_USERNAME}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./volumes/db/:/var/lib/mysql
+
+  runner:
+    build:
+      context: .
+    env_file:
+      - .env
+    depends_on:
+      - db
+    restart: always
+    environment:
+      isDev: ${isDev}
+
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+
+      DEFAULT_EVENT_DRAFT_CHANNEL_ID: ${DEFAULT_EVENT_DRAFT_CHANNEL_ID}
+      DEFAULT_EVENT_PUBLISHING_DISCORD_CHANNEL_ID: ${DEFAULT_EVENT_PUBLISHING_DISCORD_CHANNEL_ID}
+      DEFAULT_EVENT_PUBLISHING_VRC_CHANNEL_ID: ${DEFAULT_EVENT_PUBLISHING_VRC_CHANNEL_ID}
+      DEFAULT_EVENT_UPCOMING_EVENTS_CHANNEL_ID: ${DEFAULT_EVENT_UPCOMING_EVENTS_CHANNEL_ID}
+      DEFAULT_EVENT_COOKIE_CHANNEL_ID: ${DEFAULT_EVENT_COOKIE_CHANNEL_ID}
+
+      VRC_USERNAME: ${VRC_USERNAME}
+      VRC_PASSWORD: ${VRC_PASSWORD}
+
+      DATABASE_URL: "mysql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@db:3306/${DATABASE_NAME}"
+    volumes:
+      - ./volumes/runner/logs/:/app/logs
+    user: botrunner
