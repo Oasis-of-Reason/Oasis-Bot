@@ -350,7 +350,7 @@ export async function handleDraftButton(
 							{ label: "Social", value: "SOCIAL" },
 							{ label: "Cinema", value: "CINEMA" },
 							{ label: "Art", value: "ART" },
-							{ label: "Mindfulness", value: "MINDFULNESS" },
+							{ label: "Wellness", value: "WELLNESS" },
 						])
 					),
 				],
@@ -584,14 +584,21 @@ export async function handleDraftButton(
 					publishInProgress = false;
 					return;
 				}
+				console.log("Star PublishEvent");
 				await publishEvent(ix.interaction.client, guild, eventData.id);
+				console.log("Finished PublishEvent");
+				console.log("starAddHostToEventThread");
 				await addHostToEventThread(guild, eventData.id);
+				console.log("Finished AddHostToEventThread\nStart checkEventPublishedorDraftOnly, passing message id of " + message.id);
 				const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
+				console.log("checking ib.message.id: " + ib.message.id);
 				await ib.message.edit({
 					embeds: [buildDraftEmbed(eventData)],
 					components: editButtons(ib.message.id, pubCheck),
 				});
+				console.log("Finished ib.message.edit\n start FollowUp");
 				await ix.followUp({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
+				console.log("Finished FollowUp\n start refreshPublishedCalender with ix.interaction.client and guild.id values\n" + ix.interaction.client + " and " + guild.id);
 				await refreshPublishedCalender(ix.interaction.client, guild.id, true);
 			} catch (err) {
 				console.error("Publish error:", err);

@@ -4,12 +4,12 @@ const vrcGamingRoleId = `1416811955074891776`;
 const vrcSocialRoleId = `1425104014084673556`;
 const vrcCinemaRoleId = `1422352173622366358`;
 const vrcArtRoleId = `1438102765141491814`;
-const vrcMindfulnessId = `1438102558743859211`;
+const vrcWellnessId = `1438102558743859211`;
 const discordGamingRoleId = `1416812117423816867`;
 const discordSocialRoleId = `1419732188202533036`;
 const discordCinemaRoleId = `1425104189444460636`;
 const discordArtRoleId = `1438102730546876457`;
-const discordMindfulnessId = `1438102680412360764`;
+const discordWellnessId = `1438102680412360764`;
 const cookieUpdatesRole = `1439614599514292316`;
 
 export const oasisPremiumId = `1445880182274785380`;
@@ -19,12 +19,12 @@ export const allowedPingRolesEvents = [
 	vrcSocialRoleId,
 	vrcCinemaRoleId,
 	vrcArtRoleId,
-	vrcMindfulnessId,
+	vrcWellnessId,
 	discordGamingRoleId,
 	discordSocialRoleId,
 	discordCinemaRoleId,
 	discordArtRoleId,
-	discordMindfulnessId
+	discordWellnessId
 ];
 
 export const allowedPingRolesCookies = [
@@ -47,8 +47,8 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 		ART: {
 			value: `<@&${vrcArtRoleId}>`,
 		},
-		MINDFULNESS: {
-			value: `<@&${vrcMindfulnessId}>`,
+		WELLNESS: {
+			value: `<@&${vrcWellnessId}>`,
 		},
 	},
 	DISCORD: {
@@ -64,8 +64,8 @@ export const pingMap: Record<string, Record<string, { value: string }>> = {
 		ART: {
 			value: `<@&${discordArtRoleId}>`,
 		},
-		MINDFULNESS: {
-			value: `<@&${discordMindfulnessId}>`,
+		WELLNESS: {
+			value: `<@&${discordWellnessId}>`,
 		},
 	}
 };

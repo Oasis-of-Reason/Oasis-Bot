@@ -13,7 +13,7 @@ export const subtypeMap: Record<string, string> = {
 	social: "hangout",
 	cinema: "film_media",
 	art: "arts",
-	mindfulness: "wellness",
+	wellness: "wellness",
 };
 
 export const subtypeImageMap: Record<string, string> = {
@@ -21,7 +21,7 @@ export const subtypeImageMap: Record<string, string> = {
 	social: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
 	cinema: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
 	art: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
-	mindfulness: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
+	wellness: "file_487be5f9-ac47-4dfa-89f6-d52b0d1bdebb",
 };
 
 export class VrcEventDescription {
