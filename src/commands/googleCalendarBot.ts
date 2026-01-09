@@ -148,7 +148,7 @@ export async function formatCalendarEvents(events: Event[], draft: boolean = fal
 		formattedEvents.push({
 			id: e.id,
 			dbguildId: parseInt(e.guildId),
-			title: `${getEmojiFromSubtype(e.subtype as eventSubType)} ${e.title} (${totalSignedUp}/${totalCapacity})${draft ? "" : " [Draft]"}`,
+			title: `${getEmojiFromSubtype(e.subtype as eventSubType)} ${e.title} (${totalSignedUp}/${totalCapacity})${draft ? " [Draft]" : ""}`,
 			starts: e.startTime,
 			ends: e.lengthMinutes ? new Date(e.startTime.getTime() + e.lengthMinutes * 60000) : null,
 			type: e.type,
