@@ -591,7 +591,7 @@ export async function handleDraftButton(
 				await addHostToEventThread(guild, eventData.id);
 				console.log("Finished AddHostToEventThread\nStart checkEventPublishedorDraftOnly, passing message id of " + message.id);
 				const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
-				console.log("checking ib.message.id: " + ib.message.id);
+				console.log("checking ib.message.id: " + ib.message.id + "\neventData" + JSON.stringify(eventData));
 				await ib.message.edit({
 					embeds: [buildDraftEmbed(eventData)],
 					components: editButtons(ib.message.id, pubCheck),

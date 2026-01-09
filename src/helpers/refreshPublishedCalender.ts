@@ -10,43 +10,29 @@ export async function refreshPublishedCalender(
 	deleteAndResend: boolean
 ) {
 	const now = new Date(Date.now() - 2 * 60 * 60 * 1000); // -2 hours
+	console.log('refreshing calendars, now is: ' + now.toISOString());
 	const guildConfig = await prisma.guildConfig.findUnique({
 		where: { id: guildId },
 	});
 
 	// Fetch channels
+	console.log("fetching channels");
 	const discordChannel =
-		((await client.channels.cache.get(
-			guildConfig?.publishingDiscordChannelId as string
-		)) as TextChannel) ??
-		((await client.channels.fetch(
-			guildConfig!.publishingDiscordChannelId!
-		)) as TextChannel);
+		((await client.channels.cache.get(guildConfig?.publishingDiscordChannelId as string)) as TextChannel) ??
+		((await client.channels.fetch(guildConfig!.publishingDiscordChannelId!)) as TextChannel);
 
 	const vrcChannel =
-		((await client.channels.cache.get(
-			guildConfig?.publishingVRCChannelId as string
-		)) as TextChannel) ??
-		((await client.channels.fetch(
-			guildConfig!.publishingVRCChannelId!
-		)) as TextChannel);
+		((await client.channels.cache.get(guildConfig?.publishingVRCChannelId as string)) as TextChannel) ??
+		((await client.channels.fetch(guildConfig!.publishingVRCChannelId!)) as TextChannel);
 
 	const mediaChannel =
-		((await client.channels.cache.get(
-			guildConfig?.publishingMediaChannelId as string
-		)) as TextChannel) ??
-		((await client.channels.fetch(
-			guildConfig!.publishingMediaChannelId!
-		)) as TextChannel);
+		((await client.channels.cache.get(guildConfig?.publishingMediaChannelId as string)) as TextChannel) ??
+		((await client.channels.fetch(guildConfig!.publishingMediaChannelId!)) as TextChannel);
 
 	const upcomingChannel =
-		((await client.channels.cache.get(
-			guildConfig?.upcomingEventsChannelId as string
-		)) as TextChannel) ??
-		((await client.channels.fetch(
-			guildConfig!.upcomingEventsChannelId!
-		)) as TextChannel);
-
+		((await client.channels.cache.get(guildConfig?.upcomingEventsChannelId as string)) as TextChannel) ??
+		((await client.channels.fetch(guildConfig!.upcomingEventsChannelId!)) as TextChannel);
+		console.log("fetched channels");
 	// Fetch events
 	// Discord events: exclude CINEMA
 	const discordEvents = await prisma.event.findMany({
@@ -226,10 +212,11 @@ async function sendAndStoreMessages(
 	guildId: string,
 	deleteAndResend: boolean
 ) {
+	console.log("entered function sendandStoreMessage, about to create ids");
 	const ids = existingIds?.split(" ").filter(Boolean) ?? [];
 
 	let messages: (Message<boolean> | null)[] = [];
-
+	console.log("ids = " + ids);
 	// Fetch existing messages
 	for (const id of ids) {
 		try {
