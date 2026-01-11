@@ -15,24 +15,42 @@ export async function refreshPublishedCalender(
 		where: { id: guildId },
 	});
 
+	if (!guildConfig) {
+		console.error("Guild config not found for guild:", guildId);
+		return;
+	}
+
 	// Fetch channels
 	console.log("fetching channels");
-	const discordChannel =
-		((await client.channels.cache.get(guildConfig?.publishingDiscordChannelId as string)) as TextChannel) ??
-		((await client.channels.fetch(guildConfig!.publishingDiscordChannelId!)) as TextChannel);
+	
+	const fetchChannel = async (channelId: string | null | undefined): Promise<TextChannel | null> => {
+		if (!channelId) {
+			console.warn("Channel ID is null or undefined");
+			return null;
+		}
+		try {
+			return (client.channels.cache.get(channelId)) as TextChannel ??
+				((await client.channels.fetch(channelId)) as TextChannel);
+		} catch (error) {
+			console.error(`Failed to fetch channel ${channelId}:`, error);
+			return null;
+		}
+	};
+	console.log("Discord Channel: " + guildConfig.publishingDiscordChannelId);
+	console.log("VRC Channel: " + guildConfig.publishingVRCChannelId);
+	console.log("Media Channel: " + guildConfig.publishingMediaChannelId);
+	console.log("Upcoming Channel: " + guildConfig.upcomingEventsChannelId);
+	const discordChannel = await fetchChannel(guildConfig.publishingDiscordChannelId);
+	const vrcChannel = await fetchChannel(guildConfig.publishingVRCChannelId);
+	const mediaChannel = await fetchChannel(guildConfig.publishingMediaChannelId);
+	const upcomingChannel = await fetchChannel(guildConfig.upcomingEventsChannelId);
 
-	const vrcChannel =
-		((await client.channels.cache.get(guildConfig?.publishingVRCChannelId as string)) as TextChannel) ??
-		((await client.channels.fetch(guildConfig!.publishingVRCChannelId!)) as TextChannel);
+	if (!discordChannel || !vrcChannel || !mediaChannel || !upcomingChannel) {
+		console.error("One or more required channels could not be fetched");
+		return;
+	}
 
-	const mediaChannel =
-		((await client.channels.cache.get(guildConfig?.publishingMediaChannelId as string)) as TextChannel) ??
-		((await client.channels.fetch(guildConfig!.publishingMediaChannelId!)) as TextChannel);
-
-	const upcomingChannel =
-		((await client.channels.cache.get(guildConfig?.upcomingEventsChannelId as string)) as TextChannel) ??
-		((await client.channels.fetch(guildConfig!.upcomingEventsChannelId!)) as TextChannel);
-		console.log("fetched channels");
+	console.log("fetched channels");
 	// Fetch events
 	// Discord events: exclude CINEMA
 	const discordEvents = await prisma.event.findMany({
