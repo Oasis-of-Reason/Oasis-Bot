@@ -126,26 +126,26 @@ export async function execute(ix: TrackedInteraction) {
 		messages.push(output);
 	} else {
 		// Split while preserving code block formatting
-		let currentMessage = "```\n";
 		const contentLines = lines.slice(2); // Skip header and separator, we'll add them to each chunk
+		let currentMessage = "```\n" + header + "\n" + separator + "\n";
 
 		for (const line of contentLines) {
-			const testMessage = currentMessage + line + "\n```";
-			if (testMessage.length > maxCharsPerMessage) {
-				// Current message is full, save it and start a new one
+			const lineWithNewline = line + "\n";
+			const messageIfAdded = currentMessage + lineWithNewline + "```";
+
+			if (messageIfAdded.length > maxCharsPerMessage && currentMessage !== `\`\`\`\n${header}\n${separator}\n`) {
+				// Adding this line would exceed limit, save current message and start new one
 				currentMessage += "```";
 				messages.push(currentMessage);
-				currentMessage = "```\n" + header + "\n" + separator + "\n" + line + "\n";
+				currentMessage = "```\n" + header + "\n" + separator + "\n" + lineWithNewline;
 			} else {
-				currentMessage += line + "\n";
+				currentMessage += lineWithNewline;
 			}
 		}
 
 		// Add the final message
-		if (currentMessage.length > 0) {
-			currentMessage += "```";
-			messages.push(currentMessage);
-		}
+		currentMessage += "```";
+		messages.push(currentMessage);
 	}
 
 	// --- Send the first message via editReply, then follow up with additional messages ---
