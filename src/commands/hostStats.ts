@@ -118,8 +118,54 @@ export async function execute(ix: TrackedInteraction) {
 
 	const output = "```\n" + lines.join("\n") + "\n```";
 
-	// --- Send the table as the final ephemeral response ---
-	return ix.editReply({
-		content: output,
+	// --- Split into multiple messages if needed (Discord 2000 char limit) ---
+	const maxCharsPerMessage = 2000;
+	const messages: string[] = [];
+
+	if (output.length <= maxCharsPerMessage) {
+		messages.push(output);
+	} else {
+		// Split while preserving code block formatting
+		let currentMessage = "```\n";
+		const contentLines = lines.slice(2); // Skip header and separator, we'll add them to each chunk
+
+		for (const line of contentLines) {
+			const testMessage = currentMessage + line + "\n```";
+			if (testMessage.length > maxCharsPerMessage) {
+				// Current message is full, save it and start a new one
+				currentMessage += "```";
+				messages.push(currentMessage);
+				currentMessage = "```\n" + header + "\n" + separator + "\n" + line + "\n";
+			} else {
+				currentMessage += line + "\n";
+			}
+		}
+
+		// Add the final message
+		if (currentMessage.length > 0) {
+			currentMessage += "```";
+			messages.push(currentMessage);
+		}
+	}
+
+	// --- Send the first message via editReply, then follow up with additional messages ---
+	if (messages.length === 0) {
+		return ix.editReply({
+			content: "No data to display.",
+		});
+	}
+
+	await ix.editReply({
+		content: messages[0],
 	});
+
+	// Send additional messages if needed
+	for (let i = 1; i < messages.length; i++) {
+		await ix.followUp({
+			content: messages[i],
+			flags: MessageFlags.Ephemeral,
+		});
+	}
+
+	return;
 }
