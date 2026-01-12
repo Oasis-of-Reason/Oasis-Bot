@@ -52,6 +52,7 @@ import { createOrUpdateGroupEvent, isVrcCookieValid, mapArray, parseAndMapArray,
 import { createOrUpdateGoogleEvent } from "../commands/googleCalendarBot";
 import { track, TrackedInteraction } from "../utils/interactionSystem";
 
+const TIMEOUT_TIME_EXTRA_LONG = 600_000;
 const TIMEOUT_TIME_LONG = 120_000;
 const TIMEOUT_TIME_SHORT = 30_000;
 
@@ -228,7 +229,7 @@ export async function handleDraftButton(
 		try {
 			const sub = await ix.awaitModalSubmitTracked({
 				filter: (x) => x.customId === id && x.user.id === ix.interaction.user.id,
-				time: TIMEOUT_TIME_LONG,
+				time: size > 100 ? TIMEOUT_TIME_EXTRA_LONG : TIMEOUT_TIME_LONG,
 			});
 			await sub.tracked?.deferReply({ ephemeral: true });
 			return sub.tracked;
