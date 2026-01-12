@@ -384,7 +384,7 @@ module.exports = {
 			time: 0,
 		});
 
-		btnCollector.on("collect", async (i) => handleDraftButton(track(i, "From Create Event", hydrated.id + " " + hydrated.title + " By: " + hydrated.hostId), hydrated, sent));
+		btnCollector.on("collect", async (i) => await handleDraftButton(track(i, "From Create Event", hydrated.id + " " + hydrated.title + " By: " + hydrated.hostId), hydrated, sent));
 	},
 };
 

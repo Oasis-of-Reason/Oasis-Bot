@@ -170,7 +170,7 @@ module.exports = {
 			componentType: ComponentType.Button,
 			time: 0,
 		});
-		btnCollector.on("collect", async (i) => handleDraftButton(track(i, "From Duplicate Event", hydrated.id + " " + hydrated.title + " By: " + hydrated.hostId), hydrated, sent));
+		btnCollector.on("collect", async (i) => await handleDraftButton(track(i, "From Duplicate Event", hydrated.id + " " + hydrated.title + " By: " + hydrated.hostId), hydrated, sent));
 
 		// Done
 		await ix.editReply({
