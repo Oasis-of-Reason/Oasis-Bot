@@ -150,14 +150,15 @@ module.exports = {
 			vrcGroupId: duplicated.vrcGroupId ?? "",
 		};
 
-		const sent = await thread.send({
-			embeds: [buildDraftEmbed(hydrated)],
-			components: editButtons(),
-		});
 		// Update to fit new Thread name Style for drafts
 		// Needs to update the new draft channel, not the location the interaction took place. 
 		await updateThreadTitle(ix.interaction.client, duplicated.draftThreadId, duplicated.title, hydrated.id)
 
+		const sent = await thread.send({
+			embeds: [buildDraftEmbed(hydrated)],
+			components: editButtons(),
+		});
+		
 		await prisma.event.update({
 			where: { id: duplicated.id },
 			data: { draftThreadMessageId: sent.id },
