@@ -231,7 +231,6 @@ export class TrackedInteraction {
 		}
 	}
 
-
 	async followUp(
 		payload: ReplyPayload,
 		opts?: { tag?: string; note?: string }
