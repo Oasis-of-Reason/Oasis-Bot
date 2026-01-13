@@ -16,14 +16,20 @@ import {
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { updateThreadTitle } from "../helpers/refreshEventMessages";
 import { track, TrackedInteraction } from "../utils/interactionSystem";
-
+// Add optional variable for new title if left as default put it as is otherwise use the new title
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("duplicate-event")
 		.setDescription("Duplicate an existing event into a new unpublished draft")
 		.addNumberOption(opt =>
 			opt.setName("id").setDescription("ID of the event to duplicate").setRequired(true)
-		),
+		)	
+		.addStringOption(option =>
+		option
+			.setName("new-title")
+			.setDescription("new title for duplicated event")
+			.setRequired(false)
+	),
 
 	async execute(ix: TrackedInteraction) {
 		const interaction = ix.interaction as ChatInputCommandInteraction;
@@ -36,6 +42,7 @@ module.exports = {
 		}
 
 		const eventId = interaction.options.getNumber("id", true);
+		const newTitle = interaction.options.getString("new-title");
 		await ix.deferReply({ ephemeral: true });
 
 		// Load the source event
@@ -74,7 +81,7 @@ module.exports = {
 		// Prepare duplicated data
 		const title = `${src.title}`;
 		const eventData = {
-			title,
+			title : newTitle ? newTitle : title,
 			description: src.description ?? null,
 			activity: (src as any).activity ?? null,
 			type: src.type,
