@@ -50,15 +50,32 @@ export async function execute(ix: TrackedInteraction) {
 		});
 	}
 
+	// --- Fetch all event signups ---
+	const eventSignups = await prisma.eventSignUps.findMany({
+		where: {
+			event: {
+				guildId: guildId,
+			},
+		},
+	});
+
+	// --- Count signups per event ---
+	const signupsPerEvent: Record<string, number> = {};
+	for (const signup of eventSignups) {
+		const eventId = signup.eventId;
+		signupsPerEvent[eventId] = (signupsPerEvent[eventId] || 0) + 1;
+	}
+
 	// --- Group events by host ---
-	const hostMap: Record<string, { count: number; lastEvent: Date }> = {};
+	const hostMap: Record<string, { count: number; lastEvent: Date; totalSignups: number }> = {};
 
 	for (const ev of events) {
 		const hostId = ev.hostId;
 		if (!hostMap[hostId]) {
-			hostMap[hostId] = { count: 0, lastEvent: ev.startTime };
+			hostMap[hostId] = { count: 0, lastEvent: ev.startTime, totalSignups: 0 };
 		}
 		hostMap[hostId].count++;
+		hostMap[hostId].totalSignups += signupsPerEvent[ev.id] || 0;
 		if (ev.startTime > hostMap[hostId].lastEvent) {
 			hostMap[hostId].lastEvent = ev.startTime;
 		}
@@ -80,7 +97,7 @@ export async function execute(ix: TrackedInteraction) {
 				leftGuild = true;
 			}
 
-			const { count, lastEvent } = hostMap[hostId];
+			const { count, lastEvent, totalSignups } = hostMap[hostId];
 
 			const dd = String(lastEvent.getUTCDate()).padStart(2, "0");
 			const mm = String(lastEvent.getUTCMonth() + 1).padStart(2, "0");
@@ -92,7 +109,7 @@ export async function execute(ix: TrackedInteraction) {
 			let daysAgoNum = Math.floor((today.getTime() - lastEvent.getTime()) / (1000 * 60 * 60 * 24));
 			let daysAgoText = daysAgoNum >= 0 ? `${String(daysAgoNum)} days ago` : `in ${Math.abs(daysAgoNum)} days`;
 
-			return { username, count, formattedDate, daysAgoText, leftGuild };
+			return { username, count, totalSignups, formattedDate, daysAgoText, leftGuild };
 		})
 	);
 
@@ -103,14 +120,14 @@ export async function execute(ix: TrackedInteraction) {
 	);
 
 	// --- Build table output ---
-	const header = "Host               | Events | Last Event        | Days Ago ";
-	const separator = "-------------------+--------+-------------------+-----------";
+	const header = "Host               | Events | Signups | Last Event        | Days Ago ";
+	const separator = "-------------------+--------+---------+-------------------+-----------";
 	const lines = [header, separator];
 
 	for (const r of rows) {
 		const notes = r.leftGuild ? "left guild" : "";
 		lines.push(
-			`${r.username.padEnd(18)} | ${String(r.count).padEnd(6)} | ${r.formattedDate.padEnd(
+			`${r.username.padEnd(18)} | ${String(r.count).padEnd(6)} | ${String(r.totalSignups).padEnd(7)} | ${r.formattedDate.padEnd(
 				17
 			)} | ${String(r.daysAgoText).padEnd(7)} | ${notes}`
 		);
