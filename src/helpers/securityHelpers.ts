@@ -61,13 +61,13 @@ export function getStandardRolesMod(): RoleResolvable[] {
 }
 
 export function getStandardRolesOrganizer(): RoleResolvable[] {
-	return ["Admin", "Moderator", "Event Organiser"];
+	return ["Admin", "Moderator", "Community Guide"];
 }
 
 export function getStandardRolesHost(): RoleResolvable[] {
-	return ["Admin", "Moderator", "Event Organiser", "Event Host"];
+	return ["Admin", "Moderator", "Community Guide", "Event Host"];
 }
 
 export function getStandardRolesMember(): RoleResolvable[] {
-	return ["Admin", "Moderator", "Event Organiser", "Event Host", "Members"];
+	return ["Admin", "Moderator", "Community Guide", "Event Host", "Members"];
 }
