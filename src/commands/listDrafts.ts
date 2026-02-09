@@ -117,7 +117,7 @@ export async function execute(ix: TrackedInteraction) {
 			const url = `https://discord.com/channels/${e.guildId}/${e.draftThreadId}/${e.draftThreadMessageId}`;
 			embed.addFields({
 				name: '',  // invisible placeholder
-				value: `[${e.title}](${url})`,
+				value: `[${e.id} - ${e.title}](${url})`,
 				inline: false
 			});
 		}
