@@ -9,6 +9,7 @@ import {
 	ComponentType,
 } from "discord.js";
 import { prisma } from "../utils/prisma";
+import * as chrono from "chrono-node";
 import {
 	userHasAllowedRoleOrId,
 	getStandardRolesOrganizer,
@@ -23,13 +24,19 @@ module.exports = {
 		.setDescription("Duplicate an existing event into a new unpublished draft")
 		.addNumberOption(opt =>
 			opt.setName("id").setDescription("ID of the event to duplicate").setRequired(true)
-		)	
+		)
 		.addStringOption(option =>
-		option
-			.setName("new-title")
-			.setDescription("new title for duplicated event")
-			.setRequired(false)
-	),
+			option
+				.setName("new-title")
+				.setDescription("new title for duplicated event")
+				.setRequired(false)
+		)
+		.addStringOption(opt =>
+			opt
+				.setName("new-datetime")
+				.setDescription("Date/time to convert (ISO, JS parseable, or epoch seconds/ms)")
+				.setRequired(false)
+		),
 
 	async execute(ix: TrackedInteraction) {
 		const interaction = ix.interaction as ChatInputCommandInteraction;
@@ -78,10 +85,11 @@ module.exports = {
 			return;
 		}
 
+
 		// Prepare duplicated data
 		const title = `${src.title}`;
 		const eventData = {
-			title : newTitle ? newTitle : title,
+			title: newTitle ? newTitle : title,
 			description: src.description ?? null,
 			activity: (src as any).activity ?? null,
 			type: src.type,
@@ -100,6 +108,16 @@ module.exports = {
 			name: `Draft: ${title}`,
 			autoArchiveDuration: 1440,
 		});
+
+		// If we have optional datetime input then we can use chrono
+		if (interaction.options.getString("new-datetime")) {
+			const input = interaction.options.getString("new-datetime", true).trim();
+			let date = chrono.parseDate(input);
+			if (date) {
+				// If we have a valid date, update the startTime in eventData
+				eventData.startTime = date;
+			}
+		}
 
 		// Create the new (unpublished) event in DB
 		const duplicated = await prisma.event.create({
@@ -165,7 +183,7 @@ module.exports = {
 			embeds: [buildDraftEmbed(hydrated)],
 			components: editButtons(),
 		});
-		
+
 		await prisma.event.update({
 			where: { id: duplicated.id },
 			data: { draftThreadMessageId: sent.id },
