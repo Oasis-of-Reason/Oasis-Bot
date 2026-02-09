@@ -7,8 +7,7 @@ import {
 	ButtonStyle,
 	ComponentType,
 	User,
-	MessageFlags,
-	Message
+	MessageFlags
 } from "discord.js";
 import { PrismaClient } from "@prisma/client";
 import { getStandardRolesOrganizer } from "../helpers/securityHelpers";
@@ -154,18 +153,20 @@ export async function execute(ix: TrackedInteraction) {
 	};
 
 	// Send first page
-	const response = await ix.reply({
+	await ix.reply({
 		embeds: [buildPageEmbed(currentPage)],
 		components: [buildButtons(currentPage)],
-		withResponse: true,
 		flags: MessageFlags.Ephemeral,
 	});
-	const message = response.response as Message
+	
 	// Collector
-	const collector = message.createMessageComponentCollector({
+	const collector = ix.interaction.channel?.createMessageComponentCollector({
 		componentType: ComponentType.Button,
 		time: 60000, // 60 seconds
+		filter: (i) => i.user.id === ix.interaction.user.id && i.message.interaction?.id === ix.interaction.id,
 	});
+
+	if (!collector) return;
 
 	collector.on("collect", async btnInt => {
 		if (btnInt.user.id !== ix.interaction.user.id) {
@@ -198,8 +199,12 @@ export async function execute(ix: TrackedInteraction) {
 
 	collector.on("end", async () => {
 		// Disable buttons when collector stops
-		await message.edit({
-			components: [],
-		});
+		try {
+			await (ix.interaction as ChatInputCommandInteraction).editReply({
+				components: [],
+			});
+		} catch (e) {
+			// Interaction already responded or expired
+		}
 	});
 }
