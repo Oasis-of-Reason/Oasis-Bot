@@ -180,7 +180,7 @@ module.exports = {
 				row(new ButtonBuilder().setCustomId("set_timing").setLabel("⏰ Set Timing").setStyle(ButtonStyle.Primary)),
 			],
 			flags: MessageFlags.Ephemeral,
-			fetchReply: true,
+			withResponse: true,
 		}));
 		const timingMsg = followUpResponse?.response as Message;
 		const timingBtn = await new Promise<any>((resolve) => {
@@ -250,7 +250,7 @@ module.exports = {
 			content:
 				"📌 If you’d like to add a poster image, please upload it in this channel now (you have 60 seconds). Otherwise, ignore this message.",
 			flags: MessageFlags.Ephemeral,
-			fetchReply: true,
+			withResponse: true,
 		});
 
 		const channel = ix.interaction.channel as TextChannel;

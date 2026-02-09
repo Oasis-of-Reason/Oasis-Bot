@@ -324,7 +324,7 @@ export async function handleDraftButton(
 					),
 				],
 				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
+				withResponse: true,
 			});
 			const msg = response.response as Message;
 			if (!msg) return;
@@ -356,7 +356,7 @@ export async function handleDraftButton(
 					),
 				],
 				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
+				withResponse: true,
 			});
 
 			const msg = response.response as Message;
@@ -386,7 +386,7 @@ export async function handleDraftButton(
 					),
 				],
 				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
+				withResponse: true,
 			});
 
 			const msg = response.response as Message;
@@ -422,7 +422,7 @@ export async function handleDraftButton(
 					),
 				],
 				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
+				withResponse: true,
 			});
 
 			const msg = response.response as Message;
@@ -455,7 +455,7 @@ export async function handleDraftButton(
 					),
 				],
 				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
+				withResponse: true,
 			});
 
 			const msg = response.response as Message;
@@ -547,7 +547,7 @@ export async function handleDraftButton(
 					),
 				],
 				flags: MessageFlags.Ephemeral,
-				fetchReply: true,
+				withResponse: true,
 			});
 
 			const msg = response.response as Message;

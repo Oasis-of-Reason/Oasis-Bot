@@ -157,7 +157,7 @@ export async function execute(ix: TrackedInteraction) {
 	const response = await ix.reply({
 		embeds: [buildPageEmbed(currentPage)],
 		components: [buildButtons(currentPage)],
-		fetchReply: true,
+		withResponse: true,
 		flags: MessageFlags.Ephemeral,
 	});
 	const message = response.response as Message

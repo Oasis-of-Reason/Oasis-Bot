@@ -89,7 +89,7 @@ module.exports = {
   Choose which Discord timestamp format you want:`,
 			components: [row],
 			flags: MessageFlags.Ephemeral,
-			fetchReply: true
+			withResponse: true
 		},
 		);
 
