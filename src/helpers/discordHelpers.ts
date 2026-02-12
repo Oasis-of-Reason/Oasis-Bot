@@ -115,10 +115,34 @@ export async function fetchMsgInChannel(channel: TextChannel, messageId?: string
 	return await channel.messages.cache.get(messageId) ?? await channel.messages.fetch(messageId).catch(() => null);
 }
 
-export async function fetchMsgInThread(thread: AnyThreadChannel, messageId?: string | null): Promise<Message | null> {
+export async function fetchMsgInThread(
+	thread: AnyThreadChannel,
+	messageId?: string | null
+): Promise<Message | null> {
 	if (!messageId) return null;
-	return await thread.messages.cache.get(messageId) ?? await thread.messages.fetch(messageId).catch(() => null);
+
+	let msg: Message | undefined;
+
+	msg = thread.messages.cache.get(messageId);
+
+	if (!msg) {
+		msg = await thread.messages.fetch(messageId).catch(() => undefined);
+	}
+
+	if (!msg) return null;
+
+	if (msg.partial) {
+		try {
+			msg = await msg.fetch();
+		} catch {
+			return null;
+		}
+	}
+
+	return msg;
 }
+
+
 
 /** Accepts a User, GuildMember, or string (ID/mention) and returns a clean snowflake string. */
 export function toSnowflake(target: string | User | GuildMember): string {

@@ -48,17 +48,16 @@ import { writeLog } from "./logger";
 import { fetchMsgInThread, getVrcGroupId } from "./discordHelpers";
 import { checkEventPublishedOrDraftOnly } from "./getEventButtons";
 import { updateThreadTitle } from "./refreshEventMessages";
-import { createOrUpdateGroupEvent, isVrcCookieValid, mapArray, parseAndMapArray, platformMap, subtypeImageMap, subtypeMap, VrcEventDescription } from "./vrcHelpers";
-import { createOrUpdateGoogleEvent } from "../commands/googleCalendarBot";
+import { createOrUpdateGroupEvent, isVrcCookieValid, parseAndMapArray, platformMap, subtypeImageMap, subtypeMap, VrcEventDescription } from "./vrcHelpers";
 import { track, TrackedInteraction } from "../utils/interactionSystem";
 
-const TIMEOUT_TIME_EXTRA_LONG = 600_000;
-const TIMEOUT_TIME_LONG = 120_000;
-const TIMEOUT_TIME_SHORT = 30_000;
+const TIMEOUT_EXTRA_LONG = 600_000;
+const TIMEOUT_LONG = 120_000;
+const TIMEOUT_SHORT = 30_000;
 
 let publishInProgress = false;
 
-export function buildDraftEmbed(eventData: {
+export interface EventData {
 	id: number;
 	hostId: string;
 	title: string;
@@ -78,50 +77,48 @@ export function buildDraftEmbed(eventData: {
 	vrcDescription: string;
 	vrcImageId: string;
 	vrcGroupId: string;
-}) {
+}
+
+/* ─────────────── Helper Functions ─────────────── */
+
+export const buildDraftEmbed = (event: EventData) => {
 	const embed = new EmbedBuilder()
 		.setTitle("📅 Event Draft")
 		.setColor(0x5865f2)
-		.setImage(eventData.imageUrl ?? null)
-		.setDescription(eventData.description?.slice(0, 4096) || 'No description')
+		.setImage(event.imageUrl || null)
+		.setDescription(event.description?.slice(0, 4096) || "No description")
 		.addFields(
 			{
 				name: "Event Information",
-				value: `> **Title:** ${eventData.title}\n> **Host:** <@${eventData.hostId}>`,
+				value: `> **Title:** ${event.title}\n> **Host:** <@${event.hostId}>`,
 			},
 			{
 				name: "General Information",
-				value: `> **Id:** ${eventData.id}\n> **Type:** ${eventData.type ?? "—"}\n> **Subtype:** ${eventData.subtype ?? "—"}\n> **Activity:** ${eventData.activity ?? "—"}\n> **Capacity:** ${eventData.capacityCap > 0 ? eventData.capacityCap : "Unlimited"}`,
+				value: `> **Id:** ${event.id}\n> **Type:** ${event.type || "—"}\n> **Subtype:** ${event.subtype || "—"}\n> **Activity:** ${event.activity || "—"}\n> **Capacity:** ${event.capacityCap > 0 ? event.capacityCap : "Unlimited"}`,
+			},
+			{
+				name: "Timing",
+				value: `> **Start:** <t:${toUnix(event.startTime)}:F> (<t:${toUnix(event.startTime)}:R>)\n> **Length:** ${event.lengthMinutes ? `${event.lengthMinutes} min` : "Not set"}`,
 			}
 		);
-	embed.addFields({
-		name: "Timing",
-		value: `> **Start:** <t:${toUnix(eventData.startTime)}:F> (<t:${toUnix(eventData.startTime)}:R>)\n> **Length:** ${eventData.lengthMinutes ? `${eventData.lengthMinutes} min` : "Not set"}`,
-	});
 
-	if (eventData.type?.toLowerCase() === "vrchat") {
-		const parsedPlatforms = JSON.parse(eventData.platforms);
+	if (event.type?.toLowerCase() === "vrchat") {
+		const platforms = event.platforms?.length ? getPlatformsArray(JSON.parse(event.platforms)) : "—";
 		embed.addFields({
 			name: "VRC Information",
-			value: `> **Platforms:** ${eventData.platforms?.length ? getPlatformsArray(parsedPlatforms) : "—"}\n> **Avatar Requirements:** ${eventData.requirements ? getRequirementsString(eventData.requirements) : "—"}\n> **Instance Type:** ${eventData.scope ?? "—"}`,
+			value: `> **Platforms:** ${platforms}\n> **Avatar Requirements:** ${event.requirements ? getRequirementsString(event.requirements) : "—"}\n> **Instance Type:** ${event.scope || "—"}`,
 		});
-		if (eventData.vrcCalenderEventId) {
-			const link = `[${eventData.vrcCalenderEventId}](https://vrchat.com/home/group/${eventData.vrcGroupId}/calendar/${eventData.vrcCalenderEventId})`
-			embed.addFields({
-				name: "VRC Calender Info",
-				value: `> **Calender Link:** ${link}\n`,
-			});
+		if (event.vrcCalenderEventId) {
+			const link = `[${event.vrcCalenderEventId}](https://vrchat.com/home/group/${event.vrcGroupId}/calendar/${event.vrcCalenderEventId})`;
+			embed.addFields({ name: "VRC Calendar Info", value: `> **Calendar Link:** ${link}` });
 		}
-		if (eventData.vrcDescription) {
-			embed.addFields({
-				name: "VRC Calender Description",
-				value: eventData.vrcDescription,
-			});
+		if (event.vrcDescription) {
+			embed.addFields({ name: "VRC Calendar Description", value: event.vrcDescription });
 		}
 	}
 
 	return embed;
-}
+};
 
 export function editButtons(id?: string, published?: boolean) {
 	return [
@@ -159,7 +156,6 @@ export function editButtons(id?: string, published?: boolean) {
 	];
 }
 
-
 export const mkSelect = (
 	id: string,
 	placeholder: string,
@@ -177,535 +173,503 @@ export const mkSelect = (
 export const updateDraftByMsgId = (draftThreadMessageId: string, data: Record<string, any>) =>
 	prisma.event.update({ where: { draftThreadMessageId }, data });
 
-/* ─────────────────────── button interaction handler ─────────────────────── */
-
+export const showModal = async (
+	ix: TrackedInteraction,
+	id: string,
+	title: string,
+	field: string,
+	label: string,
+	defaultValue = "",
+	maxLength = 100
+): Promise<TrackedInteraction | null> => {
+	const modal = new ModalBuilder()
+		.setCustomId(id)
+		.setTitle(title)
+		.addComponents(
+			new ActionRowBuilder<TextInputBuilder>().addComponents(
+				new TextInputBuilder()
+					.setCustomId(field)
+					.setLabel(label)
+					.setStyle(maxLength > 100 ? TextInputStyle.Paragraph : TextInputStyle.Short)
+					.setRequired(false)
+					.setMaxLength(maxLength)
+					.setValue(defaultValue)
+			)
+		);
+	await ix.showModal(modal);
+	try {
+		const sub = await ix.awaitModalSubmitTracked({
+			filter: (x) => x.customId === id && x.user.id === ix.interaction.user.id,
+			time: maxLength > 100 ? TIMEOUT_EXTRA_LONG : TIMEOUT_LONG
+		});
+		await sub.tracked?.deferReply({ ephemeral: true });
+		return sub.tracked;
+	} catch {
+		writeLog("Modal submit timed out or errored.");
+		return null;
+	}
+};
 export async function handleDraftButton(
 	ix: TrackedInteraction,
-	eventData: {
-		id: number;
-		hostId: string;
-		title: string;
-		description: string;
-		activity: string;
-		type: string;
-		subtype: string;
-		scope: string;
-		platforms: string;
-		requirements: string;
-		capacityCap: number;
-		startTime: Date;
-		lengthMinutes: number;
-		imageUrl: string;
-		vrcCalenderEventId: string;
-		vrcSendNotification: boolean;
-		vrcDescription: string;
-		vrcImageId: string;
-		vrcGroupId: string;
-	},
+	event: EventData,
 	message: Message
 ) {
+	const interaction = ix.interaction as ButtonInteraction;
+	const member = interaction.member as GuildMember;
+
 	const rerender = async () => {
-		const pubCheck = await checkEventPublishedOrDraftOnly(message.id);
-		await message.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons(message.id, pubCheck) });
+		const published = await checkEventPublishedOrDraftOnly(message.id);
+		await message.edit({
+			embeds: [buildDraftEmbed(event)],
+			components: editButtons(message.id, published)
+		});
 	};
 
-	const modalInput = async (id: string, title: string, field: string, label: string, defaultValue: string = "", size = 100): Promise<TrackedInteraction | null> => {
-		const modal = new ModalBuilder()
-			.setCustomId(id)
-			.setTitle(title)
-			.addComponents(
-				new ActionRowBuilder<TextInputBuilder>().addComponents(
-					new TextInputBuilder()
-						.setCustomId(field)
-						.setLabel(label)
-						.setStyle(size > 100 ? TextInputStyle.Paragraph : TextInputStyle.Short)
-						.setRequired(false)
-						.setMaxLength(size)
-						.setValue(defaultValue)
+	/* ───────────── Generic Select Handler ───────────── */
+
+	const handleSelectMenu = async (
+		customId: string,
+		content: string,
+		options: { label: string; value: string }[],
+		onSelect: (values: string[]) => Promise<void>,
+		min = 1,
+		max = 1
+	) => {
+		await ix.reply({
+			content,
+			components: [
+				new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+					mkSelect(customId, "Select an option", options, min, max)
 				)
-			);
-		await ix.showModal(modal);
+			],
+			flags: MessageFlags.Ephemeral
+		});
 
 		try {
-			const sub = await ix.awaitModalSubmitTracked({
-				filter: (x) => x.customId === id && x.user.id === ix.interaction.user.id,
-				time: size > 100 ? TIMEOUT_TIME_EXTRA_LONG : TIMEOUT_TIME_LONG,
+			const select = await interaction.channel!.awaitMessageComponent({
+				componentType: ComponentType.StringSelect,
+				time: TIMEOUT_LONG,
+				filter: (i) =>
+					i.user.id === interaction.user.id &&
+					i.customId === customId
+			}) as StringSelectMenuInteraction;
+
+			await onSelect(select.values);
+
+			await select.update({
+				content: "✅ Updated!",
+				components: []
 			});
-			await sub.tracked?.deferReply({ ephemeral: true });
-			return sub.tracked;
-		} catch (e) { writeLog("Modal submit timed out or errored."); return null; }
+
+			await rerender();
+
+		} catch {
+			// timeout — safely ignore
+		}
 	};
 
-	const memberUsername = ix.interaction.member?.user.username ?? "";
-	const ib = ix.interaction as ButtonInteraction;
-	console.log("Run: " + ib.customId + " By: " + memberUsername + " at: " + new Date().toISOString());
+	/* ───────────── Generic Modal Handler ───────────── */
+	const handleSimpleModalUpdate = async (
+		modalId: string,
+		title: string,
+		field: string,
+		label: string,
+		currentValue: string,
+		onSave: (value: string) => Promise<void>,
+		maxLength = 100
+	) => {
+		const sub = await showModal(
+			ix,
+			modalId,
+			title,
+			field,
+			label,
+			currentValue,
+			maxLength
+		);
+		if (!sub) return;
 
-	switch (ib.customId) {
-		case "edit_title": {
-			if (!await hasTitleChangeCooldownPassed(eventData.id)) {
-				await ix.reply({ content: "5 min cooldown for title change has not passed.", flags: MessageFlags.Ephemeral })
-				break;
+		const modal = sub.interaction as ModalSubmitInteraction;
+		const value = modal.fields.getTextInputValue(field) || "";
+
+		await onSave(value);
+		await sub.editReply({ content: "✅ Updated!" });
+		await rerender();
+	};
+
+	/* ───────────── Switch Logic ───────────── */
+	switch (interaction.customId) {
+
+		/* ───────────── Title ───────────── */
+		case "edit_title":
+			if (!(await hasTitleChangeCooldownPassed(event.id))) {
+				return ix.reply({
+					content: "5 min cooldown for title change has not passed.",
+					flags: MessageFlags.Ephemeral
+				});
 			}
-			const sub = await modalInput("modal_edit_title", "Edit Title", "new_title", "New Title", eventData.title ?? "");
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			eventData.title = typedSub.fields.getTextInputValue("new_title") || eventData.title;
-			await sub.editReply({ content: "✅ Title updated! (5 min cooldown)" });
-			await setLastTitleChangeTime(eventData.id);
-			await updateDraftByMsgId(message.id, { title: eventData.title });
-			await updateThreadTitle(ix.interaction.client, ib.channelId, eventData.title, eventData.id);
-			await rerender();
-			break;
-		}
-		case "edit_description": {
-			const sub = await modalInput("modal_edit_description", "Edit Description", "new_description", "New Description", eventData.description ?? "", 4000);
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			eventData.description = typedSub.fields.getTextInputValue("new_description") || "";
-			await updateDraftByMsgId(message.id, { description: eventData.description });
-			await sub.editReply({ content: "✅ Description updated!" });
-			await rerender();
-			break;
-		}
-		case "edit_activity": {
-			const sub = await modalInput("modal_edit_activity", "Edit Activity", "new_activity", "Activity", eventData.activity ?? "");
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			eventData.activity = typedSub.fields.getTextInputValue("new_activity") || "";
-			await updateDraftByMsgId(message.id, { activity: eventData.activity });
-			await sub.editReply({ content: "✅ Activity updated!" });
-			await rerender();
-			break;
-		}
-		case "edit_capacity": {
-			const sub = await modalInput("modal_edit_capacity", "Edit Capacity", "new_capacity_cap", "Max Capacity");
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			eventData.capacityCap = validateNumber(typedSub.fields.getTextInputValue("new_capacity_cap"));
-			await updateDraftByMsgId(message.id, { capacityCap: eventData.capacityCap });
-			await sub.editReply({ content: "✅ Capacity updated!" });
-			await rerender();
-			break;
-		}
-		case "edit_start": {
-			const sub = await modalInput("modal_edit_start", "Edit Start Time", "new_start", "When does it start?");
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			const parsed = chrono.parseDate(typedSub.fields.getTextInputValue("new_start"));
-			if (parsed) {
-				eventData.startTime = parsed;
-				await updateDraftByMsgId(message.id, { startTime: eventData.startTime });
-				await sub.editReply({ content: "✅ Start time updated!" });
-			} else {
-				await sub.editReply({ content: "❌ Could not parse that date/time." });
-			}
-			await rerender();
-			break;
-		}
-		case "edit_length": {
-			const sub = await modalInput("modal_edit_length", "Edit Length", "new_length", "Length in minutes");
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			eventData.lengthMinutes = validateNumber(typedSub.fields.getTextInputValue("new_length"));
-			await updateDraftByMsgId(message.id, { lengthMinutes: eventData.lengthMinutes });
-			await sub.editReply({ content: "✅ Length updated!" });
-			await rerender();
-			break;
-		}
-		case "edit_type": {
-			const response = await ix.reply({
-				content: "Select a new type:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("select_type", "Choose type", [
-							{ label: "VRC", value: "VRCHAT" },
-							{ label: "Discord", value: "DISCORD" },
-						])
-					),
-				],
-				flags: MessageFlags.Ephemeral,
-				withResponse: true,
-			});
-			const msg = response.response as Message;
-			if (!msg) return;
-			const col = msg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_type",
-			});
-			col.on("collect", async (s: StringSelectMenuInteraction) => {
-				eventData.type = s.values[0];
-				await updateDraftByMsgId(message.id, { type: eventData.type });
-				await s.update({ content: "✅ Updated!", components: [] });
-				await rerender();
-			});
-			break;
-		}
-		case "edit_subtype": {
-			const response = await ix.reply({
-				content: "Select a new subtype:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("select_subtype", "Choose subtype", [
-							{ label: "Gaming", value: "GAMING" },
-							{ label: "Social", value: "SOCIAL" },
-							{ label: "Cinema", value: "CINEMA" },
-							{ label: "Art", value: "ART" },
-							{ label: "Wellness", value: "WELLNESS" },
-						])
-					),
-				],
-				flags: MessageFlags.Ephemeral,
-				withResponse: true,
-			});
 
-			const msg = response.response as Message;
-			if (!msg) return;
-			const col = msg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_subtype",
-			});
-			col.on("collect", async (s: StringSelectMenuInteraction) => {
-				eventData.subtype = s.values[0];
-				await updateDraftByMsgId(message.id, { subtype: eventData.subtype });
-				await s.update({ content: "✅ Updated!", components: [] });
-				await rerender();
-			});
-			break;
-		}
-		case "edit_scope": {
-			const response = await ix.reply({
-				content: "Select a new instance type:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("select_scope", "Choose scope", [
-							{ label: "Group Members Only", value: "Group" },
-							{ label: "Friends Can Join : Group+", value: "Group+" },
-						])
-					),
-				],
-				flags: MessageFlags.Ephemeral,
-				withResponse: true,
-			});
-
-			const msg = response.response as Message;
-			if (!msg) return;
-			const col = msg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_scope",
-			});
-			col.on("collect", async (s: StringSelectMenuInteraction) => {
-				eventData.scope = s.values[0];
-				await updateDraftByMsgId(message.id, { scope: eventData.scope });
-				await s.update({ content: "✅ Updated!", components: [] });
-				await rerender();
-			});
-			break;
-		}
-		case "edit_platforms": {
-			const response = await ix.reply({
-				content: "Select new platforms:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect(
-							"select_platforms",
-							"Choose platform(s)",
-							[
-								{ label: "PCVR", value: "PCVR" },
-								{ label: "Android", value: "Android" },
-							],
-							1,
-							2
-						)
-					),
-				],
-				flags: MessageFlags.Ephemeral,
-				withResponse: true,
-			});
-
-			const msg = response.response as Message;
-			if (!msg) return;
-			const col = msg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_platforms",
-			});
-			col.on("collect", async (s: StringSelectMenuInteraction) => {
-				eventData.platforms = JSON.stringify(s.values);
-				await updateDraftByMsgId(message.id, { platforms: eventData.platforms });
-				await s.update({ content: "✅ Updated!", components: [] });
-				await rerender();
-			});
-			break;
-		}
-		case "edit_requirements": {
-			const response = await ix.reply({
-				content: "Select new avatar performance requirement:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("select_requirements", "Avatar performance", [
-							{ label: "No Restriction", value: "verypoor" },
-							{ label: "Poor or better", value: "poor" },
-							{ label: "Medium or better", value: "medium" },
-							{ label: "Good or better", value: "good" },
-							{ label: "Excellent", value: "excellent" },
-						])
-					),
-				],
-				flags: MessageFlags.Ephemeral,
-				withResponse: true,
-			});
-
-			const msg = response.response as Message;
-			if (!msg) return;
-			const col = msg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_requirements",
-			});
-			col.on("collect", async (s: StringSelectMenuInteraction) => {
-				eventData.requirements = s.values[0];
-				await updateDraftByMsgId(message.id, { requirements: eventData.requirements });
-				await s.update({ content: "✅ Updated!", components: [] });
-				await rerender();
-			});
-			break;
-		}
-		case "edit_poster": {
-			await ix.reply({
-				content: "Please upload a new poster image in this thread within 30 seconds.",
-				flags: MessageFlags.Ephemeral,
-			});
-			const channel = ix.interaction.channel as TextChannel | ThreadChannel;
-			const collected = await channel.awaitMessages({
-				filter: (m) => m.author.id === ix.interaction.user.id && m.attachments.size > 0,
-				max: 1,
-				time: TIMEOUT_TIME_SHORT,
-			});
-
-			if (collected.size > 0) {
-				const msg = collected.first()!
-				const attachment = msg.attachments.first();
-				if (attachment && attachment.contentType?.startsWith("image/")) {
-					const posterUrl = attachment.url;
-
-					// Update DB
-					await prisma.event.update({
-						where: { id: eventData.id },
-						data: { imageUrl: posterUrl },
-					});
-
-					// Update hydrated object
-					eventData.imageUrl = posterUrl;
-
-					// Quick Check to see if we're editing on a now published event
-					const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
-
-					// Update embed
-					await message.edit({
-						embeds: [buildDraftEmbed(eventData)],
-						components: editButtons(message.id, pubCheck),
-					});
-
-					await ix.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
+			await handleSimpleModalUpdate(
+				"modal_edit_title",
+				"Edit Title",
+				"new_title",
+				"New Title",
+				event.title,
+				async (val) => {
+					event.title = val || event.title;
+					await setLastTitleChangeTime(event.id);
+					await updateDraftByMsgId(message.id, { title: event.title });
+					await updateThreadTitle(
+						interaction.client,
+						interaction.channelId,
+						event.title,
+						event.id
+					);
 				}
-			} else {
-				await ix.followUp({ content: "❌ No image uploaded.", flags: MessageFlags.Ephemeral });
-			}
+			);
+			break;
+
+		/* ───────────── Description / Activity ───────────── */
+		case "edit_description":
+			await handleSimpleModalUpdate(
+				"modal_edit_description",
+				"Edit Description",
+				"new_description",
+				"New Description",
+				event.description,
+				async (val) => {
+					event.description = val;
+					await updateDraftByMsgId(message.id, { description: val });
+				},
+				4000
+			);
+			break;
+
+		case "edit_activity":
+			await handleSimpleModalUpdate(
+				"modal_edit_activity",
+				"Edit Activity",
+				"new_activity",
+				"Activity",
+				event.activity,
+				async (val) => {
+					event.activity = val;
+					await updateDraftByMsgId(message.id, { activity: val });
+				}
+			);
+			break;
+
+		/* ───────────── Numeric Updates ───────────── */
+		case "edit_capacity":
+			await handleSimpleModalUpdate(
+				"modal_edit_capacity",
+				"Edit Capacity",
+				"new_capacity_cap",
+				"Max Capacity",
+				"", // no default value
+				async (val) => {
+					event.capacityCap = validateNumber(val);
+					await updateDraftByMsgId(message.id, { capacityCap: event.capacityCap });
+					writeLog(`Updated capacity for event ${event.id} to ${event.capacityCap}`);
+				}
+			);
+			break;
+
+		case "edit_length":
+			await handleSimpleModalUpdate(
+				"modal_edit_length",
+				"Edit Length",
+				"new_length",
+				"Length in minutes",
+				"", // no default value
+				async (val) => {
+					event.lengthMinutes = validateNumber(val);
+					await updateDraftByMsgId(message.id, { lengthMinutes: event.lengthMinutes });
+					writeLog(`Updated length for event ${event.id} to ${event.lengthMinutes} min`);
+				}
+			);
+			break;
+
+		case "edit_start":
+			await handleSimpleModalUpdate(
+				"modal_edit_start",
+				"Edit Start Time",
+				"new_start",
+				"When does it start?",
+				"",
+				async (val) => {
+					const parsed = chrono.parseDate(val);
+					if (!parsed) throw new Error("Invalid date");
+					event.startTime = parsed;
+					await updateDraftByMsgId(message.id, {
+						startTime: parsed
+					});
+				}
+			);
+			break;
+
+		/* ───────────── Poster Upload ───────────── */
+		case "edit_poster": {
+			writeLog(`Starting poster update for event ${event.id}`);
+			await ix.reply({ content: "Please upload a new poster image in this thread within 30 seconds.", flags: MessageFlags.Ephemeral });
+			const channel = interaction.channel as TextChannel | ThreadChannel;
+			const collected = await channel.awaitMessages({
+				filter: (m) => m.author.id === interaction.user.id && m.attachments.size > 0,
+				max: 1,
+				time: TIMEOUT_SHORT,
+			});
+
+			if (collected.size === 0) return;
+			const attachment = collected.first()!.attachments.first();
+			if (!attachment?.contentType?.startsWith("image/")) return;
+
+			const posterUrl = attachment.url;
+			event.imageUrl = posterUrl;
+			await prisma.event.update({ where: { id: event.id }, data: { imageUrl: posterUrl } });
+			writeLog(`Poster updated for event ${event.id}: ${posterUrl}`);
+
+			const published = await checkEventPublishedOrDraftOnly(message.id);
+			await message.edit({ embeds: [buildDraftEmbed(event)], components: editButtons(message.id, published) });
+			await ix.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
 			break;
 		}
-		case "edit_vrc_description": {
-			const sub = await modalInput("modal_edit_vrc_description", "Edit VRC Description", "new_vrc_description", "New VRC Description", eventData.vrcDescription ?? "", 1000);
-			if (!sub) return;
-			const typedSub = sub.interaction as ModalSubmitInteraction;
-			eventData.vrcDescription = typedSub.fields.getTextInputValue("new_vrc_description") || "";
-			await updateDraftByMsgId(message.id, { description: eventData.vrcDescription });
-			await sub.editReply({ content: "✅ VRC Description updated!" });
-			await rerender();
+
+		/* ───────────── VRChat Updates ───────────── */
+		case "edit_vrc_description":
+			await handleSimpleModalUpdate(
+				"modal_edit_vrc_description",
+				"Edit VRC Description",
+				"new_vrc_description",
+				"New VRC Description",
+				event.vrcDescription || "",
+				async (val) => {
+					event.vrcDescription = val;
+					await updateDraftByMsgId(message.id, { vrcDescription: val });
+					writeLog(`VRC description updated for event ${event.id}`);
+				},
+				1000
+			);
 			break;
-		}
-		case "edit_vrc_notify": {
 
-			if (!userHasAllowedRole(
-				ix.interaction.member as GuildMember,
-				getStandardRolesOrganizer()
-			)) {
-				await ix.reply({ content: `Ask an Admin/Mod/Organizer to do this for you. (for now).`, flags: MessageFlags.Ephemeral });
-				break;
+		case "edit_vrc_notify":
+			if (!userHasAllowedRole(member, getStandardRolesOrganizer())) {
+				return ix.reply({ content: "Ask an Admin/Mod/Organizer to do this.", flags: MessageFlags.Ephemeral });
 			}
-
-			const response = await ix.reply({
-				content: "Select whether to notify the vrc group on creation:",
-				components: [
-					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-						mkSelect("select_vrc_notify", "Choose whether to notify", [
-							{ label: "True", value: "True" },
-							{ label: "False", value: "False" },
-						])
-					),
+			await handleSelectMenu(
+				"select_vrc_notify",
+				"Select whether to notify the VRChat group on creation:",
+				[
+					{ label: "True", value: "True" },
+					{ label: "False", value: "False" }
 				],
-				flags: MessageFlags.Ephemeral,
-				withResponse: true,
-			});
-
-			const msg = response.response as Message;
-			if (!msg) return;
-			const col = msg.createMessageComponentCollector({
-				componentType: ComponentType.StringSelect,
-				time: TIMEOUT_TIME_LONG,
-				filter: (x) => x.user.id === ix.interaction.user.id && x.customId === "select_vrc_notify",
-			});
-			col.on("collect", async (s: StringSelectMenuInteraction) => {
-				eventData.vrcSendNotification = s.values[0] === "True";
-				await updateDraftByMsgId(message.id, { vrcSendNotification: eventData.vrcSendNotification });
-				await s.update({ content: "✅ Updated!", components: [] });
-				await rerender();
-			});
-			break;
-		}
-
-		case "get_event_id":
-			await ix.reply({ content: `This event's ID is \`${eventData.id}\``, flags: MessageFlags.Ephemeral });
+				async ([val]) => {
+					event.vrcSendNotification = val === "True";
+					await updateDraftByMsgId(message.id, { vrcSendNotification: event.vrcSendNotification });
+					writeLog(`VRC notify updated for event ${event.id}: ${event.vrcSendNotification}`);
+				},
+				1,
+				1
+			);
 			break;
 
-		case "publish_event": {
-			console.log("Start Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
-			if (publishInProgress) {
-				await ix.reply({ content: "A Publish is already in progress. Please wait a few seconds and try again.", flags: MessageFlags.Ephemeral })
-				break;
+		case "vrc_publish_event":
+			writeLog(`Starting VRChat publish for event ${event.id}`);
+			if (!(await hasVrcUpdateCooldownPassed(event.id))) {
+				return ix.reply({ content: "5 min cooldown for VRC update has not passed.", flags: MessageFlags.Ephemeral });
 			}
+			await ix.deferUpdate();
+			await setLastVrcUpdateTime(event.id);
+
+			const guild = interaction.guild!;
+			const guildConfig = await prisma.guildConfig.findUnique({
+				where: { id: guild.id },
+				select: { vrcLoginToken: true }
+			});
+			const groupId = await getVrcGroupId(guild.id);
+			if (!groupId || !guildConfig?.vrcLoginToken) {
+				return ix.followUp("❌ VRChat setup missing. Tell an admin.");
+			}
+
+			const valid = await isVrcCookieValid(guildConfig.vrcLoginToken);
+			if (!valid) return ix.followUp("❌ VRChat session invalid. Tell an admin.");
+
+			const eventDesc = new VrcEventDescription(
+				event.title,
+				event.vrcDescription || event.description || "",
+				subtypeMap[event.subtype.toLowerCase()],
+				event.startTime.toISOString(),
+				event.lengthMinutes || 60,
+				event.vrcImageId || subtypeImageMap[event.subtype.toLowerCase()],
+				parseAndMapArray(event.platforms, platformMap),
+				event.vrcSendNotification || false,
+				15, 10
+			);
+
+			const createdOrUpdated = await createOrUpdateGroupEvent(
+				guildConfig.vrcLoginToken,
+				groupId,
+				eventDesc,
+				event.vrcCalenderEventId || undefined
+			);
+			event.vrcCalenderEventId = createdOrUpdated?.id;
+			event.vrcGroupId = groupId;
+
+			await prisma.event.update({
+				where: { id: event.id },
+				data: { vrcCalenderEventId: createdOrUpdated?.id, vrcGroupId: groupId }
+			});
+			writeLog(`VRChat event published: ${event.id}, eventId=${event.vrcCalenderEventId}`);
+
+			await rerender();
+			await ix.followUp({ content: "✅ Event (re)published to VRChat!", flags: MessageFlags.Ephemeral });
+			break;
+			
+		/* ───────────── Select-Based Updates ───────────── */
+		case "edit_type":
+			await handleSelectMenu(
+				"select_type",
+				"Select a new type:",
+				[
+					{ label: "VRC", value: "VRCHAT" },
+					{ label: "Discord", value: "DISCORD" }
+				],
+				async ([val]) => {
+					event.type = val;
+					await updateDraftByMsgId(message.id, { type: val });
+				}
+			);
+			break;
+
+		case "edit_subtype":
+			await handleSelectMenu(
+				"select_subtype",
+				"Select a new subtype:",
+				[
+					{ label: "Gaming", value: "GAMING" },
+					{ label: "Social", value: "SOCIAL" },
+					{ label: "Cinema", value: "CINEMA" },
+					{ label: "Art", value: "ART" },
+					{ label: "Wellness", value: "WELLNESS" }
+				],
+				async ([val]) => {
+					event.subtype = val;
+					await updateDraftByMsgId(message.id, { subtype: val });
+				}
+			);
+			break;
+
+		case "edit_scope":
+			await handleSelectMenu(
+				"select_scope",
+				"Select instance type:",
+				[
+					{ label: "Group Members Only", value: "Group" },
+					{ label: "Friends Can Join : Group+", value: "Group+" }
+				],
+				async ([val]) => {
+					event.scope = val;
+					await updateDraftByMsgId(message.id, { scope: val });
+				}
+			);
+			break;
+
+		case "edit_platforms":
+			await handleSelectMenu(
+				"select_platforms",
+				"Select platforms:",
+				[
+					{ label: "PCVR", value: "PCVR" },
+					{ label: "Android", value: "Android" }
+				],
+				async (vals) => {
+					event.platforms = JSON.stringify(vals);
+					await updateDraftByMsgId(message.id, {
+						platforms: event.platforms
+					});
+				},
+				1,
+				2
+			);
+			break;
+
+		case "edit_requirements":
+			await handleSelectMenu(
+				"select_requirements",
+				"Select avatar performance requirement:",
+				[
+					{ label: "No Restriction", value: "verypoor" },
+					{ label: "Poor or better", value: "poor" },
+					{ label: "Medium or better", value: "medium" },
+					{ label: "Good or better", value: "good" },
+					{ label: "Excellent", value: "excellent" }
+				],
+				async ([val]) => {
+					event.requirements = val;
+					await updateDraftByMsgId(message.id, {
+						requirements: val
+					});
+				}
+			);
+			break;
+
+		/* ───────────── Publish ───────────── */
+		case "publish_event":
+			if (publishInProgress) {
+				return ix.reply({
+					content: "A publish is already in progress.",
+					flags: MessageFlags.Ephemeral
+				});
+			}
+
 			publishInProgress = true;
 			try {
 				await ix.deferReply();
-				const guild = ix.interaction.guild as Guild;
-				if (!userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
-					await ix.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
-					publishInProgress = false;
-					return;
-				}
-				console.log("Star PublishEvent");
-				await publishEvent(ix.interaction.client, guild, eventData.id);
-				console.log("Finished PublishEvent");
-				console.log("starAddHostToEventThread");
-				await addHostToEventThread(guild, eventData.id);
-				console.log("Finished AddHostToEventThread\nStart checkEventPublishedorDraftOnly, passing message id of " + message.id);
-				const pubCheck = await checkEventPublishedOrDraftOnly(message.id)
-				console.log("checking ib.message.id: " + ib.message.id + "\neventData" + JSON.stringify(eventData));
-				await ib.message.edit({
-					embeds: [buildDraftEmbed(eventData)],
-					components: editButtons(ib.message.id, pubCheck),
-				});
-				console.log("Finished ib.message.edit\n start FollowUp");
-				await ix.followUp({ content: "✅ Event published!", flags: MessageFlags.Ephemeral });
-				console.log("Finished FollowUp\n start refreshPublishedCalender with ix.interaction.client and guild.id values\n" + ix.interaction.client + " and " + guild.id);
-				await refreshPublishedCalender(ix.interaction.client, guild.id, true);
-			} catch (err) {
-				console.error("Publish error:", err);
-				await ix.followUp({ content: "⚠️ Something went wrong while publishing.", flags: MessageFlags.Ephemeral });
-			} finally {
-				console.log("Ended Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
-			}
-			publishInProgress = false;
-			break;
-		}
 
-		case "vrc_publish_event": {
-			console.log("Start VRC Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
-			try {
-				if (!await hasVrcUpdateCooldownPassed(eventData.id)) {
-					await ix.reply({ content: "5 min cooldown for vrc update has not passed.", flags: MessageFlags.Ephemeral })
-					break;
-				}
-				await ix.deferUpdate();
-				await setLastVrcUpdateTime(eventData.id);
-				const guild = ix.interaction.guild as Guild;
-				if (!userHasAllowedRoleOrId(ix.interaction.member as GuildMember, getStandardRolesOrganizer(), [eventData.hostId])) {
-					await ix.followUp({ content: "❌ Only organisers can publish.", flags: MessageFlags.Ephemeral });
-					return;
-				}
-				// 1) Grab the VRChat cookie for this guild from GuildConfig
-				const guildConfig = await prisma.guildConfig.findUnique({
-					where: { id: ix.guildId as string },
-					select: { vrcLoginToken: true },
-				});
-
-				const groupId = await getVrcGroupId(ix.guildId!);
-
-				if (!groupId) {
-					await ix.followUp("❌ No VRChat Group ID is set for this server. Tell an admin.");
-					return
+				if (
+					!userHasAllowedRoleOrId(
+						member,
+						getStandardRolesOrganizer(),
+						[event.hostId]
+					)
+				) {
+					return ix.followUp({
+						content: "❌ Only organisers can publish.",
+						flags: MessageFlags.Ephemeral
+					});
 				}
 
-				const cookie = guildConfig?.vrcLoginToken ?? null;
-
-				if (!cookie) {
-					await ix.followUp(
-						"❌ The bot is not logged into VRChat. Tell an admin."
-					);
-					return;
-				}
-
-				// 2) Check if cookie is still valid
-				const valid = await isVrcCookieValid(cookie);
-				if (!valid) {
-					await ix.followUp(
-						"❌ VRChat session is no longer valid. Tell an admin."
-					);
-					return;
-				}
-
-				const eventDesc = new VrcEventDescription(
-					eventData.title,
-					eventData.vrcDescription ? eventData.vrcDescription : eventData.description ?? "",
-					subtypeMap[eventData.subtype.toLowerCase()],
-					eventData.startTime.toISOString(),
-					eventData.lengthMinutes ?? 60,
-					eventData.vrcImageId ? eventData.vrcImageId : subtypeImageMap[eventData.subtype.toLowerCase()],
-					parseAndMapArray(eventData.platforms, platformMap),
-					eventData.vrcSendNotification ?? false,
-					15, // host join before minutes
-					10 // guest join before minutes
+				const guild = interaction.guild!;
+				await publishEvent(interaction.client, guild, event.id);
+				await addHostToEventThread(guild, event.id);
+				await refreshPublishedCalender(
+					interaction.client,
+					guild.id,
+					true
 				);
-
-				const createdOrUpdated = await createOrUpdateGroupEvent(
-					cookie,
-					groupId,
-					eventDesc,
-					eventData.vrcCalenderEventId ? eventData.vrcCalenderEventId : undefined
-				);
-
-				eventData.vrcCalenderEventId = createdOrUpdated?.id;
-				eventData.vrcGroupId = groupId;
-
-				// 7) Persist VRChat-related values back to the Event row
-				await prisma.event.update({
-					where: { id: eventData.id },
-					data: {
-						vrcCalenderEventId: createdOrUpdated?.id,
-						vrcGroupId: groupId,
-					},
-				});
 
 				await rerender();
-				await ix.followUp({ content: "✅ Event (re)published to VRC!", flags: MessageFlags.Ephemeral });
+
+				await ix.followUp({
+					content: "✅ Event published!",
+					flags: MessageFlags.Ephemeral
+				});
 			} catch (err) {
-				console.error("VRC Publish error:", err);
-				await ix.followUp({ content: "⚠️ Something went wrong while publishing to vrc: " + err, flags: MessageFlags.Ephemeral });
+				console.error(err);
+				await ix.followUp({
+					content: "⚠️ Publish failed.",
+					flags: MessageFlags.Ephemeral
+				});
 			} finally {
-				console.log("Ended Publishing Event from: " + memberUsername + " at: " + new Date().toISOString());
+				publishInProgress = false;
 			}
 			break;
-		}
 
 		default:
-			await ix.deferUpdate(); // safe ack
+			await ix.deferUpdate();
 	}
 }
 
 /* ─────────────── Re-attach collectors after a restart ─────────────── */
-
 function isAnyThread(c: any): c is AnyThreadChannel {
 	return c?.type === ChannelType.PublicThread || c?.type === ChannelType.PrivateThread || c?.isThread?.();
 }
@@ -759,7 +723,14 @@ export async function restoreEventDraftCollectors(guild: Guild, draft: any) {
 	}
 
 	// fetch the draft message in the thread
-	const msg = await fetchMsgInThread(thread, draft.draftThreadMessageId);
+	let msg;
+	try {
+		msg = await thread.messages.fetch(draft.draftThreadMessageId);
+	} catch {
+		console.warn(`⚠️ Draft ${draft.id}: draft message not found`);
+		if (reArchive) await thread.setArchived(true);
+		return;
+	}
 
 	if (!msg) {
 		console.warn(`⚠️ Draft ${draft.id}: draft message ${draft.draftThreadMessageId} not found`);
