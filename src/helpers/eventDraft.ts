@@ -292,7 +292,15 @@ export async function handleDraftButton(
 		const modal = sub.interaction as ModalSubmitInteraction;
 		const value = modal.fields.getTextInputValue(field) || "";
 
-		await onSave(value);
+		try {
+			await onSave(value);
+		} catch (err: any) {
+			const msg = err?.message && err.message.toLowerCase().includes("date") ? "Invalid date" : (err?.message ?? "An error occurred");
+			try {
+				await sub.editReply({ content: `⚠️ ${msg}` });
+			} catch { }
+			return;
+		}
 		await sub.editReply({ content: "✅ Updated!" });
 		await rerender();
 	};
