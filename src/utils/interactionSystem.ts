@@ -243,7 +243,9 @@ export class TrackedInteraction {
 		}
 
 		// If nothing yet, followUp will error; fall back to reply
-		if (!this.deferredReply && !this.replied) {
+		// Note: allow followUp when a component was deferred via deferUpdate()
+		// because deferUpdate() is a valid prior response for message components.
+		if (!this.deferredReply && !this.replied && !this.deferredUpdate) {
 			this.warn("followUp() called before deferReply/reply; falling back to reply()", opts);
 			return this.reply(payload, { tag: opts?.tag, note: opts?.note });
 		}
