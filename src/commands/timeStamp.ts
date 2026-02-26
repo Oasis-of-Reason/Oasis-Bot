@@ -46,7 +46,6 @@ module.exports = {
 			if (isNaN(date.getTime())) {
 				const num = Number(input);
 				if (!Number.isNaN(num)) {
-					// guess: >= 1e12 is ms, else seconds
 					date = num >= 1e12 ? new Date(num) : new Date(num * 1000);
 				}
 			}
@@ -80,25 +79,22 @@ module.exports = {
 		const row =
 			new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
 		const preview = `<t:${unixSeconds}:F>`; // Discord long datetime format
+		// Defer reply immediately to acknowledge interaction
+		await ix.deferReply({ ephemeral: true });
 
-		// Initial ephemeral reply with menu
-		const response = await ix.reply({
+		// Edit reply to show the select menu
+		const replyMsgResult = await ix.editReply({
 			content: `Picked up date: ${preview} (renders in *your* local time)
-  ISO (UTC): \`${date.toISOString()}\`
-  Unix seconds: **${unixSeconds}**
-  Choose which Discord timestamp format you want:`,
+	ISO (UTC): \`${date.toISOString()}\`
+	Unix seconds: **${unixSeconds}**
+	Choose which Discord timestamp format you want:`,
 			components: [row],
-			flags: MessageFlags.Ephemeral,
-			withResponse: true
-		},
-		);
+		});
 
 		try {
 			// Wait for the user to pick a format (60s)
-			if (!response.response || !(response.response as Message)) {
-				throw ("no response");
-			}
-			const collected = (await (response.response as Message).awaitMessageComponent({
+			const msg = replyMsgResult.response as Message;
+			const collected = (await msg.awaitMessageComponent({
 				filter: (i: StringSelectMenuInteraction) =>
 					i.user.id === ix.interaction.user.id && i.customId === "ts_format",
 				componentType: ComponentType.StringSelect,
@@ -110,7 +106,6 @@ module.exports = {
 			const fmt = collected.values[0];
 			const discordString = `<t:${unixSeconds}:${fmt}>`;
 
-			// Edit the ephemeral reply with the result
 			await ix.editReply({
 				content: `Here is your Discord timestamp:\n\`${discordString}\`\nRendered: ${discordString}`,
 				components: [],
