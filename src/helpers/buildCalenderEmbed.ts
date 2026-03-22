@@ -5,7 +5,7 @@ import {
 	MessageFlagsBitField,
 	ButtonStyle,
 } from "discord.js";
-import { emojiMapTypes } from "./generalConstants";
+import { emojiMapTypes,EVENT_SUBTYPE_META } from "./generalConstants";
 
 export function buildCalenderContainer(
 	events: any[],
@@ -167,11 +167,14 @@ function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoin
 		ev.type === "VRCHAT"
 			? emojiMapTypes["VRCHAT"].emoji
 			: emojiMapTypes["DISCORD"].emoji;
+	
+	const subTypeEmoji = ev.subtype ? 
+		(EVENT_SUBTYPE_META[ev.subtype as keyof typeof EVENT_SUBTYPE_META]?.emoji || "") : "";
 
 	// Ongoing events: replace the first timestamp with a green dot 🟢
 	const leftPrefix = isOngoing ? "🟢" : `<t:${unix}:t>`;
 
-	return `> ${leftPrefix} ${typeEmoji} ${newText} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
+	return `> ${leftPrefix} ${typeEmoji} ${subTypeEmoji} ${newText} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
 function chunkString(str: string, size = 1800): string[] {
