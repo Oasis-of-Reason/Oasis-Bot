@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { oasisPremiumId } from '../helpers/generalConstants';
 import { runCookieHourlyEvent } from '../helpers/cookieWorker';
+import { runGoogleCalendarSync } from '../commands/googleCalendarBot';
 
 const prisma = new PrismaClient();
 
@@ -47,6 +48,13 @@ async function runOnce(client: Client) {
 			}
 
 			await runCookieHourlyEvent(client, guild);
+
+			// Run Google Calendar sync for this guild
+			try {
+				await runGoogleCalendarSync(guild.id);
+			} catch (err) {
+				console.error(`Failed to sync Google Calendar for guild ${guild.id}:`, err);
+			}
 		}
 	} catch { } // thou shalt not crash
 }

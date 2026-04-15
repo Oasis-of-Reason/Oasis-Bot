@@ -463,3 +463,54 @@ function getColourIdFromSubtype(subtype: eventSubType): string {
 function getEmojiFromSubtype(subtype: eventSubType): string {
 	return EVENT_SUBTYPE_META[subtype].emoji;
 }
+
+let isCalendarSyncRunning = new Set<string>(); // per guild lock
+
+export async function runGoogleCalendarSync(
+	guildId: string,
+	options?: { forcedRefresh?: boolean }
+) {
+	if (isCalendarSyncRunning.has(guildId)) {
+		writeLog(`⏳ Sync already running for guild ${guildId}, skipping...`);
+		return;
+	}
+
+	isCalendarSyncRunning.add(guildId);
+
+	try {
+		const forcedRefresh = options?.forcedRefresh ?? false;
+
+		writeLog(`🚀 Calendar sync started for guild ${guildId}`);
+
+		if (forcedRefresh) {
+			const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
+			const LIVE_CALENDAR_ID = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
+
+			await clearGoogleCalendar(DRAFT_CALENDAR_ID);
+			await clearGoogleCalendar(LIVE_CALENDAR_ID);
+		}
+
+		const events = await getUpcomingEvents(guildId);
+		const calendarEvents = await formatCalendarEvents(events);
+
+		for (const e of calendarEvents) {
+			await createOrUpdateGoogleEvent(e);
+			await sleep(300); // slightly safer buffer
+		}
+
+		const draftEvents = await getUpcomingDraftEvents(guildId);
+		const draftCalendarEvents = await formatCalendarEvents(draftEvents, true);
+
+		for (const e of draftCalendarEvents) {
+			await createOrUpdateGoogleEvent(e, true);
+			await sleep(300);
+		}
+
+		writeLog(`✅ Calendar sync completed for guild ${guildId}`);
+	} catch (err) {
+		writeLog(`❌ Calendar sync failed for guild ${guildId}: ${(err as Error).message}`);
+		throw err;
+	} finally {
+		isCalendarSyncRunning.delete(guildId);
+	}
+}
