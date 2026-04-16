@@ -16,6 +16,7 @@ import {
 import { writeLog } from "../helpers/logger";
 import { TrackedInteraction } from "../utils/interactionSystem";
 import { EVENT_SUBTYPE_META } from "../helpers/generalConstants";
+import { run } from "googleapis/build/src/apis/run";
 
 const prisma = new PrismaClient();
 
@@ -119,6 +120,7 @@ module.exports = {
 	// expose helper functions so requiring this module doesn't lose named exports
 	createOrUpdateGoogleEvent,
 	formatCalendarEvents,
+	runGoogleCalendarSync,
 };
 
 // --- Format events for Google Calendar

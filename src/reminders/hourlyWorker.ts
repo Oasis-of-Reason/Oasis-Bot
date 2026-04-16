@@ -23,7 +23,7 @@ export function startHourlyWorker(client: Client) {
 	}
 
 	const msUntilNextHour = nextHour.getTime() - now.getTime();
-	console.log(`⏳ First run scheduled in ${msUntilNextHour} ms`);
+	console.log(`⏳ First run scheduled in ${new Date(msUntilNextHour).toISOString().slice(11,19)} ms`);
 
 	// First run at the next whole hour
 	setTimeout(() => {
@@ -51,7 +51,9 @@ async function runOnce(client: Client) {
 
 			// Run Google Calendar sync for this guild
 			try {
+				console.log('Starting google sync for guild:' + guild.name);
 				await runGoogleCalendarSync(guild.id);
+				console.log('Completed google sync for guild:' + guild.name);
 			} catch (err) {
 				console.error(`Failed to sync Google Calendar for guild ${guild.id}:`, err);
 			}
