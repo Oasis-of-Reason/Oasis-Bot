@@ -101,25 +101,11 @@ export async function refreshPublishedCalender(
 		include: { _count: { select: { signups: true } } },
 	});
 
-	// Split events into chunks of 15 each (day-aware)
-	const discordChunks = chunkEventsByDay(discordEvents, 15);
-	const vrcChunks = chunkEventsByDay(vrcEvents, 15);
-	const mediaChunks = chunkEventsByDay(mediaEvents, 15);
-	const allChunks = chunkEventsByDay(allEvents, 15);
-
 	// Build multiple embeds per calendar
-	const discordEmbeds = discordChunks.map((chunk, i) =>
-		buildCalenderContainer(chunk, guildId, false, false, i)
-	);
-	const vrcEmbeds = vrcChunks.map((chunk, i) =>
-		buildCalenderContainer(chunk, guildId, false, false, i)
-	);
-	const mediaEmbeds = mediaChunks.map((chunk, i) =>
-		buildCalenderContainer(chunk, guildId, false, false, i)
-	);
-	const allEmbeds = allChunks.map((chunk, i) =>
-		buildCalenderContainer(chunk, guildId, false, false, i)
-	);
+	const discordEmbeds = buildCalenderContainer(discordEvents, guildId, false, false);
+	const vrcEmbeds = buildCalenderContainer(vrcEvents, guildId, false, false);
+	const mediaEmbeds = buildCalenderContainer(mediaEvents, guildId, false, false);
+	const allEmbeds = buildCalenderContainer(allEvents, guildId, false, false);
 
 	// Process Discord calendar messages
 	await sendAndStoreMessages(
@@ -162,66 +148,10 @@ export async function refreshPublishedCalender(
 	);
 }
 
-// Expects events already sorted by startTime ascending
-export function chunkEventsByDay<T extends { startTime: Date }>(
-	events: T[],
-	maxPerMessage = 15
-): T[][] {
-	if (events.length === 0) return [];
-
-	// 1) Group events by day (YYYY-MM-DD)
-	const dayGroups: T[][] = [];
-	let currentDayKey: string | null = null;
-	let currentDayEvents: T[] = [];
-
-	for (const ev of events) {
-		const dayKey = ev.startTime.toISOString().slice(0, 10); // YYYY-MM-DD
-
-		if (currentDayKey === null) {
-			currentDayKey = dayKey;
-			currentDayEvents.push(ev);
-			continue;
-		}
-
-		if (dayKey === currentDayKey) {
-			currentDayEvents.push(ev);
-		} else {
-			dayGroups.push(currentDayEvents);
-			currentDayKey = dayKey;
-			currentDayEvents = [ev];
-		}
-	}
-
-	if (currentDayEvents.length > 0) dayGroups.push(currentDayEvents);
-
-	// 2) Build chunks of whole days, respecting maxPerMessage where possible
-	const chunks: T[][] = [];
-	let currentChunk: T[] = [];
-	let currentCount = 0;
-
-	for (const dayEvents of dayGroups) {
-		const dayCount = dayEvents.length;
-
-		// If adding this entire day would exceed the limit, start a new chunk first
-		if (currentCount > 0 && currentCount + dayCount > maxPerMessage) {
-			chunks.push(currentChunk);
-			currentChunk = [];
-			currentCount = 0;
-		}
-
-		currentChunk.push(...dayEvents);
-		currentCount += dayCount;
-	}
-
-	if (currentChunk.length > 0) chunks.push(currentChunk);
-
-	return chunks;
-}
-
 async function sendAndStoreMessages(
 	channel: TextChannel,
 	existingIds: string | null,
-	embeds: any[],
+	embeds: any,
 	fieldName:
 		| "discordEventCalenderMessageId"
 		| "vrcEventCalenderMessageId"
@@ -245,9 +175,11 @@ async function sendAndStoreMessages(
 		}
 	}
 
+	const embedArray = Array.isArray(embeds) ? embeds : [embeds];
+
 	let anyChanged = false;
-	for (let i = 0; i < embeds.length && !anyChanged; i++) {
-		anyChanged = anyChanged || !messageContainerEquals(messages[i] as Message<boolean>, embeds[i]);
+	for (let i = 0; i < embedArray.length && !anyChanged; i++) {
+		anyChanged = anyChanged || !messageContainerEquals(messages[i] as Message<boolean>, embedArray[i]);
 	}
 	const calenderStillLast =
 		messages[messages.length - 1]?.channel.lastMessageId === messages[messages.length - 1]?.id;
@@ -267,8 +199,8 @@ async function sendAndStoreMessages(
 
 	const newIds: string[] = [];
 
-	for (let i = 0; i < embeds.length; i++) {
-		const embed = embeds[i];
+	for (let i = 0; i < embedArray.length; i++) {
+		const embed = embedArray[i];
 
 		if (messages[i]) {
 			const msg = messages[i]!;
@@ -286,8 +218,8 @@ async function sendAndStoreMessages(
 	}
 
 	// Delete extra old messages if we now have fewer chunks
-	if (messages.length > embeds.length) {
-		for (let i = embeds.length; i < messages.length; i++) {
+	if (messages.length > embedArray.length) {
+		for (let i = embedArray.length; i < messages.length; i++) {
 			const m = messages[i];
 			if (m) {
 				try {
