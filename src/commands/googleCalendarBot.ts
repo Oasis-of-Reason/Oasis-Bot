@@ -18,6 +18,9 @@ import { TrackedInteraction } from "../utils/interactionSystem";
 import { EVENT_SUBTYPE_META } from "../helpers/generalConstants";
 import { run } from "googleapis/build/src/apis/run";
 
+const DRAFT_CALENDAR_ID = process.env.DRAFT_CALENDAR_ID!;
+const LIVE_CALENDAR_ID = process.env.LIVE_CALENDAR_ID!;
+
 const prisma = new PrismaClient();
 
 type Action = "update" | "publish";
@@ -74,8 +77,6 @@ module.exports = {
 			if (forcedRefresh) {
 				writeLog(`/gsync forced refresh started for guild ${guildId}`);
 				// Clear both calendars
-				const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
-				const LIVE_CALENDAR_ID = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
 				await clearGoogleCalendar(`${DRAFT_CALENDAR_ID}`);
 				await clearGoogleCalendar(`${LIVE_CALENDAR_ID}`);
 				writeLog(`/gsync forced refresh: calendars cleared for guild ${guildId}`);
@@ -171,8 +172,6 @@ export async function formatCalendarEvents(events: Event[], draft: boolean = fal
 export async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boolean = false, action: Action = "update") {
 	writeLog(`Processing event ID ${event.id} - ${event.title}`);
 
-	const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
-	const LIVE_CALENDAR_ID = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
 	const calendarId = draft ? DRAFT_CALENDAR_ID : LIVE_CALENDAR_ID;
 
 	const requestBody = {
@@ -357,7 +356,7 @@ async function syncCalendarEvents(guildId: string) {
 }
 
 async function syncCalendarDraftEvents(guildId: string) {
-	const calendarId = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
+	const calendarId = LIVE_CALENDAR_ID
 
 	writeLog(`Starting syncCalendarDraftEvents for guild ${guildId}`);
 
@@ -485,9 +484,6 @@ export async function runGoogleCalendarSync(
 		writeLog(`🚀 Calendar sync started for guild ${guildId}`);
 
 		if (forcedRefresh) {
-			const DRAFT_CALENDAR_ID = "b5e43c4baad5b852fc62fccdd8a98437a831e1e817f3548f293d82e589730fd9@group.calendar.google.com";
-			const LIVE_CALENDAR_ID = "ffdb23af0ab9c09e29aa8b8a981e411997c5d79c9c6fc5daca735684d0c0d660@group.calendar.google.com";
-
 			await clearGoogleCalendar(DRAFT_CALENDAR_ID);
 			await clearGoogleCalendar(LIVE_CALENDAR_ID);
 		}
