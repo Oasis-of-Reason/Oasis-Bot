@@ -631,7 +631,7 @@ export async function handleDraftButton(
 
 			publishInProgress = true;
 			try {
-				await ix.deferReply();
+				await ix.deferReply({ ephemeral: true });
 
 				if (
 					!userHasAllowedRoleOrId(
