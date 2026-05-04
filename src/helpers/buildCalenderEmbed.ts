@@ -10,9 +10,9 @@ import { emojiMapTypes, EVENT_SUBTYPE_META } from "./generalConstants";
 export function buildCalenderContainer(
 	events: any[],
 	guildId: string,
-	ephemeral = false,
 	myEventsOnly = false,
 	silent = true,
+	userId?: string
 ) {
 	const groups = new Map<string, { date: Date; lines: string[] }>();
 	const ongoingLines: string[] = [];
@@ -20,10 +20,9 @@ export function buildCalenderContainer(
 	for (const ev of events) {
 		const dt = new Date(ev.startTime);
 		const signupCount: number = ev._count?.signups ?? 0;
-
+		const isHost = userId === ev.hostId;
 		const isOngoing = isEventOngoing(ev);
-		const line = formatEventLine(ev, guildId, signupCount, isOngoing);
-
+		const line = formatEventLine(ev, guildId, signupCount, isOngoing, isHost);
 		if (isOngoing) {
 			ongoingLines.push(line);
 			continue;
@@ -74,7 +73,7 @@ export function buildCalenderContainer(
 		myEventsOnly ? 0xb865f2 : 0x5658ff
 	);
 
-	if (ephemeral) {
+	if (myEventsOnly) {
 		headerContainer.addTextDisplayComponents(
 			new TextDisplayBuilder().setContent(
 				myEventsOnly ? "# 📅 My Events" : "# 📅 Scheduled Events"
@@ -94,7 +93,6 @@ export function buildCalenderContainer(
 				)
 		);
 	}
-
 	headerContainer.addSeparatorComponents(new SeparatorBuilder());
 
 	// ---- ONGOING CASE ----
@@ -185,7 +183,7 @@ export function buildCalenderContainer(
 	const allContainers = containers.map((c) => c.toJSON());
 	const baseFlags = MessageFlagsBitField.resolve(
 		MessageFlagsBitField.Flags.IsComponentsV2 |
-		(ephemeral ? MessageFlagsBitField.Flags.Ephemeral : 0) |
+		(myEventsOnly ? MessageFlagsBitField.Flags.Ephemeral : 0) |
 		(silent ? MessageFlagsBitField.Flags.SuppressNotifications : 0)
 	);
 	const maxLen = 4000;
@@ -247,7 +245,7 @@ function eventLink(ev: any, guildId: string) {
 	return null;
 }
 
-function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoing: boolean) {
+function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoing: boolean, hosting: boolean = false) {
 	const dt = new Date(ev.startTime);
 	const unix = Math.floor(dt.getTime() / 1000);
 
@@ -256,7 +254,8 @@ function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoin
 
 	const link = eventLink(ev, guildId);
 	const title = link ? `[**${ev.title}**](${link})` : `**${ev.title}**`;
-
+	const hostEmoji = hosting ? "👑 " : "";
+	
 	const capTotal = ev.capacityCap ?? 0;
 	const hasCap = (ev.capacityCap ?? 0) + (ev.capacityBase ?? 0) > 0;
 	const capBadge = hasCap ? `${signupCount}/${capTotal}` : `${signupCount}`;
@@ -272,7 +271,7 @@ function formatEventLine(ev: any, guildId: string, signupCount: number, isOngoin
 	// Ongoing events: replace the first timestamp with a green dot 🟢
 	const leftPrefix = isOngoing ? "🟢" : `<t:${unix}:t>`;
 
-	return `> ${leftPrefix} ${typeEmoji} ${subTypeEmoji} ${newText} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
+	return `> ${hostEmoji}${leftPrefix} ${typeEmoji} ${subTypeEmoji} ${newText} ${title} <t:${unix}:R> • (${capBadge})${draftText}`;
 }
 
 function chunkString(str: string, size = 1800): string[] {

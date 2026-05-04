@@ -342,10 +342,18 @@ export async function handleCalenderButtons(ix: TrackedInteraction) {
 				guildId,
 				startTime: { gte: now },
 				published: true,
-				signups: { some: { userId } },
+				OR: [
+					{ hostId: userId },
+					{ signups: { some: { userId: userId } } }]
 			},
 			orderBy: { startTime: "asc" },
-			include: { _count: { select: { signups: true } } },
+			include: {
+				_count: { select: { signups: true } },
+				signups: {
+					where: { userId },
+					select: { userId: true },
+				},
+			},
 		});
 
 		if (events.length === 0) {
@@ -353,7 +361,10 @@ export async function handleCalenderButtons(ix: TrackedInteraction) {
 			return;
 		}
 
-		const container = buildCalenderContainer(events, guildId, true, true);
+		const container = buildCalenderContainer(events, guildId, true, true, userId);
+		if (!container || (Array.isArray(container) && container.length === 0)) {
+			throw new Error("Empty container");
+		}
 		await ix.reply(container, { tag: "calendar-my-events" });
 	} catch (err) {
 		console.error("Button handler error:", err);
