@@ -3,6 +3,7 @@ import {
 	Guild,
 	ThreadAutoArchiveDuration,
 	MessageFlags,
+	MessageFlagsBitField,
 } from "discord.js";
 import {
 	getEventById,
@@ -35,11 +36,11 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
 
 	const defaultPublishingChannelId =
-	(publishingEvent.subtype === "CINEMA"
-		? guildConfig?.publishingMediaChannelId
-		: (publishingEvent.type === "VRCHAT"
-			? guildConfig?.publishingVRCChannelId
-			: guildConfig?.publishingDiscordChannelId)) ?? "";
+		(publishingEvent.subtype === "CINEMA"
+			? guildConfig?.publishingMediaChannelId
+			: (publishingEvent.type === "VRCHAT"
+				? guildConfig?.publishingVRCChannelId
+				: guildConfig?.publishingDiscordChannelId)) ?? "";
 
 	const embed = await buildEventEmbedWithLists(client, publishingEvent, signupUserIds, cohostsUserIds);
 	const components = getEventButtons(eventId);
@@ -57,9 +58,9 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		if (publishedChannel) {
 			const existing = await fetchMsgInChannel(publishedChannel, channelMsgId);
 			if (existing) {
-				await existing.edit({ embeds: [embed], components });
+				await existing.edit({ embeds: [embed], components, flags: existing.flags.bitfield | MessageFlagsBitField.Flags.SuppressNotifications });
 			} else {
-				const sent = await publishedChannel.send({ embeds: [embed], flags: MessageFlags.SuppressNotifications, components });
+				const sent = await publishedChannel.send({ embeds: [embed], components });
 				channelMsgId = sent.id;
 			}
 		}
@@ -97,13 +98,13 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 	const channel = await fetchTextChannel(client, defaultPublishingChannelId);
 	if (!channel) throw new Error(`Publish channel not found: ${defaultPublishingChannelId}`);
 
-	const sentChannel = await channel.send({ embeds: [embed], flags: MessageFlags.SuppressNotifications, components });
+	const sentChannel = await channel.send({ content: "Pings: " + getPingString(publishingEvent.type, publishingEvent.subtype), embeds: [embed], flags: MessageFlags.SuppressNotifications, components, allowedMentions: { roles: allowedPingRolesEvents } });
 
 	// Send pings message
-	await sentChannel.reply({
+	/* await sentChannel.reply({
 		content: "Pings: " + getPingString(publishingEvent.type, publishingEvent.subtype),
 		allowedMentions: { roles: allowedPingRolesEvents },
-	});
+	}); */
 
 	// Trigger publish on Google Calendar
 	// await createOrUpdateGoogleEvent(publishingEvent, false, "publish");

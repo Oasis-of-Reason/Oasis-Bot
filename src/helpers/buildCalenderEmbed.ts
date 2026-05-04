@@ -12,7 +12,7 @@ export function buildCalenderContainer(
 	guildId: string,
 	ephemeral = false,
 	myEventsOnly = false,
-	chunkIndex: number = 0
+	silent = true,
 ) {
 	const groups = new Map<string, { date: Date; lines: string[] }>();
 	const ongoingLines: string[] = [];
@@ -184,13 +184,13 @@ export function buildCalenderContainer(
 	// =========================
 	const allContainers = containers.map((c) => c.toJSON());
 	const baseFlags = MessageFlagsBitField.resolve(
-		MessageFlagsBitField.Flags.IsComponentsV2
+		MessageFlagsBitField.Flags.IsComponentsV2 |
+		(ephemeral ? MessageFlagsBitField.Flags.Ephemeral : 0) |
+		(silent ? MessageFlagsBitField.Flags.SuppressNotifications : 0)
 	);
 	const maxLen = 4000;
 	const payloads: any[] = [];
 	let current: any = { components: [], flags: baseFlags };
-	if (ephemeral) current.flags |= MessageFlagsBitField.Flags.Ephemeral;
-
 	for (const cont of allContainers) {
 		// Try adding this container to the current payload
 		const testPayload = { ...current, components: [...current.components, cont] };
@@ -199,7 +199,6 @@ export function buildCalenderContainer(
 			// Push current and start new
 			payloads.push(current);
 			current = { components: [cont], flags: baseFlags };
-			if (ephemeral) current.flags |= MessageFlagsBitField.Flags.Ephemeral;
 		} else {
 			current.components.push(cont);
 		}
