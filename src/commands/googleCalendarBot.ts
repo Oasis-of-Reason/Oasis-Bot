@@ -227,14 +227,22 @@ export async function createOrUpdateGoogleEvent(event: CalendarEvent, draft: boo
 		// --------------------------------------
 		writeLog(`Checking if we need to update existing event`);
 		if (event.googleEventId) {
-			await calendarService.client.events.update({
-				calendarId,
-				eventId: event.googleEventId,
-				requestBody,
-			});
-
-			writeLog(`Updated Google Calendar event ${event.googleEventId}`);
-			return;
+			try {
+				await calendarService.client.events.update({
+					calendarId,
+					eventId: event.googleEventId,
+					requestBody,
+				});
+				writeLog(`Updated Google Calendar event ${event.googleEventId}`);
+				return;
+			} catch (error) {
+				writeLog(`Failed to update Google Calendar event ${event.googleEventId}: ${(error as Error).message}`);
+				// clear event id from db so we don't keep trying to update a broken event
+				await prisma.event.update({
+					where: { id: event.id },
+					data: { googleEventId: null },
+				});
+			}
 		}
 
 		// --------------------------------------
