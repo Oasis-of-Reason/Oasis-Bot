@@ -364,7 +364,7 @@ async function syncCalendarEvents(guildId: string) {
 }
 
 async function syncCalendarDraftEvents(guildId: string) {
-	const calendarId = LIVE_CALENDAR_ID
+	const calendarId = DRAFT_CALENDAR_ID;
 
 	writeLog(`Starting syncCalendarDraftEvents for guild ${guildId}`);
 
