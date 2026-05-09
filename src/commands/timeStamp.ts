@@ -30,11 +30,18 @@ module.exports = {
 				.setName("datetime")
 				.setDescription("Date/time to convert (ISO, JS parseable, or epoch seconds/ms)")
 				.setRequired(true)
+		)
+		.addStringOption(opt =>
+			opt
+				.setName("timestamp_style")
+				.setDescription("t 15:03, T 15:03:30, d 30/06/2021, D 30 June 2021, f 30 June 2021 15:03, F Wednesday, +f, Relative")
+				.setRequired(false)
 		),
 
 	async execute(ix: TrackedInteraction) {
 		const interaction = ix.interaction as ChatInputCommandInteraction;
 		const input = interaction.options.getString("datetime", true).trim();
+		const TimestampStyle = interaction.options.getString("timestamp_style", false);
 
 		// Parse input
 		// First try chrono natural language parsing
@@ -51,16 +58,28 @@ module.exports = {
 			}
 		}
 
-		if (isNaN(date.getTime())) {
+		if (!date || isNaN(date.getTime())) {
 			await ix.reply({
-				content:
-					"❌ Could not parse that date/time. Try ISO (2025-09-27T15:00), `YYYY-MM-DD HH:MM`, or epoch seconds.",
-				flags: MessageFlags.Ephemeral,
+				content: "❌ Could not parse that date/time. Try ISO (2025-09-27T15:00), `YYYY-MM-DD HH:MM`, or epoch seconds.", flags: MessageFlags.Ephemeral,
 			});
 			return;
 		}
 
 		const unixSeconds = Math.floor(date.getTime() / 1000);
+		// If format given and is one of t, T, d, D, f, F, R, use it. Otherwise, prompt user to pick from a select menu
+		if (TimestampStyle) {
+			const fmt = TimestampStyle;
+			const discordString = `<t:${unixSeconds}:${fmt}>`;
+
+			await ix.reply({
+				content: `Here is your Discord timestamp:\n\`${discordString}\`\nRendered: ${discordString}`,
+				flags: MessageFlags.Ephemeral,
+			});
+
+			return;
+		}
+
+
 
 		// Build select menu
 		const select = new StringSelectMenuBuilder()
