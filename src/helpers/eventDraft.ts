@@ -152,6 +152,7 @@ export function editButtons(id?: string, published?: boolean) {
 			) :
 			new ActionRowBuilder<ButtonBuilder>().addComponents(
 				new ButtonBuilder().setCustomId("publish_event").setLabel("🚀 Publish Event").setStyle(ButtonStyle.Success),
+				new ButtonBuilder().setCustomId("change_host").setLabel("Change Host").setStyle(ButtonStyle.Success),
 			),
 	];
 }
@@ -301,7 +302,7 @@ export async function handleDraftButton(
 			} catch { }
 			return;
 		}
-		await sub.editReply({ content: "✅ Updated!" });
+		await sub.editReply({ content: `${title} completed successfully. set to: ${value}` });
 		await rerender();
 	};
 
@@ -412,6 +413,31 @@ export async function handleDraftButton(
 					await updateDraftByMsgId(message.id, {
 						startTime: parsed
 					});
+				}
+			);
+			break;
+
+		case "change_host":
+			await handleSimpleModalUpdate(
+				"modal_change_host",
+				"Change Host",
+				"new_host",
+				"Enter new hosts Discord ID",
+				event.hostId || "",
+				async (val) => {
+					
+					const ok = userHasAllowedRoleOrId(
+						ix.interaction.member as GuildMember,
+						getStandardRolesOrganizer(),
+						[event.hostId]
+					);
+					if (!ok) {
+						await ix.editReply({ content: "Only the current host or Oasis Team Members can change the host to a new user." });
+						return;
+					}
+					event.hostId = val;
+					await updateDraftByMsgId(message.id, { hostId: val });
+					writeLog(`Host updated for event ${event.id}`);
 				}
 			);
 			break;
@@ -531,7 +557,7 @@ export async function handleDraftButton(
 			await rerender();
 			await ix.followUp({ content: "✅ Event (re)published to VRChat!", flags: MessageFlags.Ephemeral });
 			break;
-			
+
 		/* ───────────── Select-Based Updates ───────────── */
 		case "edit_type":
 			await handleSelectMenu(
