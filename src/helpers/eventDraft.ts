@@ -302,7 +302,7 @@ export async function handleDraftButton(
 			} catch { }
 			return;
 		}
-		await sub.editReply({ content: `${title} completed successfully. set to: ${value}` });
+		await sub.editReply({ content: `${title} completed successfully. Set to: ${value.length > 20 ? value.slice(0, 20) + "..." : value}` });
 		await rerender();
 	};
 
