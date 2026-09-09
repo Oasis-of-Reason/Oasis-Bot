@@ -15,8 +15,19 @@ const WINDOW_MINUTES = 2;     // tolerance for scheduler drift
 const PACE_MS = 350;          // gentle pacing between DMs
 
 export function startReminderWorker(client: Client) {
-	void runOnce(client).catch(console.error);
-	setInterval(() => void runOnce(client).catch(console.error), 30_000);
+    void workerLoop(client);
+}
+
+async function workerLoop(client: Client) {
+    while (true) {
+        try {
+            await runOnce(client);
+        } catch (err) {
+            console.error(err);
+        }
+
+        await sleep(30_000);
+    }
 }
 
 async function runOnce(client: Client) {
