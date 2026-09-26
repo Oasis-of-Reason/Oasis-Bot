@@ -86,9 +86,14 @@ async function runOnce(client: Client) {
 
 		const event = await prisma.event.findUnique({
 			where: { id: ev.id },
-			include: { signups: { select: { userId: true } } },
+			include: { 
+				signups: { select: { userId: true } },
+				cohosts: { select: { userId: true } }
+			},
 		});
-		const userIds = (event?.signups.map(s => s.userId) ?? []).concat([ev.hostId]);
+		const signupUserIds = event?.signups.map(s => s.userId) ?? [];
+		const cohostUserIds = event?.cohosts.map(c => c.userId) ?? [];
+		const userIds = signupUserIds.concat([ev.hostId]).concat(cohostUserIds);
 
 		for (const uid of userIds) {
 			const prefs = userPrefs.get(uid) ?? {
@@ -137,6 +142,7 @@ async function sendReminderDM(
 	type: 'REMINDER' | 'START',
 ): Promise<boolean> {
 	try {
+		console.log(`Sending ${type} DM to user ${userId} for event ${ev.id} (${ev.title})`);
 		const user = await client.users.cache.get(userId) ?? await client.users.fetch(userId);
 		const isReminder = type === 'REMINDER';
 		const whenFull = `<t:${unix}:F>`;
@@ -174,7 +180,7 @@ async function sendReminderDM(
 			value: content,
 			inline: true,
 		});
-
+		console.log(`Sending DM to user ${userId} for event ${ev.id} (${ev.title})`);
 		await user.send({ embeds: [embed], allowedMentions: { parse: [] } });
 
 		// record success
@@ -187,8 +193,9 @@ async function sendReminderDM(
 		});
 
 		return true;
-	} catch {
+	} catch (err) {
 		// DM failed (blocked/closed DMs/no mutual); do not record success
+		console.warn(`Failed to send ${type} DM to user ${userId} for event ${ev.id} (${ev.title}) error: ${err}`);
 		return false;
 	}
 }

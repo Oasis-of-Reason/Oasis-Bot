@@ -17,6 +17,7 @@ import {
 import { buildDraftEmbed, editButtons, handleDraftButton } from "../helpers/eventDraft";
 import { updateThreadTitle } from "../helpers/refreshEventMessages";
 import { track, TrackedInteraction } from "../utils/interactionSystem";
+import { writeLog } from "../helpers/logger";
 // Add optional variable for new title if left as default put it as is otherwise use the new title
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -113,6 +114,7 @@ module.exports = {
 		if (interaction.options.getString("new-datetime")) {
 			const input = interaction.options.getString("new-datetime", true).trim();
 			let date = chrono.parseDate(input);
+			writeLog("Chrono Parsing: " + input)
 			if (date) {
 				// If we have a valid date, update the startTime in eventData
 				eventData.startTime = date;
@@ -168,6 +170,7 @@ module.exports = {
 			startTime: duplicated.startTime,
 			lengthMinutes: duplicated.lengthMinutes ?? 0,
 			imageUrl: duplicated.imageUrl ?? "",
+			cohosts: "", // Duplicated events start with no cohosts
 			vrcCalenderEventId: "",
 			vrcSendNotification: duplicated.vrcSendNotification ?? false,
 			vrcDescription: duplicated.vrcDescription ?? "",
@@ -181,7 +184,7 @@ module.exports = {
 
 		const sent = await thread.send({
 			embeds: [buildDraftEmbed(hydrated)],
-			components: editButtons(),
+			components: editButtons(thread.id, false, false),
 		});
 
 		await prisma.event.update({

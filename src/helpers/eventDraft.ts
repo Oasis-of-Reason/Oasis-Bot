@@ -42,7 +42,7 @@ import {
 
 import * as chrono from "chrono-node";
 import { prisma } from "../utils/prisma";
-import { publishEvent, addHostToEventThread } from "../helpers/publishEvent";
+import { publishEvent, addHostToEventThread, syncCohostsToDatabase } from "../helpers/publishEvent";
 import { refreshPublishedCalender } from "./refreshPublishedCalender";
 import { writeLog } from "./logger";
 import { fetchMsgInThread, getVrcGroupId } from "./discordHelpers";
@@ -60,6 +60,7 @@ let publishInProgress = false;
 export interface EventData {
 	id: number;
 	hostId: string;
+	cohosts: string;
 	title: string;
 	description: string;
 	activity: string;
@@ -81,7 +82,70 @@ export interface EventData {
 
 /* ─────────────── Helper Functions ─────────────── */
 
+// Validate and resolve cohost input (ID, display name, or nickname)
+async function sanityCheckCoHostInput(input: string, guild: Guild, client: Client, retrieveType: string): Promise<string> {
+	const trimmed = input.trim().replace(/^@/, "").toLowerCase();
+	// use retriveType to discern what we want returned i.e a display name or a user ID
+	writeLog(`Sanity checking co-host input: "${input}" (trimmed: "${trimmed}")`);
+	if (!trimmed) throw new Error("Invalid input: cannot be empty.");
+
+	// Numeric check for user ID
+	if (/^\d+$/.test(trimmed)) {
+		try {
+			// First, try to fetch from guild members
+			const member = await guild.members.fetch(trimmed);
+			if (!member) throw new Error(`User ID ${trimmed} not found in this server.`);
+			return member ? (retrieveType === "displayName" ? (member.nickname || member.user.displayName || member.user.username) : member.user.id) : (() => { throw new Error(`User ID ${trimmed} not found in Guild.`); })();
+		} catch (err) {
+			// Fallback: check if they're a valid Discord user (not in guild)
+			try {
+				const discordUser = await client.users.fetch(trimmed);
+				return discordUser ? (retrieveType === "displayName" ? (discordUser.globalName || discordUser.username) : discordUser.id) : (() => { throw new Error(`User ID ${trimmed} not found on Discord.`); })();
+			} catch (err) {
+				writeLog(`Discord fetch failed: ${err}`);
+				throw new Error(`User ID ${trimmed} not found in this server or Discord.`);
+			}
+		}
+	}
+
+	// Name search (case-insensitive)
+	try {
+		// Use cached members if available, otherwise fetch to avoid race conditions
+		writeLog(`Creating guild.members.cache`);
+		console.log(`Guild member count: ${guild.members.cache.size}, guild member count property: ${guild.memberCount}`);
+		const members =
+			guild.members.cache.size !== guild.memberCount
+				? await guild.members.fetch()
+				: guild.members.cache;
+
+		const match = members.find(m => {
+			const displayName = (m.nickname || m.user.displayName || m.user.username).toLowerCase();
+			const username = m.user.username.toLowerCase();
+			return displayName === trimmed || username === trimmed;
+		});
+		return match ? (retrieveType === "displayName" ? (match.nickname || match.user.displayName || match.user.username) : match.user.id) : (() => { throw new Error(`No user found with name or nickname "${input}".`); })();
+	} catch (err) {
+		throw new Error(`Could not look up user "${input}": ${err}`);
+	}
+}
+
+// Build the Hosts field for the embed
+function buildHostsField(event: EventData): string {
+
+	let hostSection = `> **Host:** <@${event.hostId}>`;
+
+	if (event.cohosts && event.cohosts.trim()) {
+		const cohostIds = event.cohosts.split(",").map(id => id.trim()).filter(id => id.length > 0);
+		for (const cohostId of cohostIds) {
+			hostSection += `\n> **Co Host:** <@${cohostId}>`;
+		}
+	}
+	return hostSection;
+}
+
 export const buildDraftEmbed = (event: EventData) => {
+	console.log(`Building hosts field for event ${event.id} with hostId: ${event.hostId} and cohosts: ${event.cohosts}`)
+
 	const embed = new EmbedBuilder()
 		.setTitle("📅 Event Draft")
 		.setColor(0x5865f2)
@@ -90,7 +154,12 @@ export const buildDraftEmbed = (event: EventData) => {
 		.addFields(
 			{
 				name: "Event Information",
-				value: `> **Title:** ${event.title}\n> **Host:** <@${event.hostId}>`,
+				value: `> **Title:** ${event.title}`,
+			},
+
+			{
+				name: "Hosts",
+				value: buildHostsField(event),
 			},
 			{
 				name: "General Information",
@@ -120,7 +189,7 @@ export const buildDraftEmbed = (event: EventData) => {
 	return embed;
 };
 
-export function editButtons(id?: string, published?: boolean) {
+export function editButtons(id?: string, published?: boolean, hasCohosts: boolean = false) {
 	return [
 		new ActionRowBuilder<ButtonBuilder>().addComponents(
 			new ButtonBuilder().setCustomId("edit_title").setLabel("Edit Title").setStyle(ButtonStyle.Secondary),
@@ -140,15 +209,25 @@ export function editButtons(id?: string, published?: boolean) {
 			new ButtonBuilder().setCustomId("edit_capacity").setLabel("Edit Capacity").setStyle(ButtonStyle.Secondary),
 			new ButtonBuilder().setCustomId("edit_poster").setLabel("Edit Poster").setStyle(ButtonStyle.Secondary),
 		),
-		new ActionRowBuilder<ButtonBuilder>().addComponents(
-			new ButtonBuilder().setCustomId("edit_vrc_description").setLabel("Edit VRC Description").setStyle(ButtonStyle.Secondary),
-			//new ButtonBuilder().setCustomId("edit_vrc_imageId").setLabel("Edit VRC Image").setStyle(ButtonStyle.Secondary),
-			new ButtonBuilder().setCustomId("edit_vrc_notify").setLabel("(Admin) Edit Notify").setStyle(ButtonStyle.Secondary),
-		),
+		hasCohosts ?
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("add_cohost").setLabel("Add Co-host").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("remove_cohost").setLabel("Remove Co-host").setStyle(ButtonStyle.Danger),
+				new ButtonBuilder().setCustomId("edit_vrc_description").setLabel("Edit VRC Description").setStyle(ButtonStyle.Secondary),
+				//new ButtonBuilder().setCustomId("edit_vrc_imageId").setLabel("Edit VRC Image").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_vrc_notify").setLabel("(Admin) Edit Notify").setStyle(ButtonStyle.Secondary),
+			) :
+			new ActionRowBuilder<ButtonBuilder>().addComponents(
+				new ButtonBuilder().setCustomId("add_cohost").setLabel("Add Co-host").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_vrc_description").setLabel("Edit VRC Description").setStyle(ButtonStyle.Secondary),
+				//new ButtonBuilder().setCustomId("edit_vrc_imageId").setLabel("Edit VRC Image").setStyle(ButtonStyle.Secondary),
+				new ButtonBuilder().setCustomId("edit_vrc_notify").setLabel("(Admin) Edit Notify").setStyle(ButtonStyle.Secondary),
+			),
 		published ?
 			new ActionRowBuilder<ButtonBuilder>().addComponents(
 				new ButtonBuilder().setCustomId("publish_event").setLabel("🔧 Update Published Event").setStyle(ButtonStyle.Success),
 				new ButtonBuilder().setCustomId("vrc_publish_event").setLabel("(Re)publish to VRChat").setStyle(ButtonStyle.Success),
+				new ButtonBuilder().setCustomId("change_host").setLabel("Change Host").setStyle(ButtonStyle.Success),
 			) :
 			new ActionRowBuilder<ButtonBuilder>().addComponents(
 				new ButtonBuilder().setCustomId("publish_event").setLabel("🚀 Publish Event").setStyle(ButtonStyle.Success),
@@ -217,12 +296,20 @@ export async function handleDraftButton(
 ) {
 	const interaction = ix.interaction as ButtonInteraction;
 	const member = interaction.member as GuildMember;
-
+	const realHostId = await sanityCheckCoHostInput(event.hostId, interaction.guild!, interaction.client, "userId").catch(() => {
+		writeLog(`Warning: host ID ${event.hostId} may not be valid in this server.`);
+		return event.hostId;
+	});
+	console.log(`Sanity check event.host ID: ${event.hostId} resolved to realId: ${realHostId}`);
+	// change event.hostId value to realHostId
+	event.hostId = realHostId;
+	console.log(`After sanity check, event.hostId is now: ${event.hostId}`);
 	const rerender = async () => {
 		const published = await checkEventPublishedOrDraftOnly(message.id);
+		const hasCohosts = !!event.cohosts?.trim();
 		await message.edit({
 			embeds: [buildDraftEmbed(event)],
-			components: editButtons(message.id, published)
+			components: editButtons(message.id, published, hasCohosts)
 		});
 	};
 
@@ -408,6 +495,7 @@ export async function handleDraftButton(
 				"",
 				async (val) => {
 					const parsed = chrono.parseDate(val);
+					writeLog("Chrono Parsing: " + val)
 					if (!parsed) throw new Error("Invalid date");
 					event.startTime = parsed;
 					await updateDraftByMsgId(message.id, {
@@ -418,29 +506,232 @@ export async function handleDraftButton(
 			break;
 
 		case "change_host":
-			await handleSimpleModalUpdate(
-				"modal_change_host",
-				"Change Host",
-				"new_host",
-				"Enter new hosts Discord ID",
-				event.hostId || "",
-				async (val) => {
-					
-					const ok = userHasAllowedRoleOrId(
-						ix.interaction.member as GuildMember,
-						getStandardRolesOrganizer(),
-						[event.hostId]
-					);
-					if (!ok) {
-						await ix.editReply({ content: "Only the current host or Oasis Team Members can change the host to a new user." });
+			const ok = userHasAllowedRoleOrId(
+				ix.interaction.member as GuildMember,
+				getStandardRolesOrganizer(),
+				[event.hostId]
+			);
+			if (!ok) {
+				writeLog(`User ${interaction.user.id} attempted to add co-host without permission for event ${event.id}`);
+				await ix.reply({ content: "Only the current host or Oasis Team Members can add co-hosts.", flags: MessageFlags.Ephemeral });
+				return;
+			}
+			{
+				const sub = await showModal(
+					ix,
+					"modal_change_host",
+					"Change Host",
+					"new_host",
+					"Enter New Host's Name or Discord User ID",
+					event.hostId || "",
+					100
+				);
+
+				if (!sub) return;
+
+				const modal = sub.interaction as ModalSubmitInteraction;
+				const val = modal.fields.getTextInputValue("new_host");
+
+				try {
+					const newHostId = await sanityCheckCoHostInput(val, interaction.guild!, interaction.client, "userId");
+					console.log(`Sanity check for new host input "${val}" resolved to user ID: ${newHostId}`);
+					if (event.hostId as string === newHostId as string) {
+						await sub.editReply({ content: `${val} is already the host.` });
 						return;
 					}
-					event.hostId = val;
-					await updateDraftByMsgId(message.id, { hostId: val });
-					writeLog(`Host updated for event ${event.id}`);
+					// The Host MUST be a member of the guild
+					const guild = interaction.guild as Guild
+					const member = await guild.members.fetch(newHostId).catch(() => null);
+
+					if (!member) {
+						await sub.editReply({
+							content: `Event Hosts must be members of the Discord.`
+						});
+						return;
+					}
+
+					event.hostId = newHostId;
+					// Add the new host to the thread
+					const thread = interaction.channel as AnyThreadChannel;
+					await thread.members.add(newHostId).catch(err => {
+						writeLog(`Failed to add new host ${newHostId} to thread: ${err}`);
+					});
+					// Remove new host from cohost list if they were previously a cohost
+					const cohostIds = await prisma.cohostsOnEvent.findMany({
+						where: { eventId: event.id, userId: newHostId },
+						select: { userId: true }
+					});
+					console.log(`Checking if new host ${newHostId} is in cohost list for event ${event.id}: ${cohostIds.length > 0 ? "Yes" : "No"}`);
+					if (cohostIds.length > 0) {
+						await prisma.cohostsOnEvent.deleteMany({
+							where: { eventId: event.id, userId: newHostId }
+						});
+					}
+					event.cohosts = (event.cohosts ?? "").split(",").map(id => id.trim()).filter(id => id.length > 0 && id !== newHostId).join(", ");
+					await updateDraftByMsgId(message.id, { hostId: newHostId });
+					await sub.editReply({ content: `Event Host changed to ${val} ` })
+					writeLog(`Event ${event.id} host changed to ${newHostId}`);
+					await rerender();
+				} catch (err: any) {
+					await sub.editReply({
+						content: `${err?.message ?? "An error occurred"}`
+					});
 				}
+
+				break;
+			}
+
+		case "add_cohost":
+			const ok_add = userHasAllowedRoleOrId(
+				ix.interaction.member as GuildMember,
+				getStandardRolesOrganizer(),
+				[event.hostId]
 			);
+			if (!ok_add) {
+				writeLog(`User ${interaction.user.id} attempted to add co-host without permission for event ${event.id}`);
+				await ix.reply({ content: "Only the current host or Oasis Team Members can add co-hosts.", flags: MessageFlags.Ephemeral });
+				return;
+			}
+
+			const subAdd = await showModal(
+				ix,
+				"modal_add_cohost",
+				"Add Co-host",
+				"cohost_id",
+				"Enter Discord User ID or Display Name",
+				"",
+				100
+			);
+			if (!subAdd) return;
+
+			const userInput = (subAdd.interaction as ModalSubmitInteraction).fields.getTextInputValue("cohost_id")?.trim();
+			if (!userInput) {
+				writeLog(`User ${interaction.user.id} submitted empty co-host input for event ${event.id}`);
+				await subAdd.editReply({ content: "Invalid input: cannot be empty." });
+				return;
+			}
+
+			// Validate and resolve user ID
+			let cohostIdToAdd: string;
+			try {
+				cohostIdToAdd = await sanityCheckCoHostInput(userInput, interaction.guild!, interaction.client, "userId");
+				writeLog(`Resolved co-host input "${userInput}" to user ID ${cohostIdToAdd} for event ${event.id}`);
+			} catch (err) {
+				const errorMsg = err instanceof Error ? err.message : "Invalid user.";
+				await subAdd.editReply({ content: errorMsg });
+				return;
+			}
+
+			// Parse existing cohosts
+			const existingCohosts = event.cohosts
+				? event.cohosts.split(",").map(id => id.trim()).filter(id => id.length > 0)
+				: [];
+
+			// Include the current host as they should not also be added as a cohost for their own event
+			if (event.hostId === cohostIdToAdd) {
+				writeLog(`User ${interaction.user.id} attempted to add the host ${cohostIdToAdd} as a co-host for event ${event.id}`);
+				await subAdd.editReply({ content: `<@${cohostIdToAdd}> is already the host, can't also be a co host.` });
+				return;
+			}
+
+			// Check if already a cohost (by resolved ID, prevents duplicates from different input formats)
+			if (existingCohosts.includes(cohostIdToAdd)) {
+				writeLog(`Co-host ${cohostIdToAdd} is already a co-host for event ${event.id}`);
+				await subAdd.editReply({ content: `<@${cohostIdToAdd}> is already a co-host.` });
+				return;
+			}
+
+			// Discord select menu has a max of 25 options
+			const MAX_COHOSTS = 25;
+			if (existingCohosts.length >= MAX_COHOSTS) {
+				writeLog(`Co-host limit reached (${MAX_COHOSTS}) for event ${event.id}`);
+				await subAdd.editReply({ content: `Maximum of ${MAX_COHOSTS} co-hosts allowed (Discord select menu limit).` });
+				return;
+			}
+
+			// Add to list and persist to database
+			const updatedCohosts = [...existingCohosts, cohostIdToAdd].join(", ");
+			event.cohosts = updatedCohosts;
+			await syncCohostsToDatabase(event.id, updatedCohosts);
+			// add cohost to the thread
+			const thread = interaction.channel as AnyThreadChannel;
+			await thread.members.add(cohostIdToAdd).catch(err => {
+				writeLog(`Failed to add co-host ${cohostIdToAdd} to thread: ${err}`);
+			});
+			await subAdd.editReply({ content: `Added <@${cohostIdToAdd}> as co-host!` });
+			await rerender();
+			writeLog(`Co-host added for event ${event.id}: ${cohostIdToAdd}`);
 			break;
+
+		case "remove_cohost":
+			const ok_remove = userHasAllowedRoleOrId(
+				ix.interaction.member as GuildMember,
+				getStandardRolesOrganizer(),
+				[event.hostId]
+			);
+			if (!ok_remove) {
+				await ix.reply({ content: "Only the current host or Oasis Team Members can remove co-hosts.", flags: MessageFlags.Ephemeral });
+				return;
+			}
+
+			const currentCohosts = event.cohosts
+				? event.cohosts.split(",").map(id => id.trim()).filter(id => id.length > 0)
+				: [];
+
+			if (currentCohosts.length === 0) {
+				await ix.reply({ content: "❌ There are no co-hosts to remove.", flags: MessageFlags.Ephemeral });
+				return;
+			}
+
+			// Show select menu with cohosts
+			const options = await Promise.all(
+				currentCohosts.map(async (id) => {
+					const user = await interaction.client.users.fetch(id).catch(() => null);
+					return {
+						label: (user?.globalName ?? user?.username ?? id).slice(0, 100),
+						value: id,
+						description: id
+					};
+				})
+			);
+			await ix.reply({
+				content: "Select a co-host to remove:",
+				components: [
+					new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+						new StringSelectMenuBuilder()
+							.setCustomId("select_cohost_remove")
+							.setPlaceholder("Select co-host to remove")
+							.addOptions(options)
+					)
+				],
+				flags: MessageFlags.Ephemeral
+			});
+
+			try {
+				const selectInteraction = await (interaction.channel as TextChannel | ThreadChannel)?.awaitMessageComponent({
+					filter: (i: any) => i.customId === "select_cohost_remove" && i.user.id === interaction.user.id,
+					time: TIMEOUT_LONG
+				});
+
+
+				if (selectInteraction && selectInteraction.isStringSelectMenu()) {
+					await selectInteraction.deferUpdate();
+					const selectedId = selectInteraction.values[0];
+					const filteredCohosts = currentCohosts.filter(id => id !== selectedId);
+					const updatedCohostsStr = filteredCohosts.join(", ");
+
+					event.cohosts = updatedCohostsStr || "";
+					// Persist removal to database immediately
+					await syncCohostsToDatabase(event.id, updatedCohostsStr);
+					await ix.editReply({ content: `Removed ${selectedId} from co-hosts!`, components: [] });
+					await rerender();
+					writeLog(`Co-host removed from event ${event.id}: ${selectedId}`);
+				}
+			} catch (err) {
+				writeLog("Co-host removal selection timed out or errored.");
+			}
+			break;
+
 
 		/* ───────────── Poster Upload ───────────── */
 		case "edit_poster": {
@@ -463,7 +754,8 @@ export async function handleDraftButton(
 			writeLog(`Poster updated for event ${event.id}: ${posterUrl}`);
 
 			const published = await checkEventPublishedOrDraftOnly(message.id);
-			await message.edit({ embeds: [buildDraftEmbed(event)], components: editButtons(message.id, published) });
+			const hasCohosts = !!event.cohosts?.trim();
+			await message.edit({ embeds: [buildDraftEmbed(event)], components: editButtons(message.id, published, hasCohosts) });
 			await ix.followUp({ content: "✅ Poster updated!", flags: MessageFlags.Ephemeral });
 			break;
 		}
@@ -778,10 +1070,16 @@ export async function restoreEventDraftCollectors(guild: Guild, draft: any) {
 		if (reArchive) await thread.setArchived(true, "Restore draft collector (re-archive)");
 		return;
 	}
+	const cohosts = await prisma.cohostsOnEvent.findMany({ where: { eventId: draft.id } });
+	if (!cohosts) {
+		console.log("No Co hosts for this event");
+		return;
+	}
 
 	const eventData = {
 		id: ev.id,
 		hostId: ev.hostId,
+		cohosts: cohosts?.map((ch) => ch.userId).join(", ") ?? "",
 		title: ev.title,
 		description: ev.description ?? "",
 		activity: (ev as any).activity ?? null,
@@ -805,7 +1103,9 @@ export async function restoreEventDraftCollectors(guild: Guild, draft: any) {
 	// This guards against manual edits or stale state.
 	try {
 		if (!msg.components?.length || !msg.embeds?.length) {
-			await msg.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons() });
+			const hasCohosts = !!eventData.cohosts?.trim();
+			console.log(`Restoring draft message components for event ${ev.id}.HostId is ${ev.hostId}, Published: ${await checkEventPublishedOrDraftOnly(msg.id)}, Has cohosts: ${hasCohosts}`);
+			await msg.edit({ embeds: [buildDraftEmbed(eventData)], components: editButtons(undefined, false, hasCohosts) });
 		}
 	} catch { }
 

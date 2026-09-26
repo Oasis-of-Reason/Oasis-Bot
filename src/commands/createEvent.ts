@@ -28,6 +28,7 @@ import { validateNumber } from "../helpers/generalHelpers";
 import { updateThreadTitle } from "../helpers/refreshEventMessages"
 import { track, TrackedInteraction } from "../utils/interactionSystem";
 import { EVENT_SUBTYPE_META } from "../helpers/generalConstants";
+import { writeLog } from "../helpers/logger";
 
 module.exports = {
 	data: new SlashCommandBuilder().setName("create-event").setDescription("Start the event creation wizard"),
@@ -231,6 +232,7 @@ module.exports = {
 
 		const startText = timingSubmit.fields.getTextInputValue("start");
 		const parsed = chrono.parseDate(startText);
+		writeLog("Chrono Parsing: " + startText)
 		if (!parsed) {
 			await timingSubmit.editReply({ content: "❌ Could not parse that date/time." });
 			try {
@@ -291,6 +293,7 @@ module.exports = {
 			lengthMinutes,
 			imageUrl,
 			hostId: ix.interaction.user.id,
+			cohosts: "",
 			vrcCalenderEventId: "",
 			vrcSendNotification: false,
 			vrcDescription: "",
@@ -333,7 +336,7 @@ module.exports = {
 
 		const sent = await thread.send({
 			embeds: [buildDraftEmbed(eventData)],
-			components: editButtons(thread.id),
+			components: editButtons(thread.id, false, false),
 		});
 
 		await prisma.event.update({
@@ -372,6 +375,7 @@ module.exports = {
 			startTime: createdEvent.startTime,
 			lengthMinutes: createdEvent.lengthMinutes ?? 0,
 			imageUrl: createdEvent.imageUrl ?? "",
+			cohosts: "", // New events have no cohosts
 			vrcCalenderEventId: createdEvent.vrcCalenderEventId ?? "",
 			vrcSendNotification: createdEvent.vrcSendNotification ?? false,
 			vrcDescription: createdEvent.vrcDescription ?? "",

@@ -32,6 +32,7 @@ export async function publishEvent(client: Client, guild: Guild, eventId: number
 		throw new Error(`Could not find event to publish: ${eventId}`);
 	}
 
+	// Cohosts are already synced to database via syncCohostsToDatabase() when added/removed in draft
 	// Always load latest signup/interest lists before rendering
 	const { signupUserIds, cohostsUserIds } = await loadSignupUserIds(eventId);
 
@@ -152,8 +153,64 @@ export async function addHostToEventThread(guild: Guild, eventId: number) {
 		} catch (error) {
 			writeLog(`Error adding host to event thread: ${error}: ` + "error");
 		}
+		addCoHostsToEventThread(guild, eventId).catch(err => {
+			writeLog(`Error adding co-hosts to event thread: ${err}: ` + "error");
+		});
 	}
 }
+
+export async function addCoHostsToEventThread(guild: Guild, eventId: number) {
+	writeLog(`Adding co-hosts to event thread for event ${eventId}`);
+	const event = await getEventById(eventId);
+	if (event) {
+		try {
+			if (!event?.published || !event.publishedThreadId) return;
+			const thread = await fetchThread(guild, event.publishedThreadId);
+			if (!thread) return;
+
+			const cohostIds = (await prisma.cohostsOnEvent.findMany({
+				where: { eventId },
+				select: { userId: true },
+			})).map(c => c.userId);
+
+			// Add co-hosts to thread
+			for (const cohostId of cohostIds) {
+				try {
+					await thread.members.add(cohostId);
+				} catch (err) {
+					console.warn(`Failed to add host to thread: ${err}`);
+				}
+			}
+		} catch (error) {
+			writeLog(`Error adding host to event thread: ${error}: ` + "error");
+		}
+	}
+}
+
+async function syncCohostsToDatabase(eventId: number, cohostsString: string) {
+	// Parse cohost IDs from comma-separated string
+	const cohostIds = cohostsString
+		.split(",")
+		.map(id => id.trim())
+		.filter(id => id.length > 0);
+
+	// Delete all existing cohost records for this event
+	await prisma.cohostsOnEvent.deleteMany({
+		where: { eventId }
+	});
+
+	// Create new cohost records if any
+	if (cohostIds.length > 0) {
+		await prisma.cohostsOnEvent.createMany({
+			data: cohostIds.map(userId => ({
+				eventId,
+				userId
+			}))
+		});
+	}
+}
+
+export { syncCohostsToDatabase };
 
 async function loadSignupUserIds(eventId: number) {
 

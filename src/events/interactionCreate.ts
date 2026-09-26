@@ -406,6 +406,14 @@ export async function handleEventButtons(ix: TrackedInteraction) {
 				}
 
 				if (op === "on") {
+					// First check they are not the host or a Co host
+					const cohosts = await prisma.cohostsOnEvent.findMany({ where: { eventId } });
+					if (cohosts.some(c => c.userId === userId)) {
+						await ix.reply({ content: "You're a Co-Host for this event already, no need to sign up.", flags: MessageFlags.Ephemeral });
+					}
+					if (event.hostId === userId) {
+						await ix.reply({ content: "You're the host for this event, no need to sign up.", flags: MessageFlags.Ephemeral });
+					}
 					const existing = await prisma.eventSignUps.findFirst({ where: { eventId: event.id, userId } });
 					if (!existing) await prisma.eventSignUps.create({ data: { eventId: event.id, userId } });
 
