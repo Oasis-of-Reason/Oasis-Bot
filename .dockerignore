@@ -1,0 +1,4 @@
+.env
+.git
+volumes/
+src/utils/googleBotCalendar.json

@@ -7,3 +7,4 @@ dist
 logs/app.log
 src/utils/googleBotCalendar.json
 LocalNotes.md
+volumes/
