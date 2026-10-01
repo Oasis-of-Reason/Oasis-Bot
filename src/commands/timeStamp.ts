@@ -10,6 +10,7 @@ import {
 
 import * as chrono from "chrono-node";
 import { TrackedInteraction } from "../utils/interactionSystem";
+import { writeLog } from "../helpers/logger";
 
 const FORMATS = [
 	{ label: "Short time", value: "t", description: "15:03" },
@@ -46,6 +47,7 @@ module.exports = {
 		// Parse input
 		// First try chrono natural language parsing
 		let date = chrono.parseDate(input);
+		writeLog("Chrono Parsing: " + input)
 
 		// If chrono fails, fall back to JS Date and numeric epoch
 		if (!date) {
